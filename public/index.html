@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
+<html lang="es"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>LudoPicks · Mundial 2026</title>
@@ -197,6 +195,52 @@ select option{background:#161c30;color:#fff}
 .empty{text-align:center;padding:40px 24px;color:var(--muted)}
 .empty .emoji{font-size:40px;margin-bottom:10px}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:500}
+
+/* REFRESH BTN */
+.refresh-btn{position:absolute;top:14px;left:16px;z-index:2;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.refresh-btn.spin{animation:spin 1s linear}
+
+/* COUNTDOWN */
+.countdown{background:linear-gradient(135deg,rgba(15,110,86,.25),rgba(24,95,165,.2));border:1px solid rgba(93,202,165,.25);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cd-label{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.07em}
+.cd-match{font-size:15px;font-weight:800;margin-top:2px}
+.cd-time{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--al);letter-spacing:-.5px;white-space:nowrap}
+.cd-time small{font-size:10px;color:var(--muted);font-weight:700;display:block;text-align:right}
+
+/* OVER/UNDER ROW */
+.ou-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+.ou-label{font-size:9px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin:9px 0 5px;display:flex;align-items:center;gap:5px}
+.pick.sel-over{background:rgba(24,95,165,.22);border-color:var(--blue)}
+.pick.sel-over .pt,.pick.sel-over .pm{color:#7Fb5ec}
+.pick.sel-under{background:rgba(127,119,221,.2);border-color:#7F77DD}
+.pick.sel-under .pt,.pick.sel-under .pm{color:#aaa2ee}
+.pick.locked{opacity:.35;pointer-events:none}
+.match.locked-m{opacity:.7}
+.locktag{font-size:10px;font-weight:800;color:var(--rl);background:rgba(226,75,74,.12);padding:3px 8px;border-radius:20px}
+
+/* BETSLIP */
+.slip-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:150;padding:0 12px calc(12px + env(safe-area-inset-bottom));pointer-events:none}
+.slip-bar.hidden{display:none}
+.slip-inner{background:linear-gradient(135deg,var(--green),var(--gd));color:#04231a;border-radius:14px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;pointer-events:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);font-weight:800}
+.slip-count{background:#04231a;color:var(--green);font-size:12px;font-weight:900;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-right:8px}
+.slip-leg{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:10px}
+.slip-leg:last-of-type{border-bottom:none}
+.slip-leg .sl-info{flex:1}
+.slip-leg .sl-match{font-size:13px;font-weight:700}
+.slip-leg .sl-pick{font-size:11px;color:var(--green);font-weight:700;margin-top:1px}
+.slip-leg .sl-mom{font-size:13px;font-weight:800;margin-right:8px}
+.slip-leg .sl-x{background:rgba(226,75,74,.15);color:var(--rl);border:none;width:26px;height:26px;border-radius:50%;font-size:15px;cursor:pointer;flex-shrink:0}
+.parlay-tag{background:linear-gradient(135deg,var(--amber),#854F0B);color:#fff;font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em}
+
+/* SCORE ENTRY (admin) */
+.score-entry{display:flex;align-items:center;gap:8px;justify-content:center;margin:6px 0}
+.score-in{width:52px;text-align:center;font-size:22px;font-weight:900;padding:8px 0;letter-spacing:0}
+.score-x{font-size:16px;font-weight:800;color:var(--muted)}
+.derived{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.5}
+.derived b{color:var(--green)}
+
+/* SHARE */
+.share-btn{background:rgba(37,211,102,.14);color:#5fe08a;border:1.5px solid rgba(37,211,102,.3);border-radius:10px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 </style>
 </head>
 <body>
@@ -254,6 +298,7 @@ select option{background:#161c30;color:#fff}
 
 <div id="app" style="display:none">
   <div class="hero">
+    <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()" aria-label="Refrescar">⟳</button>
     <div class="ball">⚽</div>
     <h1>LudoPicks</h1>
     <div class="who" id="appWho"></div>
@@ -278,7 +323,7 @@ select option{background:#161c30;color:#fff}
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
   <div class="body">
-    <div id="tabc-partidos" class="tabc"><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
+    <div id="tabc-partidos" class="tabc"><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
     <div id="tabc-mis" class="tabc"><div id="listaMis"></div></div>
     <div id="tabc-ranking" class="tabc"><div id="listaRanking"></div></div>
     <div id="tabc-admin" class="tabc">
@@ -323,6 +368,8 @@ select option{background:#161c30;color:#fff}
     <div id="mBody"></div>
   </div>
 </div>
+
+<div class="slip-bar hidden" id="slipBar"><div class="slip-inner" onclick="openSlip()"><span><span class="slip-count" id="slipCount">0</span>Ver cupón</span><span id="slipMomio"></span></div></div>
 
 <div class="toast" id="toast"></div>
 
@@ -457,22 +504,25 @@ function initRegAvatar(){
 }
 
 // ── STATE ─────────────────────────────────────────────────────
-let loadFailed=false;
+let loadFailed=false, serverOffset=0, betslip=[];
 async function loadState(){
   try{
     const r=await fetch(API);
     if(!r.ok)throw new Error('http '+r.status);
     state=await r.json();
+    if(state.now)serverOffset=state.now-Date.now();
     loadFailed=false;
-  }catch(e){
-    loadFailed=true;
-    console.error('loadState falló:',e);
-  }
+  }catch(e){loadFailed=true;console.error('loadState falló:',e);}
 }
 async function api(body){
   try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return await r.json();}
   catch(e){toast('Error de conexión');return {};}
 }
+function eNow(){return Date.now()+serverOffset;}
+function byId(id){return state.partidos.find(p=>p.id===id);}
+function isLocked(p){return eNow()>=p.kickoff;}
+function pickLabel(p,pick){return {local:p.local,empate:'Empate',visita:p.visita,over:'Over '+p.linea,under:'Under '+p.linea}[pick];}
+function outcomesClient(p,r){const t=r.gl+r.gv;return{local:r.gl>r.gv,empate:r.gl===r.gv,visita:r.gl<r.gv,over:t>p.linea,under:t<p.linea};}
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init(){
@@ -484,7 +534,6 @@ async function init(){
   if(savedMe&&savedPin&&state.jugadores[savedMe]){me=savedMe;myPin=savedPin;enterApp();return;}
   renderLogin();
 }
-
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.getElementById('app').style.display='none';
@@ -496,25 +545,21 @@ function showScreen(name){
 function renderLogin(){
   showScreen('login');
   if(loadFailed){
-    document.getElementById('playerGrid').innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--rl);font-size:13px">
-      No se pudo conectar al servidor.<br><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="init()">Reintentar</button></div>`;
+    document.getElementById('playerGrid').innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--rl);font-size:13px">No se pudo conectar al servidor.<br><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="init()">Reintentar</button></div>`;
     return;
   }
   const players=Object.values(state.jugadores||{}).sort((a,b)=>(a.creado||0)-(b.creado||0));
   let html='';
-  if(!players.length) html+=`<div style="grid-column:1/-1;text-align:center;padding:16px 0 8px;color:var(--muted);font-size:13px">¡Sé el primero en registrarte!</div>`;
+  if(!players.length)html+=`<div style="grid-column:1/-1;text-align:center;padding:16px 0 8px;color:var(--muted);font-size:13px">¡Sé el primero en registrarte!</div>`;
   players.forEach((p,i)=>{
-    const avHtml=buildAvSvg(p.avatar,52);
     html+=`<div class="player-card" style="animation-delay:${i*.05}s" onclick="pickPlayer('${p.nombre.replace(/'/g,"\\'")}')">
-      <div class="av-wrap">${avHtml}</div>
+      <div class="av-wrap">${buildAvSvg(p.avatar,52)}</div>
       <div class="nm">${p.nombre}</div>
-      <div class="sl">$${Math.round(p.saldo).toLocaleString('es-MX')}</div>
-    </div>`;
+      <div class="sl">$${Math.round(p.saldo).toLocaleString('es-MX')}</div></div>`;
   });
   html+=`<div class="player-card new" onclick="showScreen('register')"><div class="plus">+</div><div class="nm">Soy nuevo</div></div>`;
   document.getElementById('playerGrid').innerHTML=html;
 }
-
 function pickPlayer(nombre){
   pinTarget=nombre;
   const j=state.jugadores[nombre];
@@ -524,35 +569,27 @@ function pickPlayer(nombre){
   showScreen('pin');
   setTimeout(()=>document.getElementById('pinInput').focus(),200);
 }
-
 function onPinType(){
   const v=document.getElementById('pinInput').value.replace(/\D/g,'');
   document.getElementById('pinInput').value=v;
   if(v.length===4)doLogin();
 }
-
 async function doLogin(){
   const pin=document.getElementById('pinInput').value;
   if(pin.length!==4)return toast('Ingresa 4 dígitos');
   const r=await api({action:'login',payload:{nombre:pinTarget,pin}});
   if(r.error){toast(r.error);document.getElementById('pinInput').value='';return;}
-  state.jugadores=r.jugadores;
-  me=pinTarget;myPin=pin;
-  localStorage.setItem('mundial_me',me);
-  localStorage.setItem('mundial_pin',pin);
+  state.jugadores=r.jugadores;me=pinTarget;myPin=pin;
+  localStorage.setItem('mundial_me',me);localStorage.setItem('mundial_pin',pin);
   enterApp();
 }
-
 async function doAdminLogin(){
   const k=document.getElementById('adminKeyInput').value.trim();
   if(!k)return toast('Ingresa la clave');
-  const r=await api({action:'resultado',payload:{adminKey:k,partidoId:-1,resultado:'local'}});
+  const r=await api({action:'resultado',payload:{adminKey:k,partidoId:-1}});
   if(r.error==='No autorizado')return toast('Clave incorrecta');
-  adminKey=k;isAdmin=true;
-  localStorage.setItem('mundial_admin',k);
-  enterApp();
+  adminKey=k;isAdmin=true;localStorage.setItem('mundial_admin',k);enterApp();
 }
-
 async function doRegister(){
   const nombre=document.getElementById('regName').value.trim();
   const pin=document.getElementById('regPin').value;
@@ -560,21 +597,16 @@ async function doRegister(){
   if(!/^\d{4}$/.test(pin))return toast('El PIN debe ser de 4 dígitos');
   const r=await api({action:'register',payload:{nombre,pin,avatar:{...regAv}}});
   if(r.error)return toast(r.error);
-  state.jugadores=r.jugadores;
-  me=nombre;myPin=pin;
-  localStorage.setItem('mundial_me',me);
-  localStorage.setItem('mundial_pin',pin);
+  state.jugadores=r.jugadores;me=nombre;myPin=pin;
+  localStorage.setItem('mundial_me',me);localStorage.setItem('mundial_pin',pin);
   enterApp();
 }
-
 function logout(){
-  localStorage.removeItem('mundial_me');localStorage.removeItem('mundial_pin');
-  localStorage.removeItem('mundial_admin');
-  me=null;adminKey=null;isAdmin=false;myPin=null;
-  renderLogin();
+  localStorage.removeItem('mundial_me');localStorage.removeItem('mundial_pin');localStorage.removeItem('mundial_admin');
+  me=null;adminKey=null;isAdmin=false;myPin=null;betslip=[];renderSlipBar();renderLogin();
 }
 
-// ── APP ───────────────────────────────────────────────────────
+// ── APP SHELL ─────────────────────────────────────────────────
 function enterApp(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
   document.getElementById('app').style.display='block';
@@ -582,9 +614,8 @@ function enterApp(){
   document.getElementById('saldoCard').style.display=isAdmin?'none':'flex';
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
-  refreshHero();
+  refreshHero();renderSlipBar();
 }
-
 function refreshHero(){
   if(isAdmin)return;
   const j=state.jugadores[me];if(!j)return;
@@ -595,27 +626,31 @@ function refreshHero(){
   el.className='saldo-delta '+(d>0?'up':d<0?'dn':'even');
   el.innerHTML=`${d>0?'▲ +':d<0?'▼ −':''}${d===0?'Sin cambios':'$'+Math.abs(Math.round(d)).toLocaleString()}<small style="display:block;color:rgba(255,255,255,.4);font-weight:600">desde $${state.saldo_inicial.toLocaleString()}</small>`;
 }
+async function manualRefresh(){
+  const btn=document.getElementById('refreshBtn');btn.classList.remove('spin');void btn.offsetWidth;btn.classList.add('spin');
+  await loadState();refreshHero();
+  if(currentTab==='partidos')renderPartidos();
+  if(currentTab==='ranking')renderRanking();
+  if(currentTab==='mis')renderMis();
+  if(currentTab==='admin'&&isAdmin){renderAdmin();renderAdminUsers();}
+  toast('Actualizado ✓');
+}
 
-// ── EDIT AVATAR ───────────────────────────────────────────────
+// ── AVATAR EDIT ───────────────────────────────────────────────
 function openEditAvatar(){
   if(!me)return;
   const j=state.jugadores[me];
   editAv=j?.avatar?{...j.avatar}:{skin:0,hairC:0,hairS:0,shirt:0,expr:0};
   document.getElementById('mTitle').textContent='Editar avatar';
-  document.getElementById('mBody').innerHTML=`
-    <div class="av-preview" style="margin-bottom:12px"><div id="editAvSvg" class="av-circle"></div></div>
-    <div id="editAvControls"></div>
-    <button class="btn btn-primary" style="margin-top:14px" onclick="saveAvatar()">Guardar avatar</button>`;
+  document.getElementById('mBody').innerHTML=`<div class="av-preview" style="margin-bottom:12px"><div id="editAvSvg" class="av-circle"></div></div><div id="editAvControls"></div><button class="btn btn-primary" style="margin-top:14px" onclick="saveAvatar()">Guardar avatar</button>`;
   document.getElementById('overlay').style.display='flex';
   setAvEl(document.getElementById('editAvSvg'),editAv,90);
   buildAvControls('editAvControls',editAv,()=>setAvEl(document.getElementById('editAvSvg'),editAv,90));
 }
-
 async function saveAvatar(){
   const r=await api({action:'updateAvatar',payload:{nombre:me,pin:myPin,avatar:{...editAv}}});
   if(r.error)return toast(r.error);
-  state.jugadores=r.jugadores;
-  closeModal();toast('Avatar actualizado');refreshHero();
+  state.jugadores=r.jugadores;closeModal();toast('Avatar actualizado');refreshHero();
   if(currentTab==='ranking')renderRanking();
 }
 
@@ -631,7 +666,6 @@ function showTab(name){
   if(name==='ranking')renderRanking();
   if(name==='admin'){renderAdmin();renderAdminUsers();}
 }
-
 function setAdminTab(name,btn){
   adminTab=name;
   document.querySelectorAll('#adminTabs .fbtn').forEach(b=>b.classList.remove('on'));
@@ -639,160 +673,232 @@ function setAdminTab(name,btn){
   document.getElementById('admin-resultados').style.display=name==='resultados'?'block':'none';
   document.getElementById('admin-saldos').style.display=name==='saldos'?'block':'none';
   document.getElementById('admin-usuarios').style.display=name==='usuarios'?'block':'none';
-  if(name==='saldos'){
-    const sel=document.getElementById('adjJugador');
-    sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
-  }
+  if(name==='saldos'){const sel=document.getElementById('adjJugador');sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');}
   if(name==='usuarios')renderAdminUsers();
 }
-
 function renderFilters(id,active,cb){
   const grupos=['Todos',...new Set(state.partidos.map(p=>'Gr.'+p.grupo))];
   document.getElementById(id).innerHTML=grupos.map(g=>`<button class="fbtn${g===active?' on':''}" onclick="${cb}('${g}')">${g}</button>`).join('');
+}
+function setGrupoF(g){grupoF=g;renderPartidos();}
+function setAdminF(g){adminF=g;renderAdmin();}
+
+// ── COUNTDOWN ─────────────────────────────────────────────────
+function nextMatch(){return state.partidos.filter(p=>!state.resultados[p.id]&&p.kickoff>eNow()).sort((a,b)=>a.kickoff-b.kickoff)[0];}
+function fmtCountdown(ms){
+  if(ms<=0)return '¡Ya!';
+  const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),ss=s%60;
+  if(d>0)return `${d}d ${h}h ${m}m`;
+  if(h>0)return `${h}h ${m}m ${ss}s`;
+  return `${m}m ${ss}s`;
+}
+function renderCountdown(){
+  const box=document.getElementById('countdownBox');if(!box)return;
+  const n=nextMatch();
+  if(!n){box.innerHTML='';return;}
+  box.innerHTML=`<div class="countdown"><div><div class="cd-label">Próximo partido</div><div class="cd-match">${n.local} vs ${n.visita}</div></div><div class="cd-time">${fmtCountdown(n.kickoff-eNow())}<small>${n.fecha} · ${n.hora}</small></div></div>`;
 }
 
 // ── PARTIDOS ──────────────────────────────────────────────────
 function renderPartidos(){
   const j=state.jugadores[me];if(!j)return;
+  renderCountdown();
   renderFilters('grupoFilters',grupoF,'setGrupoF');
   const ps=grupoF==='Todos'?state.partidos:state.partidos.filter(p=>'Gr.'+p.grupo===grupoF);
-  const myAp={};Object.values(state.apuestas).forEach(a=>{if(a.nombre===me)myAp[a.partidoId]=a;});
   let html='',lastF='';
   ps.forEach((p,i)=>{
     if(p.fecha!==lastF){html+=`<div class="daylabel">${p.fecha}</div>`;lastF=p.fecha;}
-    html+=matchCard(p,state.resultados[p.id],myAp[p.id],i);
+    html+=matchCard(p,state.resultados[p.id],i);
   });
   document.getElementById('listaPartidos').innerHTML=html||'<div class="empty"><div class="emoji">⚽</div>No hay partidos</div>';
 }
-
-function matchCard(p,res,ap,i){
-  const lbl={local:p.local,empate:'Empate',visita:p.visita};
+function matchCard(p,res,i){
   const done=!!res;
-  let badge='';
-  if(res){
-    if(ap){badge=ap.pick===res?`<span class="rb rb-win">+$${Math.round(ap.monto*ap.momio).toLocaleString()} ✓</span>`:`<span class="rb rb-lose">−$${ap.monto.toLocaleString()} ✗</span>`;}
-    else badge=`<span class="rb rb-info">${lbl[res]}</span>`;
-  }
-  let picks='';
-  ['local','empate','visita'].forEach(k=>{
+  const locked=!done&&isLocked(p);
+  const mySimple={};
+  Object.values(state.apuestas).forEach(b=>{if(b.tipo!=='parlay'&&b.nombre===me&&b.partidoId===p.id)mySimple[b.mercado]=b;});
+  let meta;
+  if(done)meta=`<span class="rb rb-info">${res.gl} - ${res.gv}</span>`;
+  else if(locked)meta=`<span class="locktag">🔒 En juego</span>`;
+  else meta=`<span class="meta">Gr.${p.grupo} · ${p.hora}</span>`;
+  const o=done?outcomesClient(p,res):null;
+  const pk=(pick,label,momio,selClass)=>{
     let cls='pick';
-    if(ap&&ap.pick===k)cls+=' sel-'+k;
-    if(done){cls+=res===k?' win':' lose';}
-    picks+=`<div class="${cls}"${done?'':` onclick="openBet(${p.id},'${k}')"`}><div class="pt">${lbl[k]}</div><div class="pm">${p.momios[k]}x</div></div>`;
-  });
+    if(done)cls+=o[pick]?' win':' lose';
+    else if(locked)cls+=' locked';
+    else if(slipHas(p.id,pick))cls+=' '+selClass;
+    const onc=(done||locked)?'':` onclick="toggleSlip(${p.id},'${pick}',${momio})"`;
+    return `<div class="${cls}"${onc}><div class="pt">${label}</div><div class="pm">${momio}x</div></div>`;
+  };
+  const row1x2=`<div class="picks">${pk('local',p.local,p.momios.local,'sel-local')}${pk('empate','Empate',p.momios.empate,'sel-empate')}${pk('visita',p.visita,p.momios.visita,'sel-visita')}</div>`;
+  const rowou=`<div class="ou-label">Total goles · línea ${p.linea}</div><div class="ou-row">${pk('over','Over '+p.linea,p.momios.over,'sel-over')}${pk('under','Under '+p.linea,p.momios.under,'sel-under')}</div>`;
   let hint='';
-  if(!done&&ap){hint=`<div class="hint bet"><i class="ti ti-circle-check"></i> $${ap.monto.toLocaleString()} a ${lbl[ap.pick]} → $${Math.round(ap.monto*ap.momio).toLocaleString()}</div><button class="cancel-btn" onclick="cancelBet(${p.id})">Cancelar apuesta</button>`;}
-  else if(done&&ap){hint=`<div class="hint res">Tu pick: ${lbl[ap.pick]} · resultado: ${lbl[res]}</div>`;}
-  return `<div class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}" style="animation-delay:${i*.04}s">
-    <div class="match-top"><div class="teams">${p.local} vs ${p.visita}</div>${badge||`<span class="meta">Gr.${p.grupo} · ${p.hora}</span>`}</div>
-    <div class="picks">${picks}</div>${hint}
-  </div>`;
+  ['1x2','ou'].forEach(mk=>{
+    const b=mySimple[mk];if(!b)return;
+    const lbl=pickLabel(p,b.pick);
+    if(done){
+      const win=b.status==='won';
+      hint+=`<div class="hint" style="color:${win?'var(--green)':'var(--rl)'}">${win?'✓ Ganaste':'✗ Perdiste'} $${b.monto.toLocaleString()} · ${lbl}${win?' → +$'+Math.round(b.monto*b.momio).toLocaleString():''}</div>`;
+    }else{
+      hint+=`<div class="hint bet">🎫 $${b.monto.toLocaleString()} a ${lbl} → $${Math.round(b.monto*b.momio).toLocaleString()}${locked?'':` <button class="cancel-btn" onclick="cancelBet('${b.id}')">cancelar</button>`}</div>`;
+    }
+  });
+  return `<div class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}" style="animation-delay:${i*.03}s">
+    <div class="match-top"><div class="teams">${p.local} vs ${p.visita}</div>${meta}</div>
+    ${row1x2}${rowou}${hint}</div>`;
 }
 
-function setGrupoF(g){grupoF=g;renderPartidos();}
-function setAdminF(g){adminF=g;renderAdmin();}
-
-// ── MODAL APUESTA ─────────────────────────────────────────────
-function openBet(pid,pick){
-  const p=state.partidos.find(x=>x.id===pid);if(!p)return;
-  const j=state.jugadores[me];
-  const lbl={local:p.local,empate:'Empate',visita:p.visita};
-  pickP=pid;pickK=pick;
-  const mom=p.momios[pick];
-  document.getElementById('mTitle').textContent=`${p.local} vs ${p.visita}`;
-  document.getElementById('mBody').innerHTML=`
-    <p style="color:var(--muted);font-size:14px;margin-bottom:14px">Apuesta: <strong style="color:#fff">${lbl[pick]}</strong> · Momio <strong style="color:var(--green)">${mom}x</strong></p>
-    <div class="field"><label>Monto (saldo: $${Math.round(j.saldo).toLocaleString()})</label>
-      <input type="tel" id="betMonto" inputmode="numeric" placeholder="1000" oninput="betPreview(${mom})"></div>
-    <div class="quick-amts">
-      ${[500,1000,2000,5000].filter(v=>v<=j.saldo).map(v=>`<button onclick="setMonto(${v},${mom})">$${v.toLocaleString()}</button>`).join('')}
-      <button onclick="setMonto(${Math.round(j.saldo)},${mom})">Todo</button>
-    </div>
-    <div class="preview-box" id="betPrev"></div>
-    <button class="btn btn-primary" style="margin-top:8px" onclick="confirmBet()">Confirmar apuesta</button>`;
+// ── BETSLIP (cupón) ───────────────────────────────────────────
+function slipHas(pid,pick){return betslip.some(s=>s.partidoId===pid&&s.pick===pick);}
+function slipMomioTotal(){return betslip.reduce((a,s)=>a*s.momio,1);}
+function toggleSlip(pid,pick,momio){
+  const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick);
+  if(i>=0)betslip.splice(i,1);
+  else{const j=betslip.findIndex(s=>s.partidoId===pid);if(j>=0)betslip.splice(j,1);betslip.push({partidoId:pid,pick,momio});}
+  renderSlipBar();renderPartidos();
+}
+function removeSlip(pid,pick){
+  betslip=betslip.filter(s=>!(s.partidoId===pid&&s.pick===pick));
+  renderSlipBar();renderPartidos();
+  if(!betslip.length)closeModal();else openSlip();
+}
+function clearSlip(){betslip=[];renderSlipBar();}
+function renderSlipBar(){
+  const bar=document.getElementById('slipBar');if(!bar)return;
+  if(!betslip.length||isAdmin){bar.classList.add('hidden');return;}
+  bar.classList.remove('hidden');
+  document.getElementById('slipCount').textContent=betslip.length;
+  const tot=slipMomioTotal();
+  document.getElementById('slipMomio').textContent=betslip.length>1?('Parlay '+tot.toFixed(2)+'x →'):'Apostar →';
+}
+function openSlip(){
+  if(!betslip.length)return;
+  const j=state.jugadores[me];const isParlay=betslip.length>1;const min=state.apuesta_min||100;
+  let legs='';
+  betslip.forEach(s=>{const p=byId(s.partidoId);
+    legs+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${p.local} vs ${p.visita}</div><div class="sl-pick">${pickLabel(p,s.pick)} · ${s.momio}x</div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}')">×</button></div>`;});
+  const tot=slipMomioTotal();
+  document.getElementById('mTitle').innerHTML=isParlay?`Cupón <span class="parlay-tag">Parlay</span>`:'Tu apuesta';
+  document.getElementById('mBody').innerHTML=`${legs}
+    ${isParlay?`<div style="text-align:right;margin:10px 0;font-size:13px;color:var(--muted)">Momio combinado: <strong style="color:var(--al);font-size:17px">${tot.toFixed(2)}x</strong></div>`:''}
+    <div class="field" style="margin-top:12px"><label>Monto · saldo $${Math.round(j.saldo).toLocaleString()} · mín $${min}</label>
+      <input type="tel" id="slipMonto" inputmode="numeric" placeholder="${min}" oninput="slipPreview()"></div>
+    <div class="quick-amts">${[500,1000,2000,5000].filter(v=>v<=j.saldo).map(v=>`<button onclick="setSlipMonto(${v})">$${v.toLocaleString()}</button>`).join('')}<button onclick="setSlipMonto(${Math.round(j.saldo)})">Todo</button></div>
+    <div class="preview-box" id="slipPrev"></div>
+    <button class="btn btn-primary" style="margin-top:8px" onclick="confirmSlip()">${isParlay?'Apostar parlay':'Confirmar apuesta'}</button>`;
   document.getElementById('overlay').style.display='flex';
-  setTimeout(()=>document.getElementById('betMonto').focus(),250);
 }
-function setMonto(v,mom){document.getElementById('betMonto').value=v;betPreview(mom);}
-function betPreview(mom){
-  const v=parseInt(document.getElementById('betMonto').value);
-  const el=document.getElementById('betPrev');
+function setSlipMonto(v){document.getElementById('slipMonto').value=v;slipPreview();}
+function slipPreview(){
+  const v=parseInt(document.getElementById('slipMonto').value);
+  const el=document.getElementById('slipPrev');if(!el)return;
   if(!v||v<=0){el.style.display='none';return;}
-  const g=Math.round(v*mom);
+  const g=Math.round(v*slipMomioTotal());
   el.innerHTML=`Si ganas recibes <strong>$${g.toLocaleString()}</strong><br><span style="color:var(--muted)">Ganancia neta: +$${(g-v).toLocaleString()}</span>`;
   el.style.display='block';
 }
-function closeModal(){document.getElementById('overlay').style.display='none';}
-async function confirmBet(){
-  const monto=parseInt(document.getElementById('betMonto').value);
-  if(!monto||monto<=0)return toast('Monto inválido');
-  const r=await api({action:'apostar',payload:{nombre:me,partidoId:pickP,pick:pickK,monto}});
+async function confirmSlip(){
+  const monto=parseInt(document.getElementById('slipMonto').value);
+  const min=state.apuesta_min||100;
+  if(!monto||monto<min)return toast('Mínimo $'+min);
+  const isParlay=betslip.length>1;const tot=slipMomioTotal();
+  const legsTxt=betslip.map(s=>{const p=byId(s.partidoId);return `${pickLabel(p,s.pick)} (${p.local} v ${p.visita}) @${s.momio}`;}).join(' + ');
+  let r;
+  if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick})),monto}});
+  else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,monto}});}
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
-  closeModal();toast('¡Apuesta registrada! 🎯');refreshHero();renderPartidos();
+  const ticket=`🎯 Mi ${isParlay?'parlay':'pick'} en LudoPicks:\n${legsTxt}\n${isParlay?'Parlay '+tot.toFixed(2)+'x\n':''}$${monto.toLocaleString()} → posible $${Math.round(monto*tot).toLocaleString()}\nhttps://ludopicks.vercel.app`;
+  clearSlip();refreshHero();renderPartidos();fireConfetti();
+  document.getElementById('mTitle').textContent='¡Listo! 🎉';
+  document.getElementById('mBody').innerHTML=`<div style="text-align:center;padding:8px 0 4px"><div style="font-size:40px">🎯</div><p style="margin:10px 0;color:var(--muted)">Apuesta de <strong style="color:#fff">$${monto.toLocaleString()}</strong> registrada${isParlay?' (parlay '+tot.toFixed(2)+'x)':''}</p></div>
+    <button class="btn share-btn" style="width:100%;justify-content:center;margin-bottom:8px;padding:13px" onclick='shareText(${JSON.stringify(ticket)})'>📲 Compartir mi pick</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Listo</button>`;
 }
-async function cancelBet(pid){
-  const r=await api({action:'cancelar',payload:{nombre:me,partidoId:pid}});
+async function cancelBet(betId){
+  const r=await api({action:'cancelar',payload:{nombre:me,betId}});
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
   toast('Apuesta cancelada');refreshHero();renderPartidos();
 }
 
 // ── MIS PICKS ─────────────────────────────────────────────────
+function betTicketText(b){
+  if(b.tipo==='parlay'){const legs=b.legs.map(l=>{const p=byId(l.partidoId);return pickLabel(p,l.pick)+' ('+p.local+' v '+p.visita+')';}).join(' + ');
+    return `🎯 Mi parlay en LudoPicks (${b.momioTotal.toFixed(2)}x):\n${legs}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momioTotal).toLocaleString()}\nhttps://ludopicks.vercel.app`;}
+  const p=byId(b.partidoId);return `🎯 Mi pick en LudoPicks:\n${pickLabel(p,b.pick)} en ${p.local} vs ${p.visita} @${b.momio}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momio).toLocaleString()}\nhttps://ludopicks.vercel.app`;
+}
+function legResIcon(l){const r=state.resultados[l.partidoId];if(!r)return ['•','var(--muted2)'];const p=byId(l.partidoId);return outcomesClient(p,r)[l.pick]?['✓','var(--green)']:['✗','var(--rl)'];}
+function betCard(b){
+  const st=b.status||'pending';
+  const isP=b.tipo==='parlay';
+  const factor=isP?b.momioTotal:b.momio;
+  const right=st==='won'?`<div class="ap-g win">+$${Math.round(b.monto*factor).toLocaleString()}</div>`
+    :st==='lost'?`<div class="ap-g loss">−$${b.monto.toLocaleString()}</div>`
+    :`<div class="ap-g pend">→ $${Math.round(b.monto*factor).toLocaleString()}</div>`;
+  let head,body='';
+  if(isP){
+    head=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span>`;
+    body=b.legs.map(l=>{const p=byId(l.partidoId);const[ic,col]=legResIcon(l);
+      return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${p.local} v ${p.visita} · ${pickLabel(p,l.pick)}</span><span style="color:${col};font-weight:700">${ic} ${l.momio}x</span></div>`;}).join('');
+  }else{
+    const p=byId(b.partidoId);
+    head=`<span style="font-weight:700;font-size:14px">${p.local} vs ${p.visita}</span> <span style="color:var(--muted2);font-size:11px">${p.fecha}</span>`;
+    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick)} · ${b.momio}x</div>`;
+  }
+  const canShare=st==='pending';
+  return `<div class="info-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="flex:1">${head}</div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div>${right}</div></div>${body}
+    ${canShare?`<button class="share-btn" style="margin-top:10px" onclick='shareText(${JSON.stringify(betTicketText(b))})'>📲 Compartir</button>`:''}</div>`;
+}
 function renderMis(){
-  const j=state.jugadores[me];
-  const mine=Object.values(state.apuestas).filter(a=>a.nombre===me);
-  if(!mine.length){document.getElementById('listaMis').innerHTML='<div class="empty"><div class="emoji">🎟️</div>Aún no tienes apuestas.</div>';return;}
-  const pend=mine.filter(a=>!state.resultados[a.partidoId]);
-  const liq=mine.filter(a=>state.resultados[a.partidoId]);
+  const mine=Object.values(state.apuestas).filter(b=>b.nombre===me).sort((a,b)=>b.ts-a.ts);
+  if(!mine.length){document.getElementById('listaMis').innerHTML='<div class="empty"><div class="emoji">🎟️</div>Aún no tienes apuestas.<br>Ve a Partidos y arma tu cupón.</div>';return;}
+  const pend=mine.filter(b=>(b.status||'pending')==='pending');
+  const liq=mine.filter(b=>b.status==='won'||b.status==='lost');
   let html='',tAp=0,tBal=0;
-  if(pend.length){
-    html+=`<div class="sec-title">Pendientes (${pend.length})</div><div class="info-card">`;
-    pend.forEach(ap=>{const p=state.partidos.find(x=>x.id===ap.partidoId);const lbl={local:p.local,empate:'Empate',visita:p.visita};const pot=Math.round(ap.monto*ap.momio);tAp+=ap.monto;
-      html+=`<div class="ap-row"><div><div class="ap-p">${p.local} vs ${p.visita}</div><div class="ap-d">${lbl[ap.pick]} · ${ap.momio}x · ${p.fecha}</div></div>
-        <div class="ap-r"><div class="ap-m">$${ap.monto.toLocaleString()}</div><div class="ap-g pend">→ $${pot.toLocaleString()}</div></div></div>`;});
-    html+='</div>';
-  }
-  if(liq.length){
-    html+=`<div class="sec-title">Liquidadas (${liq.length})</div><div class="info-card">`;
-    liq.forEach(ap=>{const p=state.partidos.find(x=>x.id===ap.partidoId);const res=state.resultados[ap.partidoId];const win=ap.pick===res;const lbl={local:p.local,empate:'Empate',visita:p.visita};
-      if(win)tBal+=Math.round(ap.monto*(ap.momio-1));else tBal-=ap.monto;
-      html+=`<div class="ap-row"><div><div class="ap-p">${p.local} vs ${p.visita}</div><div class="ap-d">${lbl[ap.pick]} · ${ap.momio}x</div></div>
-        <div class="ap-r"><div class="ap-m">$${ap.monto.toLocaleString()}</div><div class="ap-g ${win?'win':'loss'}">${win?'+$'+Math.round(ap.monto*(ap.momio-1)).toLocaleString():'−$'+ap.monto.toLocaleString()}</div></div></div>`;});
-    html+='</div>';
-  }
+  pend.forEach(b=>tAp+=b.monto);
+  liq.forEach(b=>{const f=b.tipo==='parlay'?b.momioTotal:b.momio;if(b.status==='won')tBal+=Math.round(b.monto*(f-1));else tBal-=b.monto;});
+  if(pend.length){html+=`<div class="sec-title">Pendientes (${pend.length})</div>`+pend.map(betCard).join('');}
+  if(liq.length){html+=`<div class="sec-title">Liquidadas (${liq.length})</div>`+liq.map(betCard).join('');}
   html+=`<div class="info-card" style="background:rgba(255,255,255,.04)">
-    <div class="ap-row" style="border:none;padding:4px 0"><span style="color:var(--muted)">Total apostado</span><strong>$${tAp.toLocaleString()}</strong></div>
-    <div class="ap-row" style="border:none;padding:4px 0"><span style="color:var(--muted)">Balance liquidado</span>
-      <strong style="color:${tBal>=0?'var(--green)':'var(--rl)'}">${tBal>=0?'+':'−'}$${Math.abs(tBal).toLocaleString()}</strong></div></div>`;
+    <div class="ap-row" style="border:none;padding:4px 0"><span style="color:var(--muted)">Apostado pendiente</span><strong>$${tAp.toLocaleString()}</strong></div>
+    <div class="ap-row" style="border:none;padding:4px 0"><span style="color:var(--muted)">Balance liquidado</span><strong style="color:${tBal>=0?'var(--green)':'var(--rl)'}">${tBal>=0?'+':'−'}$${Math.abs(tBal).toLocaleString()}</strong></div></div>`;
   document.getElementById('listaMis').innerHTML=html;
 }
 
 // ── RANKING ───────────────────────────────────────────────────
+function shareRanking(){
+  const js=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo);
+  const medal=['🥇','🥈','🥉'];
+  const lines=js.map((p,i)=>`${i<3?medal[i]:(i+1)+'.'} ${p.nombre} — $${Math.round(p.saldo).toLocaleString()}`).join('\n');
+  shareText(`🏆 Ranking LudoPicks · Mundial 2026\n\n${lines}\n\n¿Le entras? https://ludopicks.vercel.app`);
+}
 function renderRanking(){
   const js=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo);
   if(!js.length){document.getElementById('listaRanking').innerHTML='<div class="empty"><div class="emoji">🏆</div>Nadie se ha registrado.</div>';return;}
+  const prev=state.rankPrev||{};
   const top3=js.slice(0,3);
   const order=[top3[1],top3[0],top3[2]].filter(Boolean);
   const pc=p=>p===top3[0]?'p1':p===top3[1]?'p2':'p3';
   const md=p=>p===top3[0]?'🥇':p===top3[1]?'🥈':'🥉';
   let pod='<div class="podium">';
-  order.forEach((p,i)=>{pod+=`<div class="pod ${pc(p)}" style="animation-delay:${i*.15}s">
-    <div class="av">${buildAvSvg(p.avatar,pc(p)==='p1'?56:46)}</div>
-    <div class="nm">${p.nombre}</div><div class="sl">$${Math.round(p.saldo).toLocaleString()}</div>
-    <div class="bar">${md(p)}</div></div>`;});
+  order.forEach((p,i)=>{pod+=`<div class="pod ${pc(p)}" style="animation-delay:${i*.15}s"><div class="av">${buildAvSvg(p.avatar,pc(p)==='p1'?56:46)}</div><div class="nm">${p.nombre}</div><div class="sl">$${Math.round(p.saldo).toLocaleString()}</div><div class="bar">${md(p)}</div></div>`;});
   pod+='</div>';
+  pod+=`<div style="text-align:center;margin-bottom:12px"><button class="share-btn" onclick="shareRanking()">📲 Compartir ranking</button></div>`;
   let list='<div class="sec-title">Tabla completa</div><div class="rank-list">';
-  js.forEach((p,i)=>{const d=p.saldo-state.saldo_inicial;
+  js.forEach((p,i)=>{
+    const d=p.saldo-state.saldo_inicial;
+    const pos=i+1;const pp=prev[p.nombre];
+    let mov='';
+    if(pp){const ch=pp-pos;mov=ch>0?`<span style="color:var(--green);font-size:10px"> ▲${ch}</span>`:ch<0?`<span style="color:var(--rl);font-size:10px"> ▼${-ch}</span>`:`<span style="color:var(--muted2);font-size:10px"> =</span>`;}
     list+=`<div class="rank-row${p.nombre===me?' me':''}">
       <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid var(--line2)">${buildAvSvg(p.avatar,36)}</div>
-      <div class="rank-pos">${i<3?md(p):'#'+(i+1)}</div>
+      <div class="rank-pos">${i<3?md(p):'#'+pos}${mov}</div>
       <div class="rank-nm">${p.nombre}${p.nombre===me?'<span class="yt">TÚ</span>':''}</div>
       <div class="rank-vals"><div class="rank-sd">$${Math.round(p.saldo).toLocaleString()}</div>
         <div class="rank-dl ${d>0?'up':d<0?'dn':'even'}">${d>0?'▲ +':d<0?'▼ −':''}${d===0?'—':'$'+Math.abs(Math.round(d)).toLocaleString()}</div></div></div>`;});
   list+='</div>';
-  list+=`<div class="info-card" style="margin-top:12px;background:rgba(255,255,255,.04)">
-    <span style="color:var(--muted);font-size:13px">Partidos liquidados: <strong style="color:#fff">${Object.keys(state.resultados).length}/${state.partidos.length}</strong></span></div>`;
+  list+=`<div class="info-card" style="margin-top:12px;background:rgba(255,255,255,.04)"><span style="color:var(--muted);font-size:13px">Partidos liquidados: <strong style="color:#fff">${Object.keys(state.resultados).length}/${state.partidos.length}</strong></span></div>`;
   document.getElementById('listaRanking').innerHTML=pod+list;
 }
 
@@ -804,72 +910,117 @@ function renderAdmin(){
   ps.forEach(p=>{
     if(p.fecha!==lastF){html+=`<div style="font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;padding:8px 0 4px">${p.fecha}</div>`;lastF=p.fecha;}
     const res=state.resultados[p.id];
-    html+=`<div class="admin-match"><div><span style="font-weight:700;font-size:14px">${p.local} vs ${p.visita}</span> <span style="color:var(--muted2);font-size:11px">Gr.${p.grupo}</span></div>
-      <div class="rbtns">${res
-        ?`<span class="rb rb-info">${{local:p.local,empate:'Empate',visita:p.visita}[res]}</span><button class="rbtn" onclick="verApuestas(${p.id},'${p.local} vs ${p.visita}')" style="font-size:11px">👁</button>`
-        :`<button class="rbtn local" onclick="setRes(${p.id},'local')">${p.local}</button>
-          <button class="rbtn empate" onclick="setRes(${p.id},'empate')">Emp</button>
-          <button class="rbtn visita" onclick="setRes(${p.id},'visita')">${p.visita}</button>
-          <button class="rbtn" onclick="verApuestas(${p.id},'${p.local} vs ${p.visita}')" style="font-size:11px">👁</button>`}</div></div>`;
+    html+=`<div class="admin-match"><div><span style="font-weight:700;font-size:14px">${p.local} vs ${p.visita}</span> <span style="color:var(--muted2);font-size:11px">Gr.${p.grupo} · ${p.hora}</span></div><div class="rbtns">`;
+    if(res){
+      html+=`<span class="rb rb-info">${res.gl} - ${res.gv}</span>
+        <button class="rbtn local" onclick="openScore(${p.id})">✏️ Corregir</button>
+        <button class="rbtn visita" onclick="revertir(${p.id})">↩</button>
+        <button class="rbtn" onclick="verApuestas(${p.id})">👁</button>`;
+    }else{
+      html+=`<button class="rbtn local" onclick="openScore(${p.id})">⚽ Marcador</button>
+        <button class="rbtn" onclick="verApuestas(${p.id})">👁</button>`;
+    }
+    html+=`</div></div>`;
   });
   html+='</div>';
   document.getElementById('listaAdmin').innerHTML=html;
 }
-
+function openScore(pid){
+  const p=byId(pid);const res=state.resultados[pid];
+  document.getElementById('mTitle').textContent=`${p.local} vs ${p.visita}`;
+  document.getElementById('mBody').innerHTML=`
+    <div class="score-entry">
+      <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700">${p.local}</div><input class="score-in" id="scoreL" type="tel" inputmode="numeric" maxlength="2" value="${res?res.gl:''}" oninput="scorePreview(${pid})"></div>
+      <span class="score-x">−</span>
+      <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700">${p.visita}</div><input class="score-in" id="scoreV" type="tel" inputmode="numeric" maxlength="2" value="${res?res.gv:''}" oninput="scorePreview(${pid})"></div>
+    </div>
+    <div class="derived" id="scoreDerived"></div>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="saveScore(${pid})">${res?'Corregir resultado':'Guardar resultado'}</button>
+    ${res?`<button class="btn btn-danger btn-sm" style="width:100%;margin-top:8px" onclick="revertir(${pid})">↩ Revertir (dejar pendiente)</button>`:''}`;
+  document.getElementById('overlay').style.display='flex';
+  scorePreview(pid);
+}
+function scorePreview(pid){
+  const p=byId(pid);
+  const gl=parseInt(document.getElementById('scoreL').value),gv=parseInt(document.getElementById('scoreV').value);
+  const el=document.getElementById('scoreDerived');
+  if(isNaN(gl)||isNaN(gv)){el.innerHTML='Ingresa el marcador para ver qué se liquida.';return;}
+  const o=outcomesClient(p,{gl,gv});
+  const r1=o.local?p.local+' gana':o.empate?'Empate':p.visita+' gana';
+  el.innerHTML=`Se liquidará → <b>${r1}</b> &nbsp;·&nbsp; ${gl+gv} goles = <b>${o.over?'Over':'Under'} ${p.linea}</b>`;
+}
+async function saveScore(pid){
+  const gl=parseInt(document.getElementById('scoreL').value),gv=parseInt(document.getElementById('scoreV').value);
+  if(isNaN(gl)||isNaN(gv)||gl<0||gv<0)return toast('Marcador inválido');
+  if(state.resultados[pid]){
+    const rv=await api({action:'revertirResultado',payload:{adminKey,partidoId:pid}});
+    if(rv.error)return toast(rv.error);
+    state.resultados=rv.resultados;state.jugadores=rv.jugadores;state.apuestas=rv.apuestas;
+  }
+  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,gl,gv}});
+  if(r.error)return toast(r.error);
+  state.resultados=r.resultados;state.jugadores=r.jugadores;state.apuestas=r.apuestas;
+  closeModal();toast('Resultado guardado ✓');renderAdmin();
+}
+async function revertir(pid){
+  if(!confirm('¿Revertir el resultado? Se deshacen los pagos de ese partido y las apuestas vuelven a pendientes.'))return;
+  const r=await api({action:'revertirResultado',payload:{adminKey,partidoId:pid}});
+  if(r.error)return toast(r.error);
+  state.resultados=r.resultados;state.jugadores=r.jugadores;state.apuestas=r.apuestas;
+  closeModal();toast('Resultado revertido');renderAdmin();
+}
+async function verApuestas(pid){
+  const r=await api({action:'verApuestas',payload:{adminKey,partidoId:pid}});
+  if(r.error)return toast(r.error);
+  const p=byId(pid);const aps=r.apuestas;
+  let html='';
+  if(!aps.length)html='<div class="empty" style="padding:20px">Nadie apostó en este partido.</div>';
+  else{
+    const tot=aps.reduce((s,a)=>s+a.monto,0);
+    html=`<div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px;color:var(--muted)"><span>${aps.length} apuesta${aps.length!==1?'s':''}</span><span>Total: $${tot.toLocaleString()}</span></div>`;
+    aps.forEach(b=>{
+      if(b.tipo==='parlay'){const l=b.legs.find(x=>x.partidoId===pid);
+        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre} <span class="parlay-tag">Parlay</span></div><div class="ap-d">${pickLabel(p,l.pick)} · leg ${l.momio}x</div></div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">${b.momioTotal.toFixed(2)}x total</div></div></div>`;
+      }else{
+        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre}</div><div class="ap-d">${pickLabel(p,b.pick)} · ${b.momio}x</div></div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">→ $${Math.round(b.monto*b.momio).toLocaleString()}</div></div></div>`;
+      }
+    });
+  }
+  document.getElementById('mTitle').textContent='👁 '+p.local+' vs '+p.visita;
+  document.getElementById('mBody').innerHTML=html+`<button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`;
+  document.getElementById('overlay').style.display='flex';
+}
 async function renderAdminUsers(){
   const r=await api({action:'adminGetUsers',payload:{adminKey}});
   if(r.error)return;
   const users=r.users||[];
   let html='';
-  if(!users.length){html='<div class="empty"><div class="emoji">👥</div>No hay jugadores registrados.</div>';}
-  else{
-    html='<div class="info-card">';
-    users.forEach(u=>{
-      html+=`<div class="user-row">
-        <div class="user-av">${buildAvSvg(u.avatar,36)}</div>
-        <div class="user-info">
-          <div class="user-name">${u.nombre}</div>
-          <div class="user-saldo">$${Math.round(u.saldo).toLocaleString()} · PIN: ${u.pin}</div>
-        </div>
-        <div class="user-actions">
-          <button class="ua-btn" onclick="adminRenombrar('${u.nombre.replace(/'/g,"\\'")}')">✏️</button>
-          <button class="ua-btn" onclick="adminResetPin('${u.nombre.replace(/'/g,"\\'")}')">🔑</button>
-          <button class="ua-btn danger" onclick="adminBorrar('${u.nombre.replace(/'/g,"\\'")}')">🗑️</button>
-        </div>
-      </div>`;
-    });
-    html+='</div>';
-  }
+  if(!users.length)html='<div class="empty"><div class="emoji">👥</div>No hay jugadores.</div>';
+  else{html='<div class="info-card">';
+    users.forEach(u=>{html+=`<div class="user-row"><div class="user-av">${buildAvSvg(u.avatar,36)}</div><div class="user-info"><div class="user-name">${u.nombre}</div><div class="user-saldo">$${Math.round(u.saldo).toLocaleString()} · PIN: ${u.pin}</div></div><div class="user-actions">
+      <button class="ua-btn" onclick="adminRenombrar('${u.nombre.replace(/'/g,"\\'")}')">✏️</button>
+      <button class="ua-btn" onclick="adminResetPin('${u.nombre.replace(/'/g,"\\'")}')">🔑</button>
+      <button class="ua-btn danger" onclick="adminBorrar('${u.nombre.replace(/'/g,"\\'")}')">🗑️</button></div></div>`;});
+    html+='</div>';}
   document.getElementById('listaUsuariosAdmin').innerHTML=html;
 }
-
 function adminRenombrar(nombre){
   document.getElementById('mTitle').textContent='Renombrar jugador';
-  document.getElementById('mBody').innerHTML=`
-    <p style="color:var(--muted);font-size:14px;margin-bottom:14px">Cambia el nombre de <strong>${nombre}</strong></p>
-    <div class="field"><label>Nuevo nombre</label><input id="nuevoNombre" type="text" maxlength="18" placeholder="${nombre}" value="${nombre}"></div>
-    <button class="btn btn-primary" onclick="doRenombrar('${nombre.replace(/'/g,"\\'")}')">Guardar</button>`;
+  document.getElementById('mBody').innerHTML=`<p style="color:var(--muted);font-size:14px;margin-bottom:14px">Cambia el nombre de <strong>${nombre}</strong></p><div class="field"><label>Nuevo nombre</label><input id="nuevoNombre" type="text" maxlength="18" value="${nombre}"></div><button class="btn btn-primary" onclick="doRenombrar('${nombre.replace(/'/g,"\\'")}')">Guardar</button>`;
   document.getElementById('overlay').style.display='flex';
 }
-
 async function doRenombrar(viejo){
   const nuevo=document.getElementById('nuevoNombre').value.trim();
   if(!nuevo)return toast('Escribe un nombre');
   const r=await api({action:'renombrar',payload:{adminKey,nombreViejo:viejo,nombreNuevo:nuevo}});
   if(r.error)return toast(r.error);
-  state.jugadores=r.jugadores;
-  closeModal();toast('Nombre actualizado');renderAdminUsers();
+  state.jugadores=r.jugadores;closeModal();toast('Nombre actualizado');renderAdminUsers();
 }
-
 function adminResetPin(nombre){
   document.getElementById('mTitle').textContent='Resetear PIN';
-  document.getElementById('mBody').innerHTML=`
-    <p style="color:var(--muted);font-size:14px;margin-bottom:14px">Nuevo PIN para <strong>${nombre}</strong></p>
-    <div class="field"><input id="nuevoPin" class="pin-input" type="tel" inputmode="numeric" maxlength="4" placeholder="••••"></div>
-    <button class="btn btn-amber" onclick="doResetPin('${nombre.replace(/'/g,"\\'")}')">Cambiar PIN</button>`;
+  document.getElementById('mBody').innerHTML=`<p style="color:var(--muted);font-size:14px;margin-bottom:14px">Nuevo PIN para <strong>${nombre}</strong></p><div class="field"><input id="nuevoPin" class="pin-input" type="tel" inputmode="numeric" maxlength="4" placeholder="••••"></div><button class="btn btn-amber" onclick="doResetPin('${nombre.replace(/'/g,"\\'")}')">Cambiar PIN</button>`;
   document.getElementById('overlay').style.display='flex';
 }
-
 async function doResetPin(nombre){
   const pin=document.getElementById('nuevoPin').value;
   if(!/^\d{4}$/.test(pin))return toast('PIN debe ser 4 dígitos');
@@ -877,45 +1028,13 @@ async function doResetPin(nombre){
   if(r.error)return toast(r.error);
   closeModal();toast(`PIN de ${nombre} actualizado`);renderAdminUsers();
 }
-
 function adminBorrar(nombre){
-  if(!confirm(`¿Borrar a ${nombre}? Se eliminarán también todas sus apuestas.`))return;
+  if(!confirm(`¿Borrar a ${nombre}? Se eliminan también sus apuestas.`))return;
   api({action:'borrarJugador',payload:{adminKey,nombre}}).then(r=>{
     if(r.error)return toast(r.error);
-    state.jugadores=r.jugadores;
-    toast(`${nombre} eliminado`);renderAdminUsers();
+    state.jugadores=r.jugadores;toast(`${nombre} eliminado`);renderAdminUsers();
   });
 }
-
-async function setRes(pid,res){
-  const p=state.partidos.find(x=>x.id===pid);
-  const lbl={local:p.local,empate:'Empate',visita:p.visita}[res];
-  if(!confirm(`¿Confirmar: ${p.local} vs ${p.visita} → ${lbl}?`))return;
-  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,resultado:res}});
-  if(r.error)return toast(r.error);
-  state.resultados=r.resultados;state.jugadores=r.jugadores;
-  toast('Resultado guardado: '+lbl);renderAdmin();
-}
-
-async function verApuestas(pid,titulo){
-  const r=await api({action:'verApuestas',payload:{adminKey,partidoId:pid}});
-  if(r.error)return toast(r.error);
-  const aps=r.apuestas;
-  const lbl={local:'Local',empate:'Empate',visita:'Visitante'};
-  let html='';
-  if(!aps.length){html='<div class="empty" style="padding:20px">Nadie apostó en este partido</div>';}
-  else{
-    const tot=aps.reduce((s,a)=>s+a.monto,0);
-    html=`<div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px;color:var(--muted)"><span>${aps.length} apuesta${aps.length!==1?'s':''}</span><span>Total: $${tot.toLocaleString()}</span></div>`;
-    aps.forEach(ap=>{const pc=ap.pick==='local'?'var(--green)':ap.pick==='empate'?'var(--al)':'var(--rl)';
-      html+=`<div class="ap-row"><div><div class="ap-p">${ap.nombre}</div><div class="ap-d" style="color:${pc}">${lbl[ap.pick]} · ${ap.momio}x</div></div>
-        <div class="ap-r"><div class="ap-m">$${ap.monto.toLocaleString()}</div><div class="ap-g pend">→ $${Math.round(ap.monto*ap.momio).toLocaleString()}</div></div></div>`;});
-  }
-  document.getElementById('mTitle').textContent='👁 '+titulo;
-  document.getElementById('mBody').innerHTML=html+`<button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`;
-  document.getElementById('overlay').style.display='flex';
-}
-
 async function doBonusTodos(sign){
   const monto=parseInt(document.getElementById('bonusMonto').value);
   if(!monto||monto<=0)return toast('Ingresa un monto');
@@ -923,7 +1042,6 @@ async function doBonusTodos(sign){
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;toast(sign>0?`+$${monto.toLocaleString()} a todos`:`−$${monto.toLocaleString()} a todos`);
 }
-
 async function doAjuste(sign){
   const nombre=document.getElementById('adjJugador').value;
   const monto=parseInt(document.getElementById('adjMonto').value);
@@ -933,47 +1051,62 @@ async function doAjuste(sign){
   state.jugadores=r.jugadores;toast(`Saldo de ${nombre} ajustado`);
   setAdminTab('saldos',document.getElementById('atab-saldos'));
 }
-
 async function resetTodo(){
   if(!confirm('¿Borrar TODO?'))return;
   if(!confirm('¿Seguro? No se puede deshacer.'))return;
   const r=await api({action:'reset',payload:{adminKey}});
   if(r.error)return toast(r.error);
-  await loadState();toast('Reset completado');renderAdmin();
+  await loadState();toast('Reset completado');renderAdmin();renderAdminUsers();
 }
 
+// ── HELPERS ───────────────────────────────────────────────────
+function closeModal(){document.getElementById('overlay').style.display='none';}
+function modalOpen(){return document.getElementById('overlay').style.display==='flex';}
+function shareText(text){
+  if(navigator.share){navigator.share({text}).catch(()=>{});}
+  else{window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');}
+}
 let toastT;
 function toast(msg){
   const el=document.getElementById('toast');
   el.textContent=msg;el.classList.add('show');
-  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2500);
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600);
 }
 function fireConfetti(){
   if(typeof confetti==='undefined')return;
   confetti({particleCount:120,spread:75,origin:{y:.6},colors:['#5DCAA5','#FAC775','#185FA5','#fff']});
 }
 
-function modalOpen(){return document.getElementById('overlay').style.display==='flex';}
-
+// ── POLLING ───────────────────────────────────────────────────
 async function poll(){
-  if((!me&&!isAdmin))return;
-  if(document.hidden)return;        // no malgastar datos si la pestaña no está visible
-  if(modalOpen())return;            // no refrescar mientras el usuario apuesta/edita
-  const prev=state.jugadores[me]?.saldo;
+  if(!me&&!isAdmin)return;
+  if(document.hidden||modalOpen())return;
+  const prevSaldo=state.jugadores[me]?.saldo;
+  const prevRes=Object.keys(state.resultados||{});
   await loadState();
-  if(me&&prev!==undefined&&state.jugadores[me]&&state.jugadores[me].saldo>prev){
-    fireConfetti();toast('¡Ganaste una apuesta! 🎉');
-  }
+  const newRes=Object.keys(state.resultados||{}).filter(id=>!prevRes.includes(id));
+  if(newRes.length&&me){newRes.forEach(id=>{const p=byId(+id);const r=state.resultados[id];if(p)toast(`Liquidado: ${p.local} ${r.gl}-${r.gv} ${p.visita}`);});}
+  if(me&&prevSaldo!==undefined&&state.jugadores[me]&&state.jugadores[me].saldo>prevSaldo)fireConfetti();
   refreshHero();
   if(currentTab==='partidos')renderPartidos();
   if(currentTab==='ranking')renderRanking();
   if(currentTab==='mis')renderMis();
+  if(currentTab==='admin'&&isAdmin)renderAdmin();
 }
 setInterval(poll,20000);
-// Refresca al instante cuando el usuario regresa a la pestaña
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});
+
+// Countdown tick (1s) — barato; re-render de partidos solo si cambia el próximo
+let cdLastNext=null;
+setInterval(()=>{
+  if(isAdmin||!me||currentTab!=='partidos')return;
+  renderCountdown();
+  const n=nextMatch();const id=n?n.id:null;
+  if(id!==cdLastNext){cdLastNext=id;renderPartidos();}
+},1000);
 
 init();
 </script>
-</body>
-</html>
+
+
+</body></html>
