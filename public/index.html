@@ -516,6 +516,8 @@ async function loadState(){
     if(!r.ok)throw new Error('http '+r.status);
     state=await r.json();
     if(state.now)serverOffset=state.now-Date.now();
+    // Apuestas viejas pueden no tener "id"; usar su clave de KV como id
+    if(state.apuestas)for(const [k,b] of Object.entries(state.apuestas)){if(b&&!b.id)b.id=k;}
     loadFailed=false;
   }catch(e){loadFailed=true;console.error('loadState falló:',e);}
 }
@@ -1023,16 +1025,26 @@ async function verApuestas(pid){
     const tot=aps.reduce((s,a)=>s+a.monto,0);
     html=`<div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px;color:var(--muted)"><span>${aps.length} apuesta${aps.length!==1?'s':''}</span><span>Total: $${tot.toLocaleString()}</span></div>`;
     aps.forEach(b=>{
+      const estado=b.status==='won'?'<span style="color:var(--green);font-size:11px;font-weight:700"> · ganó</span>':b.status==='lost'?'<span style="color:var(--rl);font-size:11px;font-weight:700"> · perdió</span>':'';
+      const del=`<button class="ua-btn danger" style="margin-left:8px" onclick="adminBorrarApuesta('${b._key}',${pid})">🗑️</button>`;
       if(b.tipo==='parlay'){const l=b.legs.find(x=>x.partidoId===pid);
-        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre} <span class="parlay-tag">Parlay</span></div><div class="ap-d">${pickLabel(p,l.pick,l.linea)} · leg ${l.momio}x</div></div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">${b.momioTotal.toFixed(2)}x total</div></div></div>`;
+        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre} <span class="parlay-tag">Parlay</span>${estado}</div><div class="ap-d">${pickLabel(p,l.pick,l.linea)} · leg ${l.momio}x</div></div><div class="ap-r" style="display:flex;align-items:center"><div><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">${b.momioTotal.toFixed(2)}x total</div></div>${del}</div></div>`;
       }else{
-        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre}</div><div class="ap-d">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x</div></div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">→ $${Math.round(b.monto*b.momio).toLocaleString()}</div></div></div>`;
+        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre}${estado}</div><div class="ap-d">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x</div></div><div class="ap-r" style="display:flex;align-items:center"><div><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">→ $${Math.round(b.monto*b.momio).toLocaleString()}</div></div>${del}</div></div>`;
       }
     });
   }
   document.getElementById('mTitle').textContent='👁 '+p.local+' vs '+p.visita;
   document.getElementById('mBody').innerHTML=html+`<button class="btn btn-ghost" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`;
   document.getElementById('overlay').style.display='flex';
+}
+async function adminBorrarApuesta(key,pid){
+  if(!confirm('¿Borrar esta apuesta? Se le devuelve el saldo al jugador como si nunca hubiera apostado.'))return;
+  const r=await api({action:'borrarApuesta',payload:{adminKey,key}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;state.apuestas=r.apuestas;
+  toast('Apuesta borrada');
+  verApuestas(pid);
 }
 async function renderAdminUsers(){
   const r=await api({action:'adminGetUsers',payload:{adminKey}});
