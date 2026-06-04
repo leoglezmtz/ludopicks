@@ -337,6 +337,7 @@ select option{background:#161c30;color:#fff}
         <button class="fbtn on" id="atab-resultados" onclick="setAdminTab('resultados',this)">Resultados</button>
         <button class="fbtn" id="atab-saldos" onclick="setAdminTab('saldos',this)">Saldos</button>
         <button class="fbtn" id="atab-usuarios" onclick="setAdminTab('usuarios',this)">Usuarios</button>
+        <button class="fbtn" id="atab-notif" onclick="setAdminTab('notif',this)">📣 Push</button>
       </div>
       <div id="admin-resultados"><div class="filters" id="adminFilters"></div><div id="listaAdmin"></div></div>
       <div id="admin-saldos" style="display:none">
@@ -361,6 +362,23 @@ select option{background:#161c30;color:#fff}
         </div>
       </div>
       <div id="admin-usuarios" style="display:none"><div id="listaUsuariosAdmin"></div></div>
+      <div id="admin-notif" style="display:none">
+        <div class="sec-title">Enviar notificación a todos</div>
+        <div class="info-card">
+          <div class="field" style="margin-bottom:10px">
+            <label>Título</label>
+            <input id="pushTitulo" type="text" maxlength="50" placeholder="🔥 ¡Último día para apostar!">
+          </div>
+          <div class="field">
+            <label>Mensaje</label>
+            <input id="pushMensaje" type="text" maxlength="120" placeholder="No te quedes sin pick en el partido de hoy">
+          </div>
+          <button class="btn btn-primary" onclick="doSendPush()">📣 Enviar a todos</button>
+        </div>
+        <div class="info-card" style="background:rgba(255,255,255,.04);font-size:13px;color:var(--muted)">
+          Solo llega a jugadores que aceptaron notificaciones en su cel. En iOS requiere haber agregado la app a la pantalla de inicio.
+        </div>
+      </div>
       <button class="btn btn-danger btn-sm" style="width:100%;margin-top:16px" onclick="resetTodo()">⚠️ Reset total</button>
     </div>
     <div style="text-align:center;margin-top:20px"><span class="back-link" onclick="logout()">Cerrar sesión</span></div>
@@ -381,6 +399,29 @@ select option{background:#161c30;color:#fff}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
 <script>
 const API='/api/game';
+const VAPID_PUB='BBfvzMFV8QP3kMpdUrX8lF0SIlkriKUdpwLrWEctyN4YVM8HLxyvK8Mm59sGXgMVpgvlFdiB67tdB1Z2YQQeluU';
+
+// ── SERVICE WORKER + PUSH ─────────────────────────────────────
+async function registerSW(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  try{await navigator.serviceWorker.register('/sw.js');}catch(e){}
+}
+function urlBase64ToUint8(b64){
+  const p=b64.replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(p);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+}
+async function subscribePush(nombre){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted')return;
+    const sw=await navigator.serviceWorker.ready;
+    let sub=await sw.pushManager.getSubscription();
+    if(!sub)sub=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8(VAPID_PUB)});
+    await api({action:'saveSub',payload:{nombre,sub:sub.toJSON()}});
+  }catch(e){console.log('Push no disponible:',e);}
+}
+registerSW();
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
@@ -605,6 +646,7 @@ async function doLogin(){
   if(r.error){toast(r.error);document.getElementById('pinInput').value='';return;}
   state.jugadores=r.jugadores;me=pinTarget;myPin=pin;
   localStorage.setItem('mundial_me',me);localStorage.setItem('mundial_pin',pin);
+  subscribePush(me);
   enterApp();
 }
 async function doAdminLogin(){
@@ -623,6 +665,7 @@ async function doRegister(){
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;me=nombre;myPin=pin;
   localStorage.setItem('mundial_me',me);localStorage.setItem('mundial_pin',pin);
+  subscribePush(me);
   enterApp();
 }
 function logout(){
@@ -697,6 +740,7 @@ function setAdminTab(name,btn){
   document.getElementById('admin-resultados').style.display=name==='resultados'?'block':'none';
   document.getElementById('admin-saldos').style.display=name==='saldos'?'block':'none';
   document.getElementById('admin-usuarios').style.display=name==='usuarios'?'block':'none';
+  document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
   if(name==='saldos'){const sel=document.getElementById('adjJugador');sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');}
   if(name==='usuarios')renderAdminUsers();
 }
@@ -1265,6 +1309,17 @@ async function shareRanking(){
   const canvas=await makeRankingImage();
   await shareCanvas(canvas,'ludopicks-ranking.png');
 }
+async function doSendPush(){
+  const titulo=document.getElementById('pushTitulo').value.trim();
+  const mensaje=document.getElementById('pushMensaje').value.trim();
+  if(!titulo&&!mensaje)return toast('Escribe un título o mensaje');
+  const r=await api({action:'sendPushAdmin',payload:{adminKey,titulo,mensaje}});
+  if(r.error)return toast(r.error);
+  toast(`📣 Enviada a ${r.enviadas} jugador${r.enviadas!==1?'es':''}`);
+  document.getElementById('pushTitulo').value='';
+  document.getElementById('pushMensaje').value='';
+}
+
 let toastT;
 function toast(msg){
   const el=document.getElementById('toast');
