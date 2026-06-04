@@ -1,39 +1,81 @@
 import { kv } from "@vercel/kv";
 import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT } from "../lib/data.js";
-import { createRequire } from "module";
+import { webcrypto } from "crypto";
+import crypto from "crypto";
 
-const _require = createRequire(import.meta.url);
-let webpush;
-try { webpush = _require("web-push"); } catch(e) { webpush = null; }
+const { subtle } = webcrypto;
+
+// ── WEB PUSH NATIVO (sin dependencias externas) ───────────────
+function b64u(s){ return Buffer.from(s.replace(/-/g,'+').replace(/_/g,'/'), 'base64'); }
+function toB64u(b){ return Buffer.from(b).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
+
+async function vapidJWT(audience){
+  const pub=process.env.VAPID_PUBLIC_KEY, priv=process.env.VAPID_PRIVATE_KEY;
+  if(!pub||!priv) return null;
+  const now=Math.floor(Date.now()/1000);
+  const hdr=toB64u(Buffer.from(JSON.stringify({typ:'JWT',alg:'ES256'})));
+  const pay=toB64u(Buffer.from(JSON.stringify({aud:audience,exp:now+43200,sub:'mailto:admin@ludopicks.app'})));
+  const msg=`${hdr}.${pay}`;
+  const rawPriv=b64u(priv), rawPub=b64u(pub);
+  const jwk={kty:'EC',crv:'P-256',d:toB64u(rawPriv),x:toB64u(rawPub.slice(1,33)),y:toB64u(rawPub.slice(33,65))};
+  const key=await subtle.importKey('jwk',jwk,{name:'ECDSA',namedCurve:'P-256'},false,['sign']);
+  const sig=await subtle.sign({name:'ECDSA',hash:'SHA-256'},key,Buffer.from(msg));
+  return `${msg}.${toB64u(Buffer.from(sig))}`;
+}
+
+async function hkdfExtract(salt,ikm){
+  const k=await subtle.importKey('raw',salt,{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  return Buffer.from(await subtle.sign('HMAC',k,ikm));
+}
+async function hkdfExpand(prk,info,len){
+  const k=await subtle.importKey('raw',prk,{name:'HMAC',hash:'SHA-256'},false,['sign']);
+  let t=Buffer.alloc(0),out=Buffer.alloc(0);
+  for(let i=1;out.length<len;i++){t=Buffer.from(await subtle.sign('HMAC',k,Buffer.concat([t,info,Buffer.from([i])])));out=Buffer.concat([out,t]);}
+  return out.slice(0,len);
+}
+async function encryptPayload(plaintext, p256dhB64, authB64){
+  const recvPub=b64u(p256dhB64), auth=b64u(authB64);
+  const sender=await subtle.generateKey({name:'ECDH',namedCurve:'P-256'},true,['deriveBits']);
+  const senderPub=Buffer.from(await subtle.exportKey('raw',sender.publicKey));
+  const recvKey=await subtle.importKey('raw',recvPub,{name:'ECDH',namedCurve:'P-256'},false,[]);
+  const shared=Buffer.from(await subtle.deriveBits({name:'ECDH',public:recvKey},sender.privateKey,256));
+  const prk1=await hkdfExtract(auth,shared);
+  const ikm=await hkdfExpand(prk1,Buffer.concat([Buffer.from('WebPush: info\x00'),recvPub,senderPub]),32);
+  const salt=crypto.randomBytes(16);
+  const prk2=await hkdfExtract(salt,ikm);
+  const cek=await hkdfExpand(prk2,Buffer.from('Content-Encoding: aes128gcm\x00'),16);
+  const nonce=await hkdfExpand(prk2,Buffer.from('Content-Encoding: nonce\x00'),12);
+  const aesKey=await subtle.importKey('raw',cek,{name:'AES-GCM'},false,['encrypt']);
+  const ct=Buffer.from(await subtle.encrypt({name:'AES-GCM',iv:nonce,tagLength:128},aesKey,Buffer.concat([Buffer.from(plaintext,'utf8'),Buffer.from([2])])));
+  const rs=Buffer.alloc(4);rs.writeUInt32BE(4096,0);
+  return Buffer.concat([salt,rs,Buffer.from([65]),senderPub,ct]);
+}
+
+async function sendPush(sub, payload){
+  try{
+    if(!sub?.endpoint||!sub?.keys?.p256dh||!sub?.keys?.auth) return;
+    if(!process.env.VAPID_PUBLIC_KEY) return;
+    const audience=new URL(sub.endpoint).origin;
+    const jwt=await vapidJWT(audience);
+    if(!jwt) return;
+    const body=await encryptPayload(JSON.stringify(payload),sub.keys.p256dh,sub.keys.auth);
+    await fetch(sub.endpoint,{method:'POST',headers:{
+      'Authorization':`vapid t=${jwt},k=${process.env.VAPID_PUBLIC_KEY}`,
+      'Content-Type':'application/octet-stream',
+      'Content-Encoding':'aes128gcm',
+      'TTL':'86400',
+    },body});
+  }catch(e){ /* push falla silenciosamente, no rompe la API */ }
+}
+
+async function broadcastPush(subs, payload){
+  if(!subs||!Object.keys(subs).length) return;
+  await Promise.allSettled(Object.values(subs).map(s=>sendPush(s,payload)));
+}
 
 const BY_ID = Object.fromEntries(PARTIDOS.map(p => [p.id, p]));
 const PICKS_1X2 = ["local", "empate", "visita"];
 
-// Configura web-push con llaves VAPID del entorno
-function setupWebPush() {
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false;
-  webpush.setVapidDetails(
-    'mailto:admin@ludopicks.app',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
-  return true;
-}
-
-// Manda push a una suscripción; ignora errores silenciosamente
-async function sendPush(sub, payload) {
-  try {
-    await webpush.sendNotification(sub, JSON.stringify(payload));
-  } catch (e) {
-    // 404/410 = suscripción expirada, se limpia después
-  }
-}
-
-// Manda push a todos los jugadores que tengan suscripción
-async function broadcastPush(subs, payload) {
-  if (!setupWebPush() || !subs || !Object.keys(subs).length) return;
-  await Promise.allSettled(Object.values(subs).map(s => sendPush(s, payload)));
-}
 
 
 function publicJugadores(jugadores) {
@@ -287,7 +329,7 @@ export default async function handler(req, res) {
 
     // ── Notificaciones push a ganadores ──────────────────────────────
     const subs = (await kv.get("pushSubs")) || {};
-    if (setupWebPush() && Object.keys(subs).length) {
+    if (Object.keys(subs).length) {
       const partidoLabel = `${m.local} ${golL}-${golV} ${m.visita}`;
       // Colectar ganadores y sus pagos de este partido
       const ganadores = {};
