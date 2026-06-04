@@ -544,7 +544,7 @@ function getLinea(pid){
   if(s)return s.linea;
   return state.linea_default||2.5;
 }
-function setLinea(pid,l){lineSel[pid]=l;renderPartidos();}
+function setLinea(pid,l){lineSel[pid]=l;renderCard(pid);}
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init(){
@@ -746,7 +746,7 @@ function ouSection(p,done,locked){
   };
   return `<div class="ou-label">Total goles · elige línea</div><div class="ouchips">${chips}</div><div class="ou-row">${pk('over',row.over,'sel-over')}${pk('under',row.under,'sel-under')}</div>`;
 }
-function matchCard(p,res,i){
+function matchCard(p,res,i,skipAnim){
   const done=!!res;
   const locked=!done&&isLocked(p);
   const mySimple={};
@@ -776,9 +776,18 @@ function matchCard(p,res,i){
       hint+=`<div class="hint bet">🎫 $${b.monto.toLocaleString()} a ${lbl} → $${Math.round(b.monto*b.momio).toLocaleString()}${locked?'':` <button class="cancel-btn" onclick="cancelBet('${b.id}')">cancelar</button>`}</div>`;
     }
   });
-  return `<div class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}" style="animation-delay:${i*.03}s">
+  const animStyle=skipAnim?'animation:none':`animation-delay:${i*.03}s`;
+  return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}" style="${animStyle}">
     <div class="match-top"><div class="teams">${p.local} vs ${p.visita}</div>${meta}</div>
     ${row1x2}${rowou}${hint}</div>`;
+}
+// Actualiza SOLO una tarjeta (rápido) en vez de redibujar las 72
+function renderCard(pid){
+  const el=document.getElementById('match-'+pid);
+  if(!el){renderPartidos();return;}
+  const tmp=document.createElement('div');
+  tmp.innerHTML=matchCard(byId(pid),state.resultados[pid],0,true);
+  el.replaceWith(tmp.firstElementChild);
 }
 
 // ── BETSLIP (cupón) ───────────────────────────────────────────
@@ -789,11 +798,11 @@ function toggleSlip(pid,pick,linea,momio){
   const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick&&(market==='1x2'||s.linea===linea));
   if(i>=0)betslip.splice(i,1);
   else{const j=betslip.findIndex(s=>s.partidoId===pid&&s.market===market);if(j>=0)betslip.splice(j,1);betslip.push({partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio});}
-  renderSlipBar();renderPartidos();
+  renderSlipBar();renderCard(pid);
 }
 function removeSlip(pid,pick,linea){
   betslip=betslip.filter(s=>!(s.partidoId===pid&&s.pick===pick&&(esOU(pick)?s.linea===linea:true)));
-  renderSlipBar();renderPartidos();
+  renderSlipBar();renderCard(pid);
   if(!betslip.length)closeModal();else openSlip();
 }
 function clearSlip(){betslip=[];renderSlipBar();}
