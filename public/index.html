@@ -1,4 +1,6 @@
-<html lang="es"><head>
+<!DOCTYPE html>
+<html lang="es">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>LudoPicks · Mundial 2026</title>
@@ -16,7 +18,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 .hero{background:linear-gradient(135deg,#0C447C,#185FA5 55%,#0F6E56);padding:18px 18px 16px;position:relative;overflow:hidden}
 .hero::after{content:'';position:absolute;top:-40px;right:-30px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%);border-radius:50%}
-.ball{position:absolute;top:15px;right:16px;font-size:26px;animation:spin 8s linear infinite;z-index:1}
+.ball{position:absolute;top:16px;right:54px;font-size:22px;animation:spin 8s linear infinite;z-index:1;opacity:.5}
 @keyframes spin{to{transform:rotate(360deg)}}
 .hero h1{font-size:18px;font-weight:800;position:relative;z-index:1}
 .who{color:rgba(255,255,255,.7);font-size:12px;margin-top:2px;position:relative;z-index:1}
@@ -197,7 +199,7 @@ select option{background:#161c30;color:#fff}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:500}
 
 /* REFRESH BTN */
-.refresh-btn{position:absolute;top:14px;left:16px;z-index:2;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.refresh-btn{position:absolute;top:14px;right:14px;z-index:3;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
 .refresh-btn.spin{animation:spin 1s linear}
 
 /* COUNTDOWN */
@@ -209,6 +211,9 @@ select option{background:#161c30;color:#fff}
 
 /* OVER/UNDER ROW */
 .ou-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+.ouchips{display:flex;gap:5px;margin:5px 0 2px;flex-wrap:wrap}
+.ouchip{padding:4px 9px;font-size:11px;font-weight:800;border-radius:8px;border:1.5px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer}
+.ouchip.on{background:rgba(127,119,221,.25);border-color:#7F77DD;color:#aaa2ee}
 .ou-label{font-size:9px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin:9px 0 5px;display:flex;align-items:center;gap:5px}
 .pick.sel-over{background:rgba(24,95,165,.22);border-color:var(--blue)}
 .pick.sel-over .pt,.pick.sel-over .pm{color:#7Fb5ec}
@@ -504,7 +509,7 @@ function initRegAvatar(){
 }
 
 // ── STATE ─────────────────────────────────────────────────────
-let loadFailed=false, serverOffset=0, betslip=[];
+let loadFailed=false, serverOffset=0, betslip=[], lineSel={};
 async function loadState(){
   try{
     const r=await fetch(API);
@@ -521,8 +526,25 @@ async function api(body){
 function eNow(){return Date.now()+serverOffset;}
 function byId(id){return state.partidos.find(p=>p.id===id);}
 function isLocked(p){return eNow()>=p.kickoff;}
-function pickLabel(p,pick){return {local:p.local,empate:'Empate',visita:p.visita,over:'Over '+p.linea,under:'Under '+p.linea}[pick];}
-function outcomesClient(p,r){const t=r.gl+r.gv;return{local:r.gl>r.gv,empate:r.gl===r.gv,visita:r.gl<r.gv,over:t>p.linea,under:t<p.linea};}
+function lineas(){return state.lineas_ou||[0.5,1.5,2.5,3.5,4.5,5.5];}
+function esOU(pick){return pick==='over'||pick==='under';}
+function pickLabel(p,pick,linea){
+  if(pick==='local')return p.local;if(pick==='empate')return 'Empate';if(pick==='visita')return p.visita;
+  if(pick==='over')return 'Over '+linea;if(pick==='under')return 'Under '+linea;return pick;
+}
+function pickWinsClient(p,r,pick,linea){
+  if(pick==='local')return r.gl>r.gv;if(pick==='empate')return r.gl===r.gv;if(pick==='visita')return r.gl<r.gv;
+  const t=r.gl+r.gv;if(pick==='over')return t>linea;if(pick==='under')return t<linea;return false;
+}
+function getLinea(pid){
+  if(lineSel[pid]!=null)return lineSel[pid];
+  const b=Object.values(state.apuestas).find(x=>x.tipo!=='parlay'&&x.nombre===me&&x.partidoId===pid&&x.mercado==='ou'&&(x.status||'pending')==='pending');
+  if(b)return b.linea;
+  const s=betslip.find(x=>x.partidoId===pid&&x.market==='ou');
+  if(s)return s.linea;
+  return state.linea_default||2.5;
+}
+function setLinea(pid,l){lineSel[pid]=l;renderPartidos();}
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init(){
@@ -712,6 +734,18 @@ function renderPartidos(){
   });
   document.getElementById('listaPartidos').innerHTML=html||'<div class="empty"><div class="emoji">⚽</div>No hay partidos</div>';
 }
+function ouSection(p,done,locked){
+  if(done){const r=state.resultados[p.id];return `<div class="ou-label">Total goles</div><div style="font-size:12px;color:var(--muted);padding:3px 0">Resultado: <strong style="color:#fff">${r.gl+r.gv} goles</strong></div>`;}
+  const L=getLinea(p.id);const row=p.ou[String(L)];
+  if(!row)return '';
+  const chips=lineas().map(x=>`<button class="ouchip${x===L?' on':''}" ${locked?'':`onclick="setLinea(${p.id},${x})"`}>${x}</button>`).join('');
+  const pk=(pick,momio,sel)=>{
+    let cls='pick';if(locked)cls+=' locked';else if(slipSelected(p.id,pick,L))cls+=' '+sel;
+    const onc=locked?'':` onclick="toggleSlip(${p.id},'${pick}',${L},${momio})"`;
+    return `<div class="${cls}"${onc}><div class="pt">${pick==='over'?'Over':'Under'} ${L}</div><div class="pm">${momio}x</div></div>`;
+  };
+  return `<div class="ou-label">Total goles · elige línea</div><div class="ouchips">${chips}</div><div class="ou-row">${pk('over',row.over,'sel-over')}${pk('under',row.under,'sel-under')}</div>`;
+}
 function matchCard(p,res,i){
   const done=!!res;
   const locked=!done&&isLocked(p);
@@ -721,21 +755,20 @@ function matchCard(p,res,i){
   if(done)meta=`<span class="rb rb-info">${res.gl} - ${res.gv}</span>`;
   else if(locked)meta=`<span class="locktag">🔒 En juego</span>`;
   else meta=`<span class="meta">Gr.${p.grupo} · ${p.hora}</span>`;
-  const o=done?outcomesClient(p,res):null;
-  const pk=(pick,label,momio,selClass)=>{
+  const pk1=(pick,label,momio,selClass)=>{
     let cls='pick';
-    if(done)cls+=o[pick]?' win':' lose';
+    if(done)cls+=pickWinsClient(p,res,pick,null)?' win':' lose';
     else if(locked)cls+=' locked';
-    else if(slipHas(p.id,pick))cls+=' '+selClass;
-    const onc=(done||locked)?'':` onclick="toggleSlip(${p.id},'${pick}',${momio})"`;
+    else if(slipSelected(p.id,pick,null))cls+=' '+selClass;
+    const onc=(done||locked)?'':` onclick="toggleSlip(${p.id},'${pick}',null,${momio})"`;
     return `<div class="${cls}"${onc}><div class="pt">${label}</div><div class="pm">${momio}x</div></div>`;
   };
-  const row1x2=`<div class="picks">${pk('local',p.local,p.momios.local,'sel-local')}${pk('empate','Empate',p.momios.empate,'sel-empate')}${pk('visita',p.visita,p.momios.visita,'sel-visita')}</div>`;
-  const rowou=`<div class="ou-label">Total goles · línea ${p.linea}</div><div class="ou-row">${pk('over','Over '+p.linea,p.momios.over,'sel-over')}${pk('under','Under '+p.linea,p.momios.under,'sel-under')}</div>`;
+  const row1x2=`<div class="picks">${pk1('local',p.local,p.momios.local,'sel-local')}${pk1('empate','Empate',p.momios.empate,'sel-empate')}${pk1('visita',p.visita,p.momios.visita,'sel-visita')}</div>`;
+  const rowou=ouSection(p,done,locked);
   let hint='';
   ['1x2','ou'].forEach(mk=>{
     const b=mySimple[mk];if(!b)return;
-    const lbl=pickLabel(p,b.pick);
+    const lbl=pickLabel(p,b.pick,b.linea);
     if(done){
       const win=b.status==='won';
       hint+=`<div class="hint" style="color:${win?'var(--green)':'var(--rl)'}">${win?'✓ Ganaste':'✗ Perdiste'} $${b.monto.toLocaleString()} · ${lbl}${win?' → +$'+Math.round(b.monto*b.momio).toLocaleString():''}</div>`;
@@ -749,16 +782,17 @@ function matchCard(p,res,i){
 }
 
 // ── BETSLIP (cupón) ───────────────────────────────────────────
-function slipHas(pid,pick){return betslip.some(s=>s.partidoId===pid&&s.pick===pick);}
+function slipSelected(pid,pick,linea){return betslip.some(s=>s.partidoId===pid&&s.pick===pick&&(esOU(pick)?s.linea===linea:true));}
 function slipMomioTotal(){return betslip.reduce((a,s)=>a*s.momio,1);}
-function toggleSlip(pid,pick,momio){
-  const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick);
+function toggleSlip(pid,pick,linea,momio){
+  const market=esOU(pick)?'ou':'1x2';
+  const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick&&(market==='1x2'||s.linea===linea));
   if(i>=0)betslip.splice(i,1);
-  else{const j=betslip.findIndex(s=>s.partidoId===pid);if(j>=0)betslip.splice(j,1);betslip.push({partidoId:pid,pick,momio});}
+  else{const j=betslip.findIndex(s=>s.partidoId===pid&&s.market===market);if(j>=0)betslip.splice(j,1);betslip.push({partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio});}
   renderSlipBar();renderPartidos();
 }
-function removeSlip(pid,pick){
-  betslip=betslip.filter(s=>!(s.partidoId===pid&&s.pick===pick));
+function removeSlip(pid,pick,linea){
+  betslip=betslip.filter(s=>!(s.partidoId===pid&&s.pick===pick&&(esOU(pick)?s.linea===linea:true)));
   renderSlipBar();renderPartidos();
   if(!betslip.length)closeModal();else openSlip();
 }
@@ -776,7 +810,7 @@ function openSlip(){
   const j=state.jugadores[me];const isParlay=betslip.length>1;const min=state.apuesta_min||100;
   let legs='';
   betslip.forEach(s=>{const p=byId(s.partidoId);
-    legs+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${p.local} vs ${p.visita}</div><div class="sl-pick">${pickLabel(p,s.pick)} · ${s.momio}x</div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}')">×</button></div>`;});
+    legs+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${p.local} vs ${p.visita}</div><div class="sl-pick">${pickLabel(p,s.pick,s.linea)} · ${s.momio}x</div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}',${s.linea})">×</button></div>`;});
   const tot=slipMomioTotal();
   document.getElementById('mTitle').innerHTML=isParlay?`Cupón <span class="parlay-tag">Parlay</span>`:'Tu apuesta';
   document.getElementById('mBody').innerHTML=`${legs}
@@ -802,33 +836,40 @@ async function confirmSlip(){
   const min=state.apuesta_min||100;
   if(!monto||monto<min)return toast('Mínimo $'+min);
   const isParlay=betslip.length>1;const tot=slipMomioTotal();
-  const legsTxt=betslip.map(s=>{const p=byId(s.partidoId);return `${pickLabel(p,s.pick)} (${p.local} v ${p.visita}) @${s.momio}`;}).join(' + ');
+  const view=slipToView(monto);  // captura antes de limpiar el cupón
   let r;
-  if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick})),monto}});
-  else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,monto}});}
+  if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea})),monto}});
+  else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,monto}});}
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
-  const ticket=`🎯 Mi ${isParlay?'parlay':'pick'} en LudoPicks:\n${legsTxt}\n${isParlay?'Parlay '+tot.toFixed(2)+'x\n':''}$${monto.toLocaleString()} → posible $${Math.round(monto*tot).toLocaleString()}\nhttps://ludopicks.vercel.app`;
   clearSlip();refreshHero();renderPartidos();fireConfetti();
+  window._lastBetView=view;
   document.getElementById('mTitle').textContent='¡Listo! 🎉';
   document.getElementById('mBody').innerHTML=`<div style="text-align:center;padding:8px 0 4px"><div style="font-size:40px">🎯</div><p style="margin:10px 0;color:var(--muted)">Apuesta de <strong style="color:#fff">$${monto.toLocaleString()}</strong> registrada${isParlay?' (parlay '+tot.toFixed(2)+'x)':''}</p></div>
-    <button class="btn share-btn" style="width:100%;justify-content:center;margin-bottom:8px;padding:13px" onclick='shareText(${JSON.stringify(ticket)})'>📲 Compartir mi pick</button>
+    <button class="btn share-btn" style="width:100%;justify-content:center;margin-bottom:8px;padding:13px" onclick="shareBetImage(window._lastBetView)">📲 Compartir mi pick</button>
     <button class="btn btn-ghost" onclick="closeModal()">Listo</button>`;
 }
 async function cancelBet(betId){
   const r=await api({action:'cancelar',payload:{nombre:me,betId}});
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
-  toast('Apuesta cancelada');refreshHero();renderPartidos();
+  toast('Apuesta cancelada');refreshHero();
+  if(currentTab==='partidos')renderPartidos();
+  if(currentTab==='mis')renderMis();
 }
 
 // ── MIS PICKS ─────────────────────────────────────────────────
 function betTicketText(b){
-  if(b.tipo==='parlay'){const legs=b.legs.map(l=>{const p=byId(l.partidoId);return pickLabel(p,l.pick)+' ('+p.local+' v '+p.visita+')';}).join(' + ');
+  if(b.tipo==='parlay'){const legs=b.legs.map(l=>{const p=byId(l.partidoId);return pickLabel(p,l.pick,l.linea)+' ('+p.local+' v '+p.visita+')';}).join(' + ');
     return `🎯 Mi parlay en LudoPicks (${b.momioTotal.toFixed(2)}x):\n${legs}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momioTotal).toLocaleString()}\nhttps://ludopicks.vercel.app`;}
-  const p=byId(b.partidoId);return `🎯 Mi pick en LudoPicks:\n${pickLabel(p,b.pick)} en ${p.local} vs ${p.visita} @${b.momio}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momio).toLocaleString()}\nhttps://ludopicks.vercel.app`;
+  const p=byId(b.partidoId);return `🎯 Mi pick en LudoPicks:\n${pickLabel(p,b.pick,b.linea)} en ${p.local} vs ${p.visita} @${b.momio}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momio).toLocaleString()}\nhttps://ludopicks.vercel.app`;
 }
-function legResIcon(l){const r=state.resultados[l.partidoId];if(!r)return ['•','var(--muted2)'];const p=byId(l.partidoId);return outcomesClient(p,r)[l.pick]?['✓','var(--green)']:['✗','var(--rl)'];}
+function legResIcon(l){const r=state.resultados[l.partidoId];if(!r)return ['•','var(--muted2)'];const p=byId(l.partidoId);return pickWinsClient(p,r,l.pick,l.linea)?['✓','var(--green)']:['✗','var(--rl)'];}
+function betCanCancel(b){
+  if((b.status||'pending')!=='pending')return false;
+  if(b.tipo==='parlay')return b.legs.every(l=>{const p=byId(l.partidoId);return p&&!isLocked(p);});
+  const p=byId(b.partidoId);return p&&!isLocked(p);
+}
 function betCard(b){
   const st=b.status||'pending';
   const isP=b.tipo==='parlay';
@@ -840,15 +881,16 @@ function betCard(b){
   if(isP){
     head=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span>`;
     body=b.legs.map(l=>{const p=byId(l.partidoId);const[ic,col]=legResIcon(l);
-      return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${p.local} v ${p.visita} · ${pickLabel(p,l.pick)}</span><span style="color:${col};font-weight:700">${ic} ${l.momio}x</span></div>`;}).join('');
+      return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${p.local} v ${p.visita} · ${pickLabel(p,l.pick,l.linea)}</span><span style="color:${col};font-weight:700">${ic} ${l.momio}x</span></div>`;}).join('');
   }else{
     const p=byId(b.partidoId);
     head=`<span style="font-weight:700;font-size:14px">${p.local} vs ${p.visita}</span> <span style="color:var(--muted2);font-size:11px">${p.fecha}</span>`;
-    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick)} · ${b.momio}x</div>`;
+    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x</div>`;
   }
-  const canShare=st==='pending';
-  return `<div class="info-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="flex:1">${head}</div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div>${right}</div></div>${body}
-    ${canShare?`<button class="share-btn" style="margin-top:10px" onclick='shareText(${JSON.stringify(betTicketText(b))})'>📲 Compartir</button>`:''}</div>`;
+  let btns='';
+  if(st==='pending')btns+=`<button class="share-btn" onclick="shareBetById('${b.id}')">📲 Compartir</button>`;
+  if(betCanCancel(b))btns+=`<button class="cancel-btn" style="margin-top:0" onclick="cancelBet('${b.id}')">Cancelar apuesta</button>`;
+  return `<div class="info-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="flex:1">${head}</div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div>${right}</div></div>${body}${btns?`<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${btns}</div>`:''}</div>`;
 }
 function renderMis(){
   const mine=Object.values(state.apuestas).filter(b=>b.nombre===me).sort((a,b)=>b.ts-a.ts);
@@ -867,12 +909,6 @@ function renderMis(){
 }
 
 // ── RANKING ───────────────────────────────────────────────────
-function shareRanking(){
-  const js=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo);
-  const medal=['🥇','🥈','🥉'];
-  const lines=js.map((p,i)=>`${i<3?medal[i]:(i+1)+'.'} ${p.nombre} — $${Math.round(p.saldo).toLocaleString()}`).join('\n');
-  shareText(`🏆 Ranking LudoPicks · Mundial 2026\n\n${lines}\n\n¿Le entras? https://ludopicks.vercel.app`);
-}
 function renderRanking(){
   const js=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo);
   if(!js.length){document.getElementById('listaRanking').innerHTML='<div class="empty"><div class="emoji">🏆</div>Nadie se ha registrado.</div>';return;}
@@ -945,9 +981,8 @@ function scorePreview(pid){
   const gl=parseInt(document.getElementById('scoreL').value),gv=parseInt(document.getElementById('scoreV').value);
   const el=document.getElementById('scoreDerived');
   if(isNaN(gl)||isNaN(gv)){el.innerHTML='Ingresa el marcador para ver qué se liquida.';return;}
-  const o=outcomesClient(p,{gl,gv});
-  const r1=o.local?p.local+' gana':o.empate?'Empate':p.visita+' gana';
-  el.innerHTML=`Se liquidará → <b>${r1}</b> &nbsp;·&nbsp; ${gl+gv} goles = <b>${o.over?'Over':'Under'} ${p.linea}</b>`;
+  const r1=gl>gv?p.local+' gana':gl<gv?p.visita+' gana':'Empate';
+  el.innerHTML=`Se liquidará → <b>${r1}</b> &nbsp;·&nbsp; total <b>${gl+gv} goles</b> (define todos los over/under)`;
 }
 async function saveScore(pid){
   const gl=parseInt(document.getElementById('scoreL').value),gv=parseInt(document.getElementById('scoreV').value);
@@ -980,9 +1015,9 @@ async function verApuestas(pid){
     html=`<div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px;color:var(--muted)"><span>${aps.length} apuesta${aps.length!==1?'s':''}</span><span>Total: $${tot.toLocaleString()}</span></div>`;
     aps.forEach(b=>{
       if(b.tipo==='parlay'){const l=b.legs.find(x=>x.partidoId===pid);
-        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre} <span class="parlay-tag">Parlay</span></div><div class="ap-d">${pickLabel(p,l.pick)} · leg ${l.momio}x</div></div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">${b.momioTotal.toFixed(2)}x total</div></div></div>`;
+        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre} <span class="parlay-tag">Parlay</span></div><div class="ap-d">${pickLabel(p,l.pick,l.linea)} · leg ${l.momio}x</div></div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">${b.momioTotal.toFixed(2)}x total</div></div></div>`;
       }else{
-        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre}</div><div class="ap-d">${pickLabel(p,b.pick)} · ${b.momio}x</div></div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">→ $${Math.round(b.monto*b.momio).toLocaleString()}</div></div></div>`;
+        html+=`<div class="ap-row"><div><div class="ap-p">${b.nombre}</div><div class="ap-d">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x</div></div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div><div class="ap-g pend">→ $${Math.round(b.monto*b.momio).toLocaleString()}</div></div></div>`;
       }
     });
   }
@@ -1066,6 +1101,149 @@ function shareText(text){
   if(navigator.share){navigator.share({text}).catch(()=>{});}
   else{window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');}
 }
+
+// ── GENERACIÓN DE IMÁGENES PARA COMPARTIR ─────────────────────
+function pickLabelLong(p,pick,linea){
+  if(pick==='local')return p.local+' gana';
+  if(pick==='visita')return p.visita+' gana';
+  if(pick==='empate')return 'Empate';
+  if(pick==='over')return 'Over '+linea+' goles';
+  if(pick==='under')return 'Under '+linea+' goles';
+  return pick;
+}
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function avSvgFixed(av,size){return buildAvSvg(av).replace('width="100%" height="100%"',`width="${size}" height="${size}"`);}
+function svgToImg(svgStr){return new Promise(res=>{const img=new Image();img.onload=()=>res(img);img.onerror=()=>res(null);img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgStr);});}
+
+async function shareCanvas(canvas,filename,fallbackText){
+  await new Promise(r=>canvas.toBlob(async(blob)=>{
+    if(!blob){if(fallbackText)shareText(fallbackText);return r();}
+    const file=new File([blob],filename,{type:'image/png'});
+    try{
+      if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});return r();}
+    }catch(e){}
+    // Fallback: abrir/descargar imagen
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    toast('Imagen lista — compártela 📲');
+    r();
+  },'image/png'));
+}
+
+function brandHeader(ctx,W){
+  ctx.textAlign='center';
+  ctx.font='90px sans-serif';ctx.fillText('🏆',W/2,135);
+  ctx.fillStyle='#fff';ctx.font='800 70px -apple-system,sans-serif';ctx.fillText('LudoPicks',W/2,225);
+  ctx.fillStyle='#5DCAA5';ctx.font='700 34px -apple-system,sans-serif';ctx.fillText('Mundial 2026',W/2,275);
+  ctx.strokeStyle='rgba(255,255,255,.12)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(90,320);ctx.lineTo(W-90,320);ctx.stroke();
+}
+function bgFill(ctx,W,H){
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0C2A4A');g.addColorStop(.5,'#0d1220');g.addColorStop(1,'#0a0e1a');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+
+function betToView(b){
+  if(b.tipo==='parlay')return{parlay:true,legs:b.legs.map(l=>{const p=byId(l.partidoId);return{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,l.pick,l.linea),momio:l.momio};}),momio:b.momioTotal,monto:b.monto};
+  const p=byId(b.partidoId);return{parlay:false,legs:[{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,b.pick,b.linea),momio:b.momio}],momio:b.momio,monto:b.monto};
+}
+function slipToView(monto){
+  return{parlay:betslip.length>1,legs:betslip.map(s=>{const p=byId(s.partidoId);return{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,s.pick,s.linea),momio:s.momio};}),momio:slipMomioTotal(),monto};
+}
+
+function makeBetImage(v){
+  const W=1080;
+  const rowH=v.parlay?150:175;
+  const headerBottom=520;
+  const cardTop=headerBottom;
+  const cardH=v.legs.length*rowH+40;
+  const stakeTop=cardTop+cardH+80;
+  const H=stakeTop+400;
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const ctx=c.getContext('2d');
+  bgFill(ctx,W,H);brandHeader(ctx,W);
+  ctx.textAlign='center';
+  ctx.fillStyle='#FAC775';ctx.font='800 44px -apple-system,sans-serif';
+  ctx.fillText(v.parlay?`PARLAY ${v.legs.length} · ${v.momio.toFixed(2)}x`:'MI PICK',W/2,420);
+  if(me){ctx.fillStyle='rgba(255,255,255,.55)';ctx.font='600 30px -apple-system,sans-serif';ctx.fillText('@'+me,W/2,470);}
+  const cardX=80,cardW=W-160;
+  ctx.fillStyle='rgba(255,255,255,.05)';rr(ctx,cardX,cardTop,cardW,cardH,28);ctx.fill();
+  ctx.strokeStyle='rgba(93,202,165,.25)';ctx.lineWidth=2;rr(ctx,cardX,cardTop,cardW,cardH,28);ctx.stroke();
+  let ry=cardTop+30;
+  v.legs.forEach((l,i)=>{
+    ctx.textAlign='left';
+    ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='600 30px -apple-system,sans-serif';
+    ctx.fillText(l.match,cardX+45,ry+44);
+    ctx.fillStyle='#5DCAA5';ctx.font='800 46px -apple-system,sans-serif';
+    ctx.fillText(l.pick,cardX+45,ry+98);
+    ctx.textAlign='right';
+    ctx.fillStyle='#fff';ctx.font='800 46px -apple-system,sans-serif';
+    ctx.fillText(l.momio.toFixed(2)+'x',cardX+cardW-45,ry+90);
+    if(i<v.legs.length-1){ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cardX+45,ry+rowH-15);ctx.lineTo(cardX+cardW-45,ry+rowH-15);ctx.stroke();}
+    ry+=rowH;
+  });
+  const posible=Math.round(v.monto*v.momio);
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,.55)';ctx.font='600 34px -apple-system,sans-serif';
+  ctx.fillText('Apuesta',W/2,stakeTop);
+  ctx.fillStyle='#fff';ctx.font='800 62px -apple-system,sans-serif';
+  ctx.fillText('$'+v.monto.toLocaleString('es-MX'),W/2,stakeTop+75);
+  ctx.fillStyle='#5DCAA5';ctx.font='600 34px -apple-system,sans-serif';
+  ctx.fillText('Posible ganancia',W/2,stakeTop+165);
+  ctx.fillStyle='#5DCAA5';ctx.font='900 84px -apple-system,sans-serif';
+  ctx.fillText('$'+posible.toLocaleString('es-MX'),W/2,stakeTop+248);
+  ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='600 32px -apple-system,sans-serif';
+  ctx.fillText('ludopicks.vercel.app',W/2,H-55);
+  return c;
+}
+
+async function makeRankingImage(){
+  const W=1080;
+  const js=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo).slice(0,8);
+  const rowH=95;const listTop=490;
+  const H=listTop+js.length*rowH+130;
+  const c=document.createElement('canvas');c.width=W;c.height=H;
+  const ctx=c.getContext('2d');
+  bgFill(ctx,W,H);brandHeader(ctx,W);
+  ctx.textAlign='center';
+  ctx.fillStyle='#FAC775';ctx.font='800 46px -apple-system,sans-serif';ctx.fillText('🏆 RANKING',W/2,420);
+  const imgs=await Promise.all(js.map(p=>svgToImg(avSvgFixed(p.avatar,90))));
+  const medal=['🥇','🥈','🥉'];
+  js.forEach((p,i)=>{
+    const rowY=listTop+i*rowH;
+    if(p.nombre===me){ctx.fillStyle='rgba(93,202,165,.12)';rr(ctx,70,rowY-55,W-140,80,16);ctx.fill();}
+    ctx.textAlign='left';
+    ctx.fillStyle=i<3?'#FAC775':'rgba(255,255,255,.5)';ctx.font='800 44px -apple-system,sans-serif';
+    ctx.fillText(i<3?medal[i]:'#'+(i+1),90,rowY);
+    if(imgs[i]){ctx.save();ctx.beginPath();ctx.arc(245,rowY-15,38,0,7);ctx.closePath();ctx.clip();ctx.drawImage(imgs[i],207,rowY-53,76,76);ctx.restore();}
+    ctx.fillStyle='#fff';ctx.font='700 42px -apple-system,sans-serif';
+    ctx.fillText(p.nombre.length>16?p.nombre.slice(0,15)+'…':p.nombre,305,rowY);
+    ctx.textAlign='right';
+    ctx.fillStyle=i<3?'#5DCAA5':'#fff';ctx.font='800 42px -apple-system,sans-serif';
+    ctx.fillText('$'+Math.round(p.saldo).toLocaleString('es-MX'),W-90,rowY);
+  });
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,.4)';ctx.font='600 32px -apple-system,sans-serif';
+  ctx.fillText('ludopicks.vercel.app · ¿le entras?',W/2,H-55);
+  return c;
+}
+
+async function shareBetImage(view){
+  toast('Generando imagen…');
+  const canvas=makeBetImage(view);
+  await shareCanvas(canvas,'ludopicks-pick.png');
+}
+async function shareBetById(betId){
+  const b=Object.values(state.apuestas).find(x=>x.id===betId);
+  if(!b)return;
+  await shareBetImage(betToView(b));
+}
+async function shareRanking(){
+  toast('Generando imagen…');
+  const canvas=await makeRankingImage();
+  await shareCanvas(canvas,'ludopicks-ranking.png');
+}
 let toastT;
 function toast(msg){
   const el=document.getElementById('toast');
@@ -1096,7 +1274,6 @@ async function poll(){
 setInterval(poll,20000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});
 
-// Countdown tick (1s) — barato; re-render de partidos solo si cambia el próximo
 let cdLastNext=null;
 setInterval(()=>{
   if(isAdmin||!me||currentTab!=='partidos')return;
@@ -1107,6 +1284,5 @@ setInterval(()=>{
 
 init();
 </script>
-
-
-</body></html>
+</body>
+</html>
