@@ -320,6 +320,11 @@ select option{background:#161c30;color:#fff}
         <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">Toca para editar avatar</div>
       </div>
     </div>
+    <div id="notifBtn" style="display:none;margin-top:10px">
+      <button onclick="activarNotifs()" style="width:100%;padding:10px;background:rgba(239,159,39,.15);border:1.5px solid rgba(239,159,39,.35);border-radius:12px;color:#FAC775;font-size:13px;font-weight:700;cursor:pointer">
+        🔔 Activar notificaciones de ganancias
+      </button>
+    </div>
   </div>
   <nav class="nav">
     <button id="tab-partidos" class="on" onclick="showTab('partidos')"><i class="ti ti-ballpen"></i>Partidos</button>
@@ -410,16 +415,49 @@ function urlBase64ToUint8(b64){
   const p=b64.replace(/-/g,'+').replace(/_/g,'/');
   const raw=atob(p);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
-async function subscribePush(nombre){
-  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+// Verifica el estado del permiso y muestra/oculta el botón
+async function checkNotifStatus(){
+  const btn=document.getElementById('notifBtn');
+  if(!btn)return;
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){btn.style.display='none';return;}
+  const perm=Notification.permission;
+  if(perm==='granted'){
+    // Ya tiene permiso — verificar si tiene suscripción activa
+    try{
+      const sw=await navigator.serviceWorker.ready;
+      const sub=await sw.pushManager.getSubscription();
+      btn.style.display=sub?'none':'block'; // si no hay sub, mostrar por si se perdió
+    }catch{btn.style.display='none';}
+  } else if(perm==='denied'){
+    btn.style.display='none'; // bloqueó — no podemos hacer nada
+  } else {
+    btn.style.display='block'; // 'default' — aún no ha decidido
+  }
+}
+// Se llama al tocar el botón
+async function activarNotifs(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return toast('Tu navegador no soporta notificaciones');
   try{
     const perm=await Notification.requestPermission();
-    if(perm!=='granted')return;
+    if(perm!=='granted'){toast('Notificaciones bloqueadas — actívalas desde la config del navegador');return;}
+    const sw=await navigator.serviceWorker.ready;
+    let sub=await sw.pushManager.getSubscription();
+    if(!sub)sub=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8(VAPID_PUB)});
+    await api({action:'saveSub',payload:{nombre:me,sub:sub.toJSON()}});
+    document.getElementById('notifBtn').style.display='none';
+    toast('🔔 ¡Notificaciones activadas! Te avisamos cuando ganes.');
+  }catch(e){toast('No se pudieron activar: '+e.message);}
+}
+// Al registrar o iniciar sesión: solo re-suscribir si ya tenía permiso (silencioso)
+async function subscribePush(nombre){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+  if(Notification.permission!=='granted')return; // no pedir automático
+  try{
     const sw=await navigator.serviceWorker.ready;
     let sub=await sw.pushManager.getSubscription();
     if(!sub)sub=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8(VAPID_PUB)});
     await api({action:'saveSub',payload:{nombre,sub:sub.toJSON()}});
-  }catch(e){console.log('Push no disponible:',e);}
+  }catch(e){}
 }
 registerSW();
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
@@ -682,6 +720,7 @@ function enterApp(){
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
   refreshHero();renderSlipBar();
+  if(!isAdmin)checkNotifStatus();
 }
 function refreshHero(){
   if(isAdmin)return;
