@@ -1,6 +1,10 @@
 import { kv } from "@vercel/kv";
 import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT } from "../lib/data.js";
-import webpush from "web-push";
+import { createRequire } from "module";
+
+const _require = createRequire(import.meta.url);
+let webpush;
+try { webpush = _require("web-push"); } catch(e) { webpush = null; }
 
 const BY_ID = Object.fromEntries(PARTIDOS.map(p => [p.id, p]));
 const PICKS_1X2 = ["local", "empate", "visita"];
