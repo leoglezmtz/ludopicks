@@ -501,7 +501,7 @@ export default async function handler(req, res) {
   }
 
   // ── RESET ──────────────────────────────────────────────────────────
-
+  if (action === "reset") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     await kv.set("jugadores", {});
     await kv.set("apuestas", {});
