@@ -296,9 +296,31 @@ export default async function handler(req, res) {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     const { partidoId } = payload;
     const apuestas = (await kv.get("apuestas")) || {};
-    const lista = Object.values(apuestas).filter(b =>
-      b.tipo === "parlay" ? b.legs.some(l => l.partidoId === partidoId) : b.partidoId === partidoId);
+    const lista = Object.entries(apuestas)
+      .filter(([k, b]) => b.tipo === "parlay" ? (b.legs || []).some(l => l.partidoId === partidoId) : b.partidoId === partidoId)
+      .map(([k, b]) => ({ ...b, _key: k }));
     return res.json({ ok: true, apuestas: lista });
+  }
+
+  // ── ADMIN: borrar una apuesta (devuelve saldo como si nunca hubiera pasado) ──
+  if (action === "borrarApuesta") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { key } = payload;
+    const jugadores = (await kv.get("jugadores")) || {};
+    const apuestas  = (await kv.get("apuestas"))  || {};
+    const b = apuestas[key];
+    if (!b) return res.status(400).json({ error: "Apuesta no existe" });
+    const j = jugadores[b.nombre];
+    if (j) {
+      // Revertir el efecto neto de la apuesta sobre el saldo
+      j.saldo += (b.monto || 0);                 // devolver el stake
+      if (b.status === "won") j.saldo -= (b.payout || 0); // quitar el pago si había ganado
+      j.saldo = Math.max(0, j.saldo);
+    }
+    delete apuestas[key];
+    await kv.set("jugadores", jugadores);
+    await kv.set("apuestas", apuestas);
+    return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas });
   }
 
   // ── ADMIN: usuarios ────────────────────────────────────────────────
