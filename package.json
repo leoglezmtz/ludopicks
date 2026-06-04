@@ -1,0 +1,11 @@
+{
+  "name": "ludopicks",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'static'"
+  },
+  "dependencies": {
+    "@vercel/kv": "^2.0.0"
+  }
+}
