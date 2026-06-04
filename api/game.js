@@ -1,8 +1,36 @@
 import { kv } from "@vercel/kv";
 import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT } from "../lib/data.js";
+import webpush from "web-push";
 
 const BY_ID = Object.fromEntries(PARTIDOS.map(p => [p.id, p]));
 const PICKS_1X2 = ["local", "empate", "visita"];
+
+// Configura web-push con llaves VAPID del entorno
+function setupWebPush() {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false;
+  webpush.setVapidDetails(
+    'mailto:admin@ludopicks.app',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+  return true;
+}
+
+// Manda push a una suscripción; ignora errores silenciosamente
+async function sendPush(sub, payload) {
+  try {
+    await webpush.sendNotification(sub, JSON.stringify(payload));
+  } catch (e) {
+    // 404/410 = suscripción expirada, se limpia después
+  }
+}
+
+// Manda push a todos los jugadores que tengan suscripción
+async function broadcastPush(subs, payload) {
+  if (!setupWebPush() || !subs || !Object.keys(subs).length) return;
+  await Promise.allSettled(Object.values(subs).map(s => sendPush(s, payload)));
+}
+
 
 function publicJugadores(jugadores) {
   const out = {};
@@ -246,12 +274,43 @@ export default async function handler(req, res) {
     const jugadores  = (await kv.get("jugadores"))  || {};
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
-    await kv.set("rankPrev", rankingSnapshot(jugadores)); // foto antes de liquidar
+    await kv.set("rankPrev", rankingSnapshot(jugadores));
     resultados[partidoId] = { gl: golL, gv: golV };
     settleAll(jugadores, apuestas, resultados);
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
+
+    // ── Notificaciones push a ganadores ──────────────────────────────
+    const subs = (await kv.get("pushSubs")) || {};
+    if (setupWebPush() && Object.keys(subs).length) {
+      const partidoLabel = `${m.local} ${golL}-${golV} ${m.visita}`;
+      // Colectar ganadores y sus pagos de este partido
+      const ganadores = {};
+      Object.values(apuestas).forEach(b => {
+        if (b.status !== 'won') return;
+        const esDeEstePartido = b.tipo === 'parlay'
+          ? b.legs.some(l => l.partidoId === partidoId)
+          : b.partidoId === partidoId;
+        if (!esDeEstePartido) return;
+        if (!ganadores[b.nombre]) ganadores[b.nombre] = 0;
+        ganadores[b.nombre] += b.payout || 0;
+      });
+      // Mandar notificación a cada ganador
+      await Promise.allSettled(
+        Object.entries(ganadores).map(([nombre, pago]) => {
+          if (!subs[nombre]) return Promise.resolve();
+          const saldo = jugadores[nombre]?.saldo || 0;
+          return sendPush(subs[nombre], {
+            title: '🎉 ¡Ganaste!',
+            body: `${partidoLabel} · +$${pago.toLocaleString('es-MX')} 💰 Saldo: $${Math.round(saldo).toLocaleString('es-MX')}`,
+            tag: 'win-' + partidoId,
+            url: '/',
+          });
+        })
+      );
+    }
+
     return res.json({ ok: true, resultados, jugadores: publicJugadores(jugadores), apuestas });
   }
 
@@ -370,7 +429,33 @@ export default async function handler(req, res) {
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
 
-  if (action === "reset") {
+  // ── Guardar suscripción push de un jugador ─────────────────────────
+  if (action === "saveSub") {
+    const { nombre, sub } = payload;
+    if (!nombre || !sub) return res.status(400).json({ error: "Faltan datos" });
+    const subs = (await kv.get("pushSubs")) || {};
+    subs[nombre] = sub;
+    await kv.set("pushSubs", subs);
+    return res.json({ ok: true });
+  }
+
+  // ── Admin: enviar notificación manual a todos ──────────────────────
+  if (action === "sendPushAdmin") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { titulo, mensaje } = payload;
+    if (!titulo && !mensaje) return res.status(400).json({ error: "Escribe un título o mensaje" });
+    const subs = (await kv.get("pushSubs")) || {};
+    await broadcastPush(subs, {
+      title: titulo || '🏆 LudoPicks',
+      body: mensaje || '',
+      tag: 'admin-' + Date.now(),
+      url: '/',
+    });
+    return res.json({ ok: true, enviadas: Object.keys(subs).length });
+  }
+
+  // ── RESET ──────────────────────────────────────────────────────────
+
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     await kv.set("jugadores", {});
     await kv.set("apuestas", {});
