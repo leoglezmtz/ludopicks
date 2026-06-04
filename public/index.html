@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>LudoPicks · Mundial 2026</title>
+<style>
+  :root{
+    --bg:#0a0e1a; --bg2:#0d1220; --card:#161c30; --card2:#11162a;
+    --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12);
+    --txt:#fff; --muted:rgba(255,255,255,.55); --muted2:rgba(255,255,255,.35);
+    --green:#5DCAA5; --green-d:#0F6E56; --blue:#185FA5; --blue-d:#0C447C;
+    --amber:#EF9F27; --amber-l:#FAC775; --red:#E24B4A; --red-l:#F09595;
+    --gold:#FAC775;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);color:var(--txt);font-size:15px;max-width:480px;margin:0 auto;
+    min-height:100vh;position:relative;overflow-x:hidden}
+
+  /* HERO */
+  .hero{background:linear-gradient(135deg,#0C447C 0%,#185FA5 55%,#0F6E56 100%);
+    padding:18px 18px 16px;position:relative;overflow:hidden}
+  .hero::after{content:'';position:absolute;top:-40px;right:-30px;width:140px;height:140px;
+    background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%);border-radius:50%}
+  .hero::before{content:'';position:absolute;bottom:-60px;left:-40px;width:160px;height:160px;
+    background:radial-gradient(circle,rgba(15,110,86,.4),transparent 70%);border-radius:50%}
+  .ball{position:absolute;top:15px;right:16px;font-size:26px;animation:spin 8s linear infinite;z-index:1}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hero h1{font-size:18px;font-weight:800;letter-spacing:-.3px;position:relative;z-index:1}
+  .hero .who{color:rgba(255,255,255,.7);font-size:12px;margin-top:2px;position:relative;z-index:1}
+  .saldo-card{margin-top:14px;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 15px;position:relative;z-index:1;
+    display:flex;justify-content:space-between;align-items:center}
+  .saldo-label{color:rgba(255,255,255,.75);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .saldo-val{font-size:27px;font-weight:900;letter-spacing:-1px;line-height:1.1}
+  .saldo-delta{font-size:12px;font-weight:700;text-align:right}
+  .saldo-delta.up{color:var(--green)} .saldo-delta.dn{color:var(--red-l)} .saldo-delta.even{color:rgba(255,255,255,.6)}
+  .saldo-delta small{color:rgba(255,255,255,.5);font-weight:600;display:block}
+
+  /* NAV */
+  .nav{display:flex;background:var(--card2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+  .nav button{flex:1;padding:10px 2px;font-size:11px;font-weight:700;border:none;background:none;
+    color:var(--muted2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;
+    border-bottom:2.5px solid transparent;transition:all .2s}
+  .nav button.on{color:#fff;border-bottom-color:var(--green)}
+  .nav button i{font-size:18px}
+
+  /* BODY */
+  .body{padding:14px;padding-bottom:30px;min-height:60vh}
+  .screen{display:none;animation:fadeUp .35s ease both}
+  .screen.on{display:block}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  .daylabel{color:var(--green);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+    margin:10px 0 8px;display:flex;align-items:center;gap:6px}
+  .daylabel:first-child{margin-top:0}
+  .daylabel::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green)}
+
+  /* MATCH CARD */
+  .match{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+    border-radius:16px;padding:13px;margin-bottom:11px;position:relative;overflow:hidden;
+    animation:slideUp .4s ease both}
+  @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .match.mx{border-color:rgba(93,202,165,.4)}
+  .match.mx::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:linear-gradient(180deg,var(--green),var(--green-d))}
+  .match.done{opacity:.75}
+  .match-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;gap:8px}
+  .teams{font-size:16px;font-weight:800;letter-spacing:-.3px}
+  .meta{color:var(--muted2);font-size:10px;font-weight:700;background:rgba(255,255,255,.06);
+    padding:3px 8px;border-radius:20px;white-space:nowrap}
+  .picks{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+  .pick{background:rgba(255,255,255,.05);border:1.5px solid var(--line2);border-radius:11px;
+    padding:9px 4px;text-align:center;cursor:pointer;transition:all .18s}
+  .pick:active{transform:scale(.95)}
+  .pick .pt{font-size:12px;font-weight:800;margin-bottom:3px;color:rgba(255,255,255,.85)}
+  .pick .pm{font-size:11px;font-weight:700;color:var(--muted)}
+  .pick.sel-local{background:linear-gradient(135deg,rgba(15,110,86,.35),rgba(93,202,165,.18));border-color:var(--green)}
+  .pick.sel-local .pt,.pick.sel-local .pm{color:var(--green)}
+  .pick.sel-empate{background:rgba(239,159,39,.18);border-color:var(--amber)}
+  .pick.sel-empate .pt,.pick.sel-empate .pm{color:var(--amber-l)}
+  .pick.sel-visita{background:rgba(226,75,74,.18);border-color:var(--red)}
+  .pick.sel-visita .pt,.pick.sel-visita .pm{color:var(--red-l)}
+  .pick.win{background:linear-gradient(135deg,rgba(15,110,86,.5),rgba(93,202,165,.25));border-color:var(--green)}
+  .pick.lose{opacity:.4}
+  .hint{margin-top:9px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:5px;animation:fadeUp .3s both}
+  .hint.bet{color:var(--green)} .hint.res{color:var(--muted)}
+  .cancel-btn{margin-top:8px;font-size:11px;font-weight:700;color:var(--red-l);background:rgba(226,75,74,.12);
+    border:1px solid rgba(226,75,74,.25);border-radius:8px;padding:5px 10px;cursor:pointer}
+  .result-badge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;white-space:nowrap}
+  .rb-win{background:rgba(93,202,165,.2);color:var(--green)}
+  .rb-lose{background:rgba(226,75,74,.2);color:var(--red-l)}
+  .rb-info{background:rgba(255,255,255,.1);color:var(--muted)}
+
+  /* FILTERS */
+  .filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .fbtn{padding:6px 13px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid var(--line2);
+    background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+  .fbtn.on{background:var(--green);color:#04231a;border-color:var(--green)}
+
+  /* PODIUM */
+  .podium{display:flex;justify-content:center;align-items:flex-end;gap:8px;padding:18px 8px 14px;
+    background:linear-gradient(180deg,var(--bg2),var(--bg));border-radius:16px;margin-bottom:12px}
+  .pod{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;animation:rise .5s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .pod .av{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:900;font-size:15px;color:#fff;border:2px solid}
+  .pod.p1 .av{background:linear-gradient(135deg,#EF9F27,#BA7517);border-color:var(--gold);width:54px;height:54px;font-size:17px}
+  .pod.p2 .av{background:linear-gradient(135deg,#9aa0ab,#6b7280);border-color:#c4c9d2}
+  .pod.p3 .av{background:linear-gradient(135deg,#c87f4a,#8B5A2B);border-color:#d89968}
+  .pod .nm{font-size:11px;font-weight:700;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pod .sl{font-size:12px;font-weight:900}
+  .pod.p1 .sl{color:var(--gold)} .pod.p2 .sl{color:#c4c9d2} .pod.p3 .sl{color:#d89968}
+  .pod .bar{width:100%;border-radius:8px 8px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:6px;font-size:20px}
+  .pod.p1 .bar{height:56px;background:linear-gradient(180deg,#EF9F27,#854F0B)}
+  .pod.p2 .bar{height:40px;background:linear-gradient(180deg,#9aa0ab,#4b5159)}
+  .pod.p3 .bar{height:28px;background:linear-gradient(180deg,#c87f4a,#6b3f1f)}
+
+  /* RANK LIST */
+  .rank-list{display:flex;flex-direction:column;gap:6px}
+  .rank-row{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;
+    background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);animation:slideR .4s ease both}
+  @keyframes slideR{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+  .rank-row.me{background:linear-gradient(90deg,rgba(24,95,165,.3),rgba(17,22,42,.6));border-color:rgba(93,202,165,.3)}
+  .rank-pos{font-size:14px;font-weight:900;color:var(--muted2);min-width:24px;text-align:center}
+  .rank-nm{flex:1;font-size:14px;font-weight:700}
+  .rank-nm .yt{font-size:9px;color:var(--green);font-weight:800;background:rgba(93,202,165,.15);padding:2px 6px;border-radius:10px;margin-left:5px}
+  .rank-vals{text-align:right}
+  .rank-sd{font-size:14px;font-weight:800}
+  .rank-dl{font-size:11px;font-weight:700} .rank-dl.up{color:var(--green)} .rank-dl.dn{color:var(--red-l)} .rank-dl.even{color:var(--muted2)}
+
+  /* CARDS GENERIC */
+  .info-card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+    border-radius:14px;padding:13px 15px;margin-bottom:10px}
+  .sec-title{color:var(--muted2);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px}
+  .sec-title:first-child{margin-top:0}
+  .ap-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+  .ap-row:last-child{border-bottom:none}
+  .ap-p{font-size:14px;font-weight:700} .ap-d{font-size:11px;color:var(--muted);margin-top:1px}
+  .ap-r{text-align:right} .ap-m{font-size:14px;font-weight:800}
+  .ap-g{font-size:11px;font-weight:700} .ap-g.win{color:var(--green)} .ap-g.loss{color:var(--red-l)} .ap-g.pend{color:var(--muted)}
+
+  /* LOGIN */
+  .login-hero{text-align:center;padding:40px 24px 24px}
+  .login-trophy{font-size:54px;animation:bounce 2.5s ease-in-out infinite}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .login-hero h1{font-size:24px;font-weight:900;margin-top:12px;background:linear-gradient(135deg,#5DCAA5,#FAC775);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .login-hero p{color:var(--muted);font-size:13px;margin-top:4px}
+  .player-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 4px}
+  .player-card{background:linear-gradient(180deg,var(--card),var(--card2));border:1.5px solid var(--line2);
+    border-radius:16px;padding:16px 10px;text-align:center;cursor:pointer;transition:all .2s;animation:slideUp .4s ease both}
+  .player-card:active{transform:scale(.96)}
+  .player-card:hover{border-color:var(--green)}
+  .player-card .av{width:50px;height:50px;border-radius:50%;margin:0 auto 8px;display:flex;align-items:center;
+    justify-content:center;font-weight:900;font-size:18px;color:#fff;
+    background:linear-gradient(135deg,var(--blue),var(--green-d))}
+  .player-card .nm{font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .player-card .sl{font-size:11px;color:var(--muted);margin-top:2px}
+  .player-card.new{border-style:dashed;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:118px}
+  .player-card.new .plus{font-size:28px;color:var(--green);margin-bottom:4px}
+  .player-card.new .nm{color:var(--green)}
+
+  /* FORMS */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+  input{width:100%;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line2);
+    background:rgba(255,255,255,.05);font-size:16px;color:#fff;outline:none;transition:border-color .15s}
+  input:focus{border-color:var(--green)}
+  input::placeholder{color:var(--muted2)}
+  .pin-input{text-align:center;letter-spacing:12px;font-size:24px;font-weight:800;padding-left:12px}
+  .btn{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:800;border:none;cursor:pointer;
+    transition:transform .1s,opacity .15s;display:flex;align-items:center;justify-content:center;gap:7px}
+  .btn:active{transform:scale(.97)}
+  .btn-primary{background:linear-gradient(135deg,var(--green),var(--green-d));color:#04231a}
+  .btn-ghost{background:rgba(255,255,255,.06);color:#fff;border:1.5px solid var(--line2)}
+  .btn-danger{background:rgba(226,75,74,.15);color:var(--red-l);border:1.5px solid rgba(226,75,74,.3)}
+  .btn-sm{padding:9px 14px;font-size:13px;width:auto}
+  .btn:disabled{opacity:.4}
+  .back-link{color:var(--muted);font-size:13px;text-align:center;margin-top:16px;cursor:pointer}
+  .back-link:hover{color:#fff}
+
+  /* MODAL */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;
+    align-items:flex-end;justify-content:center;animation:fadeIn .2s}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .sheet{background:linear-gradient(180deg,var(--card),var(--bg2));width:100%;max-width:480px;
+    border-radius:22px 22px 0 0;padding:20px 18px calc(28px + env(safe-area-inset-bottom));
+    max-height:88vh;overflow-y:auto;border-top:1px solid var(--line2);animation:slideSheet .3s ease}
+  @keyframes slideSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .sheet-head h3{font-size:18px;font-weight:800}
+  .sheet-close{background:rgba(255,255,255,.08);border:none;color:var(--muted);font-size:20px;
+    width:32px;height:32px;border-radius:50%;cursor:pointer}
+  .quick-amts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .quick-amts button{flex:1;min-width:60px;padding:8px;border-radius:10px;border:1.5px solid var(--line2);
+    background:rgba(255,255,255,.05);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+  .preview-box{background:rgba(93,202,165,.12);border:1px solid rgba(93,202,165,.25);border-radius:12px;
+    padding:12px 14px;font-size:13px;color:var(--green);margin:14px 0;display:none}
+  .preview-box strong{font-size:16px}
+
+  /* ADMIN */
+  .admin-banner{background:linear-gradient(135deg,rgba(239,159,39,.2),rgba(133,79,11,.15));
+    border:1px solid rgba(239,159,39,.3);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--amber-l)}
+  .admin-match{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:8px;flex-wrap:wrap}
+  .admin-match:last-child{border-bottom:none}
+  .rbtns{display:flex;gap:5px}
+  .rbtn{padding:6px 9px;font-size:11px;font-weight:800;border-radius:8px;border:1.5px solid var(--line2);
+    background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer}
+  .rbtn.local{border-color:var(--green);color:var(--green)}
+  .rbtn.empate{border-color:var(--amber);color:var(--amber-l)}
+  .rbtn.visita{border-color:var(--red);color:var(--red-l)}
+
+  /* TOAST + CONFETTI */
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1a1f33;
+    border:1px solid var(--line2);color:#fff;padding:12px 22px;border-radius:30px;font-size:14px;font-weight:700;
+    z-index:999;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.hide-init{transform:translateX(-50%) translateY(10px)}
+  .empty{text-align:center;padding:50px 24px;color:var(--muted)}
+  .empty .emoji{font-size:40px;margin-bottom:10px}
+  #confetti{position:fixed;inset:0;pointer-events:none;z-index:500}
+</style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen on">
+  <div class="login-hero">
+    <div class="login-trophy">🏆</div>
+    <h1>LudoPicks</h1>
+    <p>Mundial 2026 · Elige tu jugador</p>
+    <p style="font-size:11px;color:var(--muted2);margin-top:6px">Apuesta ficticia entre compas · sin dinero real</p>
+  </div>
+  <div class="body" style="padding-top:0">
+    <div class="player-grid" id="playerGrid"></div>
+  </div>
+</div>
+
+<!-- PIN LOGIN -->
+<div id="screen-pin" class="screen">
+  <div class="login-hero">
+    <div class="av" id="pinAvatar" style="width:64px;height:64px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#fff;background:linear-gradient(135deg,#185FA5,#0F6E56)"></div>
+    <h1 id="pinName" style="font-size:20px"></h1>
+    <p>Ingresa tu PIN de 4 dígitos</p>
+  </div>
+  <div class="body" style="padding-top:0;max-width:280px;margin:0 auto">
+    <div class="field">
+      <input id="pinInput" class="pin-input" type="tel" inputmode="numeric" maxlength="4" placeholder="••••"
+        oninput="onPinType()" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">Entrar →</button>
+    <div class="back-link" onclick="showScreen('login')">← Volver</div>
+  </div>
+</div>
+
+<!-- REGISTER -->
+<div id="screen-register" class="screen">
+  <div class="login-hero">
+    <div class="login-trophy">⚽</div>
+    <h1 style="font-size:20px">Nuevo jugador</h1>
+    <p>Crea tu perfil para jugar</p>
+  </div>
+  <div class="body" style="padding-top:0;max-width:300px;margin:0 auto">
+    <div class="field">
+      <label>Tu nombre</label>
+      <input id="regName" type="text" maxlength="18" placeholder="Ej: El Profe" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Crea un PIN (4 dígitos)</label>
+      <input id="regPin" class="pin-input" type="tel" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" onclick="doRegister()">Crear y entrar →</button>
+    <div class="back-link" onclick="showScreen('login')">← Volver</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <div class="hero">
+    <div class="ball">⚽</div>
+    <h1 id="appTitle">LudoPicks</h1>
+    <div class="who" id="appWho"></div>
+    <div class="saldo-card" id="saldoCard">
+      <div>
+        <div class="saldo-label">Tu saldo</div>
+        <div class="saldo-val" id="saldoVal">$1,000</div>
+      </div>
+      <div class="saldo-delta even" id="saldoDelta"></div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <button id="tab-partidos" class="on" onclick="showTab('partidos')"><i class="ti ti-ballpen"></i>Partidos</button>
+    <button id="tab-mis" onclick="showTab('mis')"><i class="ti ti-ticket"></i>Mis picks</button>
+    <button id="tab-ranking" onclick="showTab('ranking')"><i class="ti ti-trophy"></i>Ranking</button>
+    <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
+  </nav>
+
+  <div class="body">
+    <div id="tabc-partidos" class="tabc">
+      <div class="filters" id="grupoFilters"></div>
+      <div id="listaPartidos"></div>
+    </div>
+    <div id="tabc-mis" class="tabc" style="display:none">
+      <div id="listaMis"></div>
+    </div>
+    <div id="tabc-ranking" class="tabc" style="display:none">
+      <div id="listaRanking"></div>
+    </div>
+    <div id="tabc-admin" class="tabc" style="display:none">
+      <div class="admin-banner"><strong>Modo administrador</strong> — Registra resultados para liquidar apuestas automáticamente.</div>
+      <div class="filters" id="adminFilters"></div>
+      <div id="listaAdmin"></div>
+      <button class="btn btn-danger btn-sm" style="width:100%;margin-top:16px" onclick="resetTodo()">⚠️ Reset total</button>
+    </div>
+    <div style="text-align:center;margin-top:20px">
+      <span class="back-link" onclick="logout()">Cerrar sesión</span>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL APUESTA -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h3 id="mTitle"></h3>
+      <button class="sheet-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="mBody"></div>
+  </div>
+</div>
+
+<div class="toast hide-init" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
+<script>
+const API='/api/game';
+let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:1000};
+let me=null, adminKey=null, isAdmin=false;
+let pickP=null, pickK=null, pinTarget=null;
+let grupoF='Todos', adminF='Todos', currentTab='partidos';
+
+function initials(n){return n.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();}
+function fmt(n){return '$'+Math.round(n).toLocaleString('es-MX');}
+
+async function loadState(){const r=await fetch(API);state=await r.json();}
+async function api(body){
+  try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return await r.json();}
+  catch(e){toast('Error de conexión');return {};}
+}
+
+async function init(){
+  await loadState();
+  const savedAdmin=localStorage.getItem('mundial_admin');
+  const savedMe=localStorage.getItem('mundial_me');
+  if(savedAdmin){adminKey=savedAdmin;isAdmin=true;enterApp();return;}
+  if(savedMe&&state.jugadores[savedMe]){me=savedMe;enterApp();return;}
+  renderLogin();
+}
+
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById('app').style.display='none';
+  document.getElementById('screen-'+name).classList.add('on');
+}
+
+function renderLogin(){
+  showScreen('login');
+  const players=Object.values(state.jugadores).sort((a,b)=>a.creado-b.creado);
+  let html='';
+  players.forEach((p,i)=>{
+    html+=`<div class="player-card" style="animation-delay:${i*.05}s" onclick="pickPlayer('${p.nombre.replace(/'/g,"\\'")}')">
+      <div class="av">${initials(p.nombre)}</div>
+      <div class="nm">${p.nombre}</div>
+      <div class="sl">${fmt(p.saldo)}</div>
+    </div>`;
+  });
+  html+=`<div class="player-card new" onclick="showScreen('register')">
+    <div class="plus">+</div><div class="nm">Soy nuevo</div>
+  </div>`;
+  document.getElementById('playerGrid').innerHTML=html;
+}
+
+function pickPlayer(nombre){
+  pinTarget=nombre;
+  document.getElementById('pinAvatar').textContent=initials(nombre);
+  document.getElementById('pinName').textContent=nombre;
+  document.getElementById('pinInput').value='';
+  showScreen('pin');
+  setTimeout(()=>document.getElementById('pinInput').focus(),200);
+}
+
+function onPinType(){
+  const v=document.getElementById('pinInput').value.replace(/\D/g,'');
+  document.getElementById('pinInput').value=v;
+  if(v.length===4) doLogin();
+}
+
+async function doLogin(){
+  const pin=document.getElementById('pinInput').value;
+  if(pin.length!==4)return toast('Ingresa 4 dígitos');
+  const r=await api({action:'login',payload:{nombre:pinTarget,pin}});
+  if(r.error){toast(r.error);document.getElementById('pinInput').value='';return;}
+  state.jugadores=r.jugadores;
+  me=pinTarget;
+  localStorage.setItem('mundial_me',me);
+  enterApp();
+}
+
+async function doRegister(){
+  const nombre=document.getElementById('regName').value.trim();
+  const pin=document.getElementById('regPin').value;
+  if(!nombre)return toast('Escribe tu nombre');
+  if(!/^\d{4}$/.test(pin))return toast('El PIN debe ser de 4 dígitos');
+  const r=await api({action:'register',payload:{nombre,pin}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;
+  me=nombre;
+  localStorage.setItem('mundial_me',me);
+  enterApp();
+}
+
+function logout(){
+  localStorage.removeItem('mundial_me');
+  localStorage.removeItem('mundial_admin');
+  me=null;adminKey=null;isAdmin=false;
+  renderLogin();
+}
+
+function enterApp(){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById('app').style.display='block';
+  document.getElementById('tab-admin').style.display=isAdmin?'flex':'none';
+  if(isAdmin){
+    document.getElementById('appWho').textContent='⚙️ Modo administrador';
+    document.getElementById('saldoCard').style.display='none';
+    showTab('admin');
+  }else{
+    document.getElementById('saldoCard').style.display='flex';
+    showTab('partidos');
+  }
+  refreshHero();
+}
+
+function refreshHero(){
+  if(isAdmin)return;
+  const j=state.jugadores[me];if(!j)return;
+  document.getElementById('appWho').textContent='Jugando como '+me;
+  document.getElementById('saldoVal').textContent=fmt(j.saldo);
+  const d=j.saldo-state.saldo_inicial;
+  const el=document.getElementById('saldoDelta');
+  el.className='saldo-delta '+(d>0?'up':d<0?'dn':'even');
+  el.innerHTML=`${d>0?'▲ +':d<0?'▼ ':''}${d===0?'Sin cambios':'$'+Math.abs(d)}<small>desde ${fmt(state.saldo_inicial)}</small>`;
+}
+
+function showTab(name){
+  currentTab=name;
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tab-'+name).classList.add('on');
+  document.querySelectorAll('.tabc').forEach(t=>t.style.display='none');
+  document.getElementById('tabc-'+name).style.display='block';
+  if(name==='partidos')renderPartidos();
+  if(name==='mis')renderMis();
+  if(name==='ranking')renderRanking();
+  if(name==='admin')renderAdmin();
+}
+
+function renderFilters(id,active,cb){
+  const grupos=['Todos',...new Set(state.partidos.map(p=>'Gr.'+p.grupo))];
+  document.getElementById(id).innerHTML=grupos.map(g=>
+    `<button class="fbtn${g===active?' on':''}" onclick="${cb}('${g}')">${g}</button>`).join('');
+}
+
+function renderPartidos(){
+  const j=state.jugadores[me];if(!j)return;
+  renderFilters('grupoFilters',grupoF,'setGrupoF');
+  const ps=grupoF==='Todos'?state.partidos:state.partidos.filter(p=>'Gr.'+p.grupo===grupoF);
+  const myAp={};Object.values(state.apuestas).forEach(a=>{if(a.nombre===me)myAp[a.partidoId]=a;});
+  let html='',lastF='';
+  ps.forEach((p,i)=>{
+    if(p.fecha!==lastF){html+=`<div class="daylabel">${p.fecha}</div>`;lastF=p.fecha;}
+    html+=matchCard(p,state.resultados[p.id],myAp[p.id],i);
+  });
+  document.getElementById('listaPartidos').innerHTML=html||'<div class="empty"><div class="emoji">⚽</div>No hay partidos</div>';
+}
+
+function matchCard(p,res,ap,i){
+  const lbl={local:p.local,empate:'Empate',visita:p.visita};
+  const done=!!res;
+  let badge='';
+  if(res){
+    if(ap){
+      if(ap.pick===res){const g=Math.round(ap.monto*ap.momio);badge=`<span class="result-badge rb-win">+${g} ✓</span>`;}
+      else badge=`<span class="result-badge rb-lose">−$${ap.monto} ✗</span>`;
+    }else badge=`<span class="result-badge rb-info">${lbl[res]}</span>`;
+  }
+  let picks='';
+  ['local','empate','visita'].forEach(k=>{
+    let cls='pick';
+    if(ap&&ap.pick===k)cls+=' sel-'+k;
+    if(done){if(res===k)cls+=' win';else cls+=' lose';}
+    const team={local:p.local,empate:'Empate',visita:p.visita}[k];
+    const onclick=done?'':`onclick="openBet(${p.id},'${k}')"`;
+    picks+=`<div class="${cls}" ${onclick}><div class="pt">${team}</div><div class="pm">${p.momios[k]}x</div></div>`;
+  });
+  let hint='';
+  if(!done&&ap){
+    const g=Math.round(ap.monto*ap.momio);
+    hint=`<div class="hint bet"><i class="ti ti-circle-check"></i> Apostaste $${ap.monto} a ${lbl[ap.pick]} · ganarías $${g}</div>
+      <button class="cancel-btn" onclick="cancelBet(${p.id})">Cancelar apuesta</button>`;
+  }else if(done&&ap){
+    hint=`<div class="hint res">Tu pick: ${lbl[ap.pick]} · resultado: ${lbl[res]}</div>`;
+  }
+  return `<div class="match${p.local==='MEX'||p.visita==='MEX'?' mx':''}${done?' done':''}" style="animation-delay:${i*.04}s">
+    <div class="match-top">
+      <div class="teams">${p.local} vs ${p.visita}</div>
+      ${badge||`<span class="meta">Gr.${p.grupo} · ${p.hora}</span>`}
+    </div>
+    <div class="picks">${picks}</div>
+    ${hint}
+  </div>`;
+}
+
+function setGrupoF(g){grupoF=g;renderPartidos();}
+function setAdminF(g){adminF=g;renderAdmin();}
+
+function openBet(pid,pick){
+  const p=state.partidos.find(x=>x.id===pid);if(!p)return;
+  const j=state.jugadores[me];
+  const lbl={local:p.local,empate:'Empate',visita:p.visita};
+  pickP=pid;pickK=pick;
+  const mom=p.momios[pick];
+  document.getElementById('mTitle').textContent=`${p.local} vs ${p.visita}`;
+  document.getElementById('mBody').innerHTML=`
+    <p style="color:var(--muted);font-size:14px;margin-bottom:14px">
+      Apuesta: <strong style="color:#fff">${lbl[pick]}</strong> · Momio <strong style="color:var(--green)">${mom}x</strong>
+    </p>
+    <div class="field">
+      <label>Monto (saldo: ${fmt(j.saldo)})</label>
+      <input id="betMonto" type="tel" inputmode="numeric" placeholder="100" oninput="betPreview(${mom})">
+    </div>
+    <div class="quick-amts">
+      ${[50,100,200,500].filter(v=>v<=j.saldo).map(v=>`<button onclick="setMonto(${v},${mom})">$${v}</button>`).join('')}
+      <button onclick="setMonto(${j.saldo},${mom})">Todo</button>
+    </div>
+    <div class="preview-box" id="betPrev"></div>
+    <button class="btn btn-primary" style="margin-top:6px" onclick="confirmBet()">Confirmar apuesta</button>`;
+  document.getElementById('overlay').style.display='flex';
+  setTimeout(()=>document.getElementById('betMonto').focus(),250);
+}
+function setMonto(v,mom){document.getElementById('betMonto').value=v;betPreview(mom);}
+function betPreview(mom){
+  const v=parseInt(document.getElementById('betMonto').value);
+  const el=document.getElementById('betPrev');
+  if(!v||v<=0){el.style.display='none';return;}
+  const g=Math.round(v*mom);
+  el.innerHTML=`Si ganas recibes <strong>${fmt(g)}</strong><br><span style="color:var(--muted)">Ganancia neta: +${fmt(g-v)}</span>`;
+  el.style.display='block';
+}
+function closeModal(){document.getElementById('overlay').style.display='none';}
+async function confirmBet(){
+  const monto=parseInt(document.getElementById('betMonto').value);
+  if(!monto||monto<=0)return toast('Monto inválido');
+  const r=await api({action:'apostar',payload:{nombre:me,partidoId:pickP,pick:pickK,monto}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;state.apuestas=r.apuestas;
+  closeModal();toast('¡Apuesta registrada! 🎯');refreshHero();renderPartidos();
+}
+async function cancelBet(pid){
+  const r=await api({action:'cancelar',payload:{nombre:me,partidoId:pid}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;state.apuestas=r.apuestas;
+  toast('Apuesta cancelada');refreshHero();renderPartidos();
+}
+
+function renderMis(){
+  const j=state.jugadores[me];
+  const mine=Object.values(state.apuestas).filter(a=>a.nombre===me);
+  if(!mine.length){document.getElementById('listaMis').innerHTML='<div class="empty"><div class="emoji">🎟️</div>Aún no tienes apuestas.<br>Ve a Partidos para empezar.</div>';return;}
+  const pend=mine.filter(a=>!state.resultados[a.partidoId]);
+  const liq=mine.filter(a=>state.resultados[a.partidoId]);
+  let html='',tApostado=0,tBalance=0;
+  if(pend.length){
+    html+=`<div class="sec-title">Pendientes (${pend.length})</div><div class="info-card">`;
+    pend.forEach(ap=>{const p=state.partidos.find(x=>x.id===ap.partidoId);const lbl={local:p.local,empate:'Empate',visita:p.visita};
+      const pot=Math.round(ap.monto*ap.momio);tApostado+=ap.monto;
+      html+=`<div class="ap-row"><div><div class="ap-p">${p.local} vs ${p.visita}</div><div class="ap-d">${lbl[ap.pick]} · ${ap.momio}x · ${p.fecha}</div></div>
+        <div class="ap-r"><div class="ap-m">$${ap.monto}</div><div class="ap-g pend">→ $${pot}</div></div></div>`;});
+    html+='</div>';
+  }
+  if(liq.length){
+    html+=`<div class="sec-title">Liquidadas (${liq.length})</div><div class="info-card">`;
+    liq.forEach(ap=>{const p=state.partidos.find(x=>x.id===ap.partidoId);const res=state.resultados[ap.partidoId];
+      const win=ap.pick===res;const lbl={local:p.local,empate:'Empate',visita:p.visita};
+      if(win)tBalance+=Math.round(ap.monto*(ap.momio-1));else tBalance-=ap.monto;
+      html+=`<div class="ap-row"><div><div class="ap-p">${p.local} vs ${p.visita}</div><div class="ap-d">${lbl[ap.pick]} · ${ap.momio}x</div></div>
+        <div class="ap-r"><div class="ap-m">$${ap.monto}</div><div class="ap-g ${win?'win':'loss'}">${win?'+$'+Math.round(ap.monto*(ap.momio-1)):'−$'+ap.monto}</div></div></div>`;});
+    html+='</div>';
+  }
+  html+=`<div class="info-card" style="background:rgba(255,255,255,.04)">
+    <div class="ap-row" style="border:none;padding:4px 0"><span style="color:var(--muted)">Total apostado</span><strong>$${tApostado}</strong></div>
+    <div class="ap-row" style="border:none;padding:4px 0"><span style="color:var(--muted)">Balance liquidado</span>
+      <strong style="color:${tBalance>=0?'var(--green)':'var(--red-l)'}">${tBalance>=0?'+':'−'}$${Math.abs(tBalance)}</strong></div></div>`;
+  document.getElementById('listaMis').innerHTML=html;
+}
+
+function renderRanking(){
+  const js=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo);
+  if(!js.length){document.getElementById('listaRanking').innerHTML='<div class="empty"><div class="emoji">🏆</div>Nadie se ha registrado aún.</div>';return;}
+  const top3=js.slice(0,3);
+  const order=[top3[1],top3[0],top3[2]].filter(Boolean);
+  const posClass=p=>p===top3[0]?'p1':p===top3[1]?'p2':'p3';
+  const medal=p=>p===top3[0]?'🥇':p===top3[1]?'🥈':'🥉';
+  let pod='<div class="podium">';
+  order.forEach((p,i)=>{pod+=`<div class="pod ${posClass(p)}" style="animation-delay:${i*.15}s">
+    <div class="av">${initials(p.nombre)}</div><div class="nm">${p.nombre}</div><div class="sl">${fmt(p.saldo)}</div>
+    <div class="bar">${medal(p)}</div></div>`;});
+  pod+='</div>';
+  let list='<div class="sec-title">Tabla completa</div><div class="rank-list">';
+  js.forEach((p,i)=>{const d=p.saldo-state.saldo_inicial;
+    list+=`<div class="rank-row${p.nombre===me?' me':''}" style="animation-delay:${i*.05}s">
+      <div class="rank-pos">${i<3?medal(p):'#'+(i+1)}</div>
+      <div class="rank-nm">${p.nombre}${p.nombre===me?'<span class="yt">TÚ</span>':''}</div>
+      <div class="rank-vals"><div class="rank-sd">${fmt(p.saldo)}</div>
+        <div class="rank-dl ${d>0?'up':d<0?'dn':'even'}">${d>0?'▲ +':d<0?'▼ −':''}${d===0?'—':'$'+Math.abs(d)}</div></div></div>`;});
+  list+='</div>';
+  const liq=Object.keys(state.resultados).length;
+  list+=`<div class="info-card" style="margin-top:12px;background:rgba(255,255,255,.04)">
+    <span style="color:var(--muted);font-size:13px">Partidos liquidados: <strong style="color:#fff">${liq}/${state.partidos.length}</strong></span></div>`;
+  document.getElementById('listaRanking').innerHTML=pod+list;
+}
+
+function renderAdmin(){
+  renderFilters('adminFilters',adminF,'setAdminF');
+  const ps=adminF==='Todos'?state.partidos:state.partidos.filter(p=>'Gr.'+p.grupo===adminF);
+  let html='<div class="info-card">',lastF='';
+  ps.forEach(p=>{
+    if(p.fecha!==lastF){html+=`<div class="sec-title" style="margin:8px 0 4px">${p.fecha}</div>`;lastF=p.fecha;}
+    const res=state.resultados[p.id];
+    html+=`<div class="admin-match"><div style="font-weight:700;font-size:14px">${p.local} vs ${p.visita} <span style="color:var(--muted2);font-size:11px">Gr.${p.grupo}</span></div>
+      <div class="rbtns">${res?`<span class="result-badge rb-info">${{local:p.local,empate:'Empate',visita:p.visita}[res]}</span>`:
+        `<button class="rbtn local" onclick="setRes(${p.id},'local')">${p.local}</button>
+         <button class="rbtn empate" onclick="setRes(${p.id},'empate')">Emp</button>
+         <button class="rbtn visita" onclick="setRes(${p.id},'visita')">${p.visita}</button>`}</div></div>`;
+  });
+  html+='</div>';
+  document.getElementById('listaAdmin').innerHTML=html;
+}
+
+async function setRes(pid,res){
+  const p=state.partidos.find(x=>x.id===pid);
+  const lbl={local:p.local,empate:'Empate',visita:p.visita}[res];
+  if(!confirm(`¿Confirmar: ${p.local} vs ${p.visita} → ${lbl}?`))return;
+  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,resultado:res}});
+  if(r.error)return toast(r.error);
+  state.resultados=r.resultados;state.jugadores=r.jugadores;
+  toast('Resultado guardado: '+lbl);renderAdmin();
+}
+async function resetTodo(){
+  if(!confirm('¿Borrar TODO? (jugadores, apuestas, resultados)'))return;
+  if(!confirm('¿Seguro? No se puede deshacer.'))return;
+  const r=await api({action:'reset',payload:{adminKey}});
+  if(r.error)return toast(r.error);
+  await loadState();toast('Reset completado');renderAdmin();
+}
+
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.remove('hide-init');el.classList.add('show');
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+function fireConfetti(){
+  if(typeof confetti==='undefined')return;
+  confetti({particleCount:120,spread:75,origin:{y:.6},colors:['#5DCAA5','#FAC775','#185FA5','#fff']});
+}
+
+setInterval(async()=>{
+  if(!me&&!isAdmin)return;
+  const prevSaldo=state.jugadores[me]?.saldo;
+  await loadState();
+  if(me&&prevSaldo!==undefined&&state.jugadores[me]&&state.jugadores[me].saldo>prevSaldo){
+    fireConfetti();toast('¡Ganaste una apuesta! 🎉');
+  }
+  refreshHero();
+  if(currentTab==='partidos')renderPartidos();
+  if(currentTab==='ranking')renderRanking();
+  if(currentTab==='mis')renderMis();
+},20000);
+
+init();
+</script>
+</body>
+</html>
