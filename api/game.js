@@ -1,8 +1,8 @@
 import { kv } from "@vercel/kv";
-import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN } from "../lib/data.js";
+import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT } from "../lib/data.js";
 
 const BY_ID = Object.fromEntries(PARTIDOS.map(p => [p.id, p]));
-const MERCADOS_VALIDOS = ["local", "empate", "visita", "over", "under"];
+const PICKS_1X2 = ["local", "empate", "visita"];
 
 function publicJugadores(jugadores) {
   const out = {};
@@ -12,26 +12,32 @@ function publicJugadores(jugadores) {
   return out;
 }
 
-// Deriva todos los resultados posibles a partir del marcador exacto
-function outcomes(match, r) {
-  const gl = r.gl, gv = r.gv, total = gl + gv;
-  return {
-    local: gl > gv, empate: gl === gv, visita: gl < gv,
-    over: total > match.linea, under: total < match.linea,
-  };
-}
-function pickWins(partidoId, r, pick) {
+// ¿Gana este pick dado el marcador? Para over/under usa la línea de la apuesta.
+function pickWins(partidoId, r, pick, linea) {
   const m = BY_ID[partidoId];
   if (!m) return false;
-  return !!outcomes(m, r)[pick];
+  if (pick === "local") return r.gl > r.gv;
+  if (pick === "empate") return r.gl === r.gv;
+  if (pick === "visita") return r.gl < r.gv;
+  const total = r.gl + r.gv;
+  if (pick === "over") return total > linea;
+  if (pick === "under") return total < linea;
+  return false;
 }
 
-// Momio real desde el catálogo (nunca confiar en el cliente)
-function momioDe(partidoId, pick) {
+// Momio real desde el catálogo (nunca confiar en el cliente).
+function momioPick(partidoId, pick, linea) {
   const m = BY_ID[partidoId];
-  if (!m || !(pick in m.momios)) return null;
-  return m.momios[pick];
+  if (!m) return null;
+  if (PICKS_1X2.includes(pick)) return m.momios[pick];
+  if (pick === "over" || pick === "under") {
+    const row = m.ou[String(linea)];
+    return row ? row[pick] : null;
+  }
+  return null;
 }
+function esMercadoOU(pick) { return pick === "over" || pick === "under"; }
+function mercadoDe(pick) { return esMercadoOU(pick) ? "ou" : "1x2"; }
 
 // Motor recalculable: ajusta saldos solo por transiciones de estado.
 // Idempotente — sirve igual para registrar y para revertir resultados.
@@ -42,12 +48,12 @@ function settleAll(jugadores, apuestas, resultados) {
       const sts = b.legs.map(l => {
         const r = resultados[l.partidoId];
         if (!r) return "pending";
-        return pickWins(l.partidoId, r, l.pick) ? "won" : "lost";
+        return pickWins(l.partidoId, r, l.pick, l.linea) ? "won" : "lost";
       });
       ns = sts.includes("lost") ? "lost" : sts.every(s => s === "won") ? "won" : "pending";
     } else {
       const r = resultados[b.partidoId];
-      ns = !r ? "pending" : (pickWins(b.partidoId, r, b.pick) ? "won" : "lost");
+      ns = !r ? "pending" : (pickWins(b.partidoId, r, b.pick, b.linea) ? "won" : "lost");
     }
     const old = b.status || "pending";
     const j = jugadores[b.nombre];
@@ -84,6 +90,7 @@ export default async function handler(req, res) {
     return res.json({
       jugadores: publicJugadores(jugadores), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
+      lineas_ou: LINEAS_OU, linea_default: LINEA_DEFAULT,
       now: Date.now(),
     });
   }
@@ -125,43 +132,46 @@ export default async function handler(req, res) {
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
 
-  // ── APOSTAR (simple u over/under) ──────────────────────────────────
+  // ── APOSTAR (simple: 1X2 u over/under con línea) ───────────────────
   if (action === "apostar") {
-    const { nombre, partidoId, pick, monto } = payload;
+    const { nombre, partidoId, pick, monto, linea } = payload;
     const jugadores  = (await kv.get("jugadores"))  || {};
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
     const j = jugadores[nombre];
     if (!j) return res.status(400).json({ error: "Jugador no existe" });
-    if (!MERCADOS_VALIDOS.includes(pick)) return res.status(400).json({ error: "Pick inválido" });
     const m = BY_ID[partidoId];
     if (!m) return res.status(400).json({ error: "Partido no existe" });
+    const esOU = esMercadoOU(pick);
+    if (!PICKS_1X2.includes(pick) && !esOU) return res.status(400).json({ error: "Pick inválido" });
+    const lineaUsada = esOU ? Number(linea) : null;
+    const momio = momioPick(partidoId, pick, lineaUsada);
+    if (momio == null) return res.status(400).json({ error: "Línea o pick inválido" });
     if (resultados[partidoId]) return res.status(400).json({ error: "El partido ya tiene resultado" });
     if (Date.now() >= m.kickoff) return res.status(400).json({ error: "El partido ya empezó, apuestas cerradas" });
     const mInt = Math.floor(Number(monto));
     if (!mInt || mInt < APUESTA_MIN) return res.status(400).json({ error: `Mínimo $${APUESTA_MIN}` });
 
-    const mercado = (pick === "over" || pick === "under") ? "ou" : "1x2";
-    // Reemplaza apuesta simple previa pendiente en mismo partido+mercado (devuelve su stake)
-    let saldoDisp = j.saldo;
-    let prevKey = null;
+    const mercado = mercadoDe(pick);
+    // Reemplaza apuesta simple previa pendiente del mismo partido+mercado (devuelve su stake)
+    let saldoDisp = j.saldo, prevKey = null;
     for (const [k, b] of Object.entries(apuestas)) {
       if (b.tipo !== "parlay" && b.nombre === nombre && b.partidoId === partidoId && b.mercado === mercado && (b.status || "pending") === "pending") {
         saldoDisp += b.monto; prevKey = k; break;
       }
     }
     if (mInt > saldoDisp) return res.status(400).json({ error: "Saldo insuficiente" });
-    if (prevKey) { delete apuestas[prevKey]; }
+    if (prevKey) delete apuestas[prevKey];
 
     j.saldo = saldoDisp - mInt;
     const id = "b" + Date.now() + Math.random().toString(36).slice(2, 6);
-    apuestas[id] = { id, tipo: "simple", mercado, nombre, partidoId, pick, monto: mInt, momio: momioDe(partidoId, pick), status: "pending", payout: 0, ts: Date.now() };
+    apuestas[id] = { id, tipo: "simple", mercado, nombre, partidoId, pick, linea: lineaUsada, monto: mInt, momio, status: "pending", payout: 0, ts: Date.now() };
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas });
   }
 
-  // ── APOSTAR PARLAY ─────────────────────────────────────────────────
+  // ── APOSTAR PARLAY (permite 1X2 + O/U del mismo partido) ───────────
   if (action === "apostarParlay") {
     const { nombre, legs, monto } = payload;
     const jugadores  = (await kv.get("jugadores"))  || {};
@@ -174,20 +184,25 @@ export default async function handler(req, res) {
     if (!mInt || mInt < APUESTA_MIN) return res.status(400).json({ error: `Mínimo $${APUESTA_MIN}` });
     if (mInt > j.saldo) return res.status(400).json({ error: "Saldo insuficiente" });
 
-    const vistos = new Set();
+    const vistos = new Set();        // clave: partidoId + mercado (evita 2 picks del mismo mercado/partido)
     let momioTotal = 1;
     const cleanLegs = [];
     for (const l of legs) {
       const m = BY_ID[l.partidoId];
       if (!m) return res.status(400).json({ error: "Partido inválido en el parlay" });
-      if (!MERCADOS_VALIDOS.includes(l.pick)) return res.status(400).json({ error: "Pick inválido en el parlay" });
-      if (vistos.has(l.partidoId)) return res.status(400).json({ error: "Solo una selección por partido en un parlay" });
-      vistos.add(l.partidoId);
+      const esOU = esMercadoOU(l.pick);
+      if (!PICKS_1X2.includes(l.pick) && !esOU) return res.status(400).json({ error: "Pick inválido en el parlay" });
+      const mercado = mercadoDe(l.pick);
+      const clave = l.partidoId + "_" + mercado;
+      if (vistos.has(clave)) return res.status(400).json({ error: "No puedes repetir el mismo mercado de un partido" });
+      vistos.add(clave);
       if (resultados[l.partidoId]) return res.status(400).json({ error: `${m.local} vs ${m.visita} ya tiene resultado` });
       if (Date.now() >= m.kickoff) return res.status(400).json({ error: `${m.local} vs ${m.visita} ya empezó` });
-      const mo = momioDe(l.partidoId, l.pick);
+      const lineaUsada = esOU ? Number(l.linea) : null;
+      const mo = momioPick(l.partidoId, l.pick, lineaUsada);
+      if (mo == null) return res.status(400).json({ error: "Línea o pick inválido en el parlay" });
       momioTotal *= mo;
-      cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, mercado: (l.pick === "over" || l.pick === "under") ? "ou" : "1x2", momio: mo });
+      cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, linea: lineaUsada, mercado, momio: mo });
     }
     momioTotal = Math.round(momioTotal * 100) / 100;
 
