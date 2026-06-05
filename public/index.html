@@ -365,6 +365,11 @@ select option{background:#161c30;color:#fff}
             <button class="btn btn-sm btn-danger" onclick="doAjuste(-1)">− Quitar</button>
           </div>
         </div>
+        <div class="sec-title">Recotizar apuestas</div>
+        <div class="info-card">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Actualiza el momio de las apuestas <b>pendientes</b> a los momios actuales del catálogo. Las ya liquidadas no se tocan. No cambia saldos — solo afecta cuánto pagarán al liquidarse.</div>
+          <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doRecotizar()">🔄 Recotizar pendientes con momios actuales</button>
+        </div>
       </div>
       <div id="admin-usuarios" style="display:none"><div id="listaUsuariosAdmin"></div></div>
       <div id="admin-notif" style="display:none">
@@ -609,13 +614,17 @@ function byId(id){return state.partidos.find(p=>p.id===id);}
 function isLocked(p){return eNow()>=p.kickoff;}
 function lineas(){return state.lineas_ou||[0.5,1.5,2.5,3.5,4.5,5.5];}
 function esOU(pick){return pick==='over'||pick==='under';}
+function esBtts(pick){return pick==='si'||pick==='no';}
+function marketOf(pick){return esOU(pick)?'ou':esBtts(pick)?'btts':'1x2';}
 function pickLabel(p,pick,linea){
   if(pick==='local')return p.local;if(pick==='empate')return 'Empate';if(pick==='visita')return p.visita;
-  if(pick==='over')return 'Over '+linea;if(pick==='under')return 'Under '+linea;return pick;
+  if(pick==='over')return 'Over '+linea;if(pick==='under')return 'Under '+linea;
+  if(pick==='si')return 'Ambos anotan: Sí';if(pick==='no')return 'Ambos anotan: No';return pick;
 }
 function pickWinsClient(p,r,pick,linea){
   if(pick==='local')return r.gl>r.gv;if(pick==='empate')return r.gl===r.gv;if(pick==='visita')return r.gl<r.gv;
-  const t=r.gl+r.gv;if(pick==='over')return t>linea;if(pick==='under')return t<linea;return false;
+  const t=r.gl+r.gv;if(pick==='over')return t>linea;if(pick==='under')return t<linea;
+  if(pick==='si')return r.gl>0&&r.gv>0;if(pick==='no')return !(r.gl>0&&r.gv>0);return false;
 }
 function getLinea(pid){
   if(lineSel[pid]!=null)return lineSel[pid];
@@ -831,6 +840,16 @@ function ouSection(p,done,locked){
   };
   return `<div class="ou-label">Total goles · elige línea</div><div class="ouchips">${chips}</div><div class="ou-row">${pk('over',row.over,'sel-over')}${pk('under',row.under,'sel-under')}</div>`;
 }
+function bttsSection(p,done,locked){
+  if(done){const r=state.resultados[p.id];const both=r.gl>0&&r.gv>0;return `<div class="ou-label">Ambos anotan</div><div style="font-size:12px;color:var(--muted);padding:3px 0">${both?'Sí — ambos marcaron':'No'}</div>`;}
+  if(!p.btts)return '';
+  const pk=(pick,label,momio,sel)=>{
+    let cls='pick';if(locked)cls+=' locked';else if(slipSelected(p.id,pick,null))cls+=' '+sel;
+    const onc=locked?'':` onclick="toggleSlip(${p.id},'${pick}',null,${momio})"`;
+    return `<div class="${cls}"${onc}><div class="pt">${label}</div><div class="pm">${momio}x</div></div>`;
+  };
+  return `<div class="ou-label">Ambos anotan</div><div class="ou-row">${pk('si','Sí',p.btts.si,'sel-local')}${pk('no','No',p.btts.no,'sel-visita')}</div>`;
+}
 function matchCard(p,res,i,skipAnim){
   const done=!!res;
   const locked=!done&&isLocked(p);
@@ -850,6 +869,7 @@ function matchCard(p,res,i,skipAnim){
   };
   const row1x2=`<div class="picks">${pk1('local',p.local,p.momios.local,'sel-local')}${pk1('empate','Empate',p.momios.empate,'sel-empate')}${pk1('visita',p.visita,p.momios.visita,'sel-visita')}</div>`;
   const rowou=ouSection(p,done,locked);
+  const rowbtts=bttsSection(p,done,locked);
   let hint='';
   ['1x2','ou'].forEach(mk=>{
     const b=mySimple[mk];if(!b)return;
@@ -864,7 +884,7 @@ function matchCard(p,res,i,skipAnim){
   const animStyle=skipAnim?'animation:none':`animation-delay:${i*.03}s`;
   return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}" style="${animStyle}">
     <div class="match-top"><div class="teams">${p.local} vs ${p.visita}</div>${meta}</div>
-    ${row1x2}${rowou}${hint}</div>`;
+    ${row1x2}${rowou}${rowbtts}${hint}</div>`;
 }
 // Actualiza SOLO una tarjeta (rápido) en vez de redibujar las 72
 function renderCard(pid){
@@ -879,8 +899,8 @@ function renderCard(pid){
 function slipSelected(pid,pick,linea){return betslip.some(s=>s.partidoId===pid&&s.pick===pick&&(esOU(pick)?s.linea===linea:true));}
 function slipMomioTotal(){return betslip.reduce((a,s)=>a*s.momio,1);}
 function toggleSlip(pid,pick,linea,momio){
-  const market=esOU(pick)?'ou':'1x2';
-  const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick&&(market==='1x2'||s.linea===linea));
+  const market=marketOf(pick);
+  const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick&&(market==='ou'?s.linea===linea:true));
   if(i>=0)betslip.splice(i,1);
   else{const j=betslip.findIndex(s=>s.partidoId===pid&&s.market===market);if(j>=0)betslip.splice(j,1);betslip.push({partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio});}
   renderSlipBar();renderCard(pid);
@@ -1007,10 +1027,14 @@ function renderRanking(){
   const js=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo);
   if(!js.length){document.getElementById('listaRanking').innerHTML='<div class="empty"><div class="emoji">🏆</div>Nadie se ha registrado.</div>';return;}
   const prev=state.rankPrev||{};
+  // Posición con empates (denso: 1,1,2,2,3): mismo saldo = mismo lugar, sin saltos
+  const posByName={};let _r=0;
+  js.forEach((p,i)=>{ if(i===0||p.saldo!==js[i-1].saldo)_r++; posByName[p.nombre]=_r; });
+  const medalFor=pos=>pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'';
   const top3=js.slice(0,3);
   const order=[top3[1],top3[0],top3[2]].filter(Boolean);
   const pc=p=>p===top3[0]?'p1':p===top3[1]?'p2':'p3';
-  const md=p=>p===top3[0]?'🥇':p===top3[1]?'🥈':'🥉';
+  const md=p=>medalFor(posByName[p.nombre]);
   let pod='<div class="podium">';
   order.forEach((p,i)=>{pod+=`<div class="pod ${pc(p)}" style="animation-delay:${i*.15}s"><div class="av">${buildAvSvg(p.avatar,pc(p)==='p1'?56:46)}</div><div class="nm">${p.nombre}</div><div class="sl">$${Math.round(p.saldo).toLocaleString()}</div><div class="bar">${md(p)}</div></div>`;});
   pod+='</div>';
@@ -1018,12 +1042,13 @@ function renderRanking(){
   let list='<div class="sec-title">Tabla completa</div><div class="rank-list">';
   js.forEach((p,i)=>{
     const d=p.saldo-state.saldo_inicial;
-    const pos=i+1;const pp=prev[p.nombre];
+    const pos=posByName[p.nombre];const pp=prev[p.nombre];
+    const medal=medalFor(pos);
     let mov='';
     if(pp){const ch=pp-pos;mov=ch>0?`<span style="color:var(--green);font-size:10px"> ▲${ch}</span>`:ch<0?`<span style="color:var(--rl);font-size:10px"> ▼${-ch}</span>`:`<span style="color:var(--muted2);font-size:10px"> =</span>`;}
     list+=`<div class="rank-row${p.nombre===me?' me':''}">
       <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid var(--line2)">${buildAvSvg(p.avatar,36)}</div>
-      <div class="rank-pos">${i<3?md(p):'#'+pos}${mov}</div>
+      <div class="rank-pos">${medal||('#'+pos)}${mov}</div>
       <div class="rank-nm">${p.nombre}${p.nombre===me?'<span class="yt">TÚ</span>':''}</div>
       <div class="rank-vals"><div class="rank-sd">$${Math.round(p.saldo).toLocaleString()}</div>
         <div class="rank-dl ${d>0?'up':d<0?'dn':'even'}">${d>0?'▲ +':d<0?'▼ −':''}${d===0?'—':'$'+Math.abs(Math.round(d)).toLocaleString()}</div></div></div>`;});
@@ -1076,7 +1101,8 @@ function scorePreview(pid){
   const el=document.getElementById('scoreDerived');
   if(isNaN(gl)||isNaN(gv)){el.innerHTML='Ingresa el marcador para ver qué se liquida.';return;}
   const r1=gl>gv?p.local+' gana':gl<gv?p.visita+' gana':'Empate';
-  el.innerHTML=`Se liquidará → <b>${r1}</b> &nbsp;·&nbsp; total <b>${gl+gv} goles</b> (define todos los over/under)`;
+  const btts=(gl>0&&gv>0)?'Sí':'No';
+  el.innerHTML=`Se liquidará → <b>${r1}</b> &nbsp;·&nbsp; total <b>${gl+gv} goles</b> &nbsp;·&nbsp; ambos anotan: <b>${btts}</b>`;
 }
 async function saveScore(pid){
   const gl=parseInt(document.getElementById('scoreL').value),gv=parseInt(document.getElementById('scoreV').value);
@@ -1181,6 +1207,13 @@ async function doBonusTodos(sign){
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;toast(sign>0?`+$${monto.toLocaleString()} a todos`:`−$${monto.toLocaleString()} a todos`);
 }
+async function doRecotizar(){
+  if(!confirm('¿Recotizar todas las apuestas pendientes con los momios actuales? Las apuestas vigentes cambiarán su posible ganancia.'))return;
+  const r=await api({action:'recotizar',payload:{adminKey}});
+  if(r.error)return toast(r.error);
+  if(r.apuestas)state.apuestas=r.apuestas;
+  toast(r.actualizadas>0?`✅ ${r.actualizadas} apuesta(s) recotizada(s)`:'Nada que recotizar (ya estaban al día)');
+}
 async function doAjuste(sign){
   const nombre=document.getElementById('adjJugador').value;
   const monto=parseInt(document.getElementById('adjMonto').value);
@@ -1213,6 +1246,8 @@ function pickLabelLong(p,pick,linea){
   if(pick==='empate')return 'Empate';
   if(pick==='over')return 'Over '+linea+' goles';
   if(pick==='under')return 'Under '+linea+' goles';
+  if(pick==='si')return 'Ambos anotan: Sí';
+  if(pick==='no')return 'Ambos anotan: No';
   return pick;
 }
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
@@ -1313,18 +1348,20 @@ async function makeRankingImage(){
   ctx.textAlign='center';
   ctx.fillStyle='#FAC775';ctx.font='800 46px -apple-system,sans-serif';ctx.fillText('🏆 RANKING',W/2,420);
   const imgs=await Promise.all(js.map(p=>svgToImg(avSvgFixed(p.avatar,90))));
-  const medal=['🥇','🥈','🥉'];
+  // Posición con empates (denso: 1,1,2,2,3): mismo saldo = mismo lugar, sin saltos
+  const posArr=[];let _r=0;js.forEach((p,i)=>{if(i===0||p.saldo!==js[i-1].saldo)_r++;posArr[i]=_r;});
+  const medalFor=pos=>pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'';
   js.forEach((p,i)=>{
-    const rowY=listTop+i*rowH;
+    const rowY=listTop+i*rowH;const pos=posArr[i];const medal=medalFor(pos);
     if(p.nombre===me){ctx.fillStyle='rgba(93,202,165,.12)';rr(ctx,70,rowY-55,W-140,80,16);ctx.fill();}
     ctx.textAlign='left';
-    ctx.fillStyle=i<3?'#FAC775':'rgba(255,255,255,.5)';ctx.font='800 44px -apple-system,sans-serif';
-    ctx.fillText(i<3?medal[i]:'#'+(i+1),90,rowY);
+    ctx.fillStyle=medal?'#FAC775':'rgba(255,255,255,.5)';ctx.font='800 44px -apple-system,sans-serif';
+    ctx.fillText(medal||('#'+pos),90,rowY);
     if(imgs[i]){ctx.save();ctx.beginPath();ctx.arc(245,rowY-15,38,0,7);ctx.closePath();ctx.clip();ctx.drawImage(imgs[i],207,rowY-53,76,76);ctx.restore();}
     ctx.fillStyle='#fff';ctx.font='700 42px -apple-system,sans-serif';
     ctx.fillText(p.nombre.length>16?p.nombre.slice(0,15)+'…':p.nombre,305,rowY);
     ctx.textAlign='right';
-    ctx.fillStyle=i<3?'#5DCAA5':'#fff';ctx.font='800 42px -apple-system,sans-serif';
+    ctx.fillStyle=medal?'#5DCAA5':'#fff';ctx.font='800 42px -apple-system,sans-serif';
     ctx.fillText('$'+Math.round(p.saldo).toLocaleString('es-MX'),W-90,rowY);
   });
   ctx.textAlign='center';
