@@ -49,7 +49,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .match.mx::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--green),var(--gd))}
 .match.done{opacity:.75}
 .match-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;gap:8px}
-.teams{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.match-head{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.match.open .match-head{margin-bottom:11px}
+.match-meta-wrap{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.meta-col{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.closein{font-size:10px;font-weight:800;color:var(--gold);white-space:nowrap}
+.closein.urgent{color:var(--rl);animation:pulseT 1.2s ease-in-out infinite}
+@keyframes pulseT{0%,100%{opacity:1}50%{opacity:.55}}
+.stat-pill{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}
+.stat-pill .sp-n{font-size:20px;font-weight:900;color:#fff;line-height:1}
+.stat-pill .sp-l{font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:3px}
+.elim-hero{text-align:center;padding:28px 18px;background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:18px;margin-bottom:16px}
+.elim-badge{display:inline-block;margin-top:14px;background:rgba(239,159,39,.15);border:1.5px solid rgba(239,159,39,.4);color:var(--gold);font-weight:800;font-size:13px;padding:8px 16px;border-radius:30px}
+.elim-list{display:flex;flex-direction:column;gap:7px}
+.elim-row{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:13px;opacity:.85}
+.elim-date{font-weight:900;color:var(--gold);font-size:14px}
+.campeon-list{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto}
+.campeon-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:all .15s}
+.campeon-row:active{transform:scale(.98)}
+.campeon-odd{font-weight:900;color:var(--gold);font-size:15px}
+.campeon-mybet{margin-top:10px;padding:10px;background:rgba(239,159,39,.1);border:1px solid rgba(239,159,39,.3);border-radius:11px;font-weight:700;font-size:13px}
+.chev{color:var(--muted2);font-size:13px;transition:transform .25s ease;display:inline-block}
+.match.open .chev{transform:rotate(180deg)}
+.bet-dot{font-size:13px}
+.vsx{color:var(--muted2);font-weight:600;font-size:13px;margin:0 2px}
+.match-body{animation:expandDown .25s ease both}
+@keyframes expandDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.vermas-btn{width:100%;padding:13px;margin:4px 0 8px;background:linear-gradient(180deg,var(--card),var(--card2));border:1.5px solid var(--line2);border-radius:14px;color:var(--gold);font-weight:800;font-size:14px;cursor:pointer;transition:all .18s}
+.vermas-btn:active{transform:scale(.98)}
+.teams{font-size:16px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:5px;min-width:0}
 .meta{color:var(--muted2);font-size:10px;font-weight:700;background:rgba(255,255,255,.06);padding:3px 8px;border-radius:20px;white-space:nowrap}
 .picks{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .pick{background:rgba(255,255,255,.05);border:1.5px solid var(--line2);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer;transition:all .18s}
@@ -330,12 +358,14 @@ select option{background:#161c30;color:#fff}
     <button id="tab-partidos" class="on" onclick="showTab('partidos')"><i class="ti ti-ballpen"></i>Partidos</button>
     <button id="tab-mis" onclick="showTab('mis')"><i class="ti ti-ticket"></i>Mis picks</button>
     <button id="tab-ranking" onclick="showTab('ranking')"><i class="ti ti-trophy"></i>Ranking</button>
+    <button id="tab-elim" onclick="showTab('elim')"><i class="ti ti-tournament"></i>Liguilla</button>
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
   <div class="body">
     <div id="tabc-partidos" class="tabc"><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
     <div id="tabc-mis" class="tabc"><div id="listaMis"></div></div>
     <div id="tabc-ranking" class="tabc"><div id="listaRanking"></div></div>
+    <div id="tabc-elim" class="tabc"><div id="listaElim"></div></div>
     <div id="tabc-admin" class="tabc">
       <div class="admin-banner"><strong>Modo administrador</strong> — Registra resultados y gestiona jugadores.</div>
       <div id="adminTabs" style="display:flex;gap:8px;margin-bottom:14px">
@@ -369,6 +399,12 @@ select option{background:#161c30;color:#fff}
         <div class="info-card">
           <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Actualiza el momio de las apuestas <b>pendientes</b> a los momios actuales del catálogo. Las ya liquidadas no se tocan. No cambia saldos — solo afecta cuánto pagarán al liquidarse.</div>
           <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doRecotizar()">🔄 Recotizar pendientes con momios actuales</button>
+        </div>
+        <div class="sec-title">🏆 Declarar campeón del Mundial</div>
+        <div class="info-card">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Liquida todas las apuestas de campeón. Úsalo solo al terminar el Mundial. Puedes corregirlo o dejarlo en blanco para revertir.</div>
+          <div class="field" style="margin-bottom:10px"><select id="campSel"></select></div>
+          <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doSetCampeon()">🏆 Declarar campeón</button>
         </div>
       </div>
       <div id="admin-usuarios" style="display:none"><div id="listaUsuariosAdmin"></div></div>
@@ -469,6 +505,20 @@ let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:1000
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados';
+let expanded=new Set();   // ids de partidos con la tarjeta desplegada
+let daysToShow=3;          // cuántos días de partidos mostrar (Todos)
+
+// ── FRASES CHISTOSAS (futbol mexicano / memes) ─────────────────
+const FRASES={
+  pick:['¡Tírate un pick!','¿Cuál es el pick de hoy, crack?','Anímate, no seas codo 💸','El que no arriesga, no gana','Hoy es día de inventar 🎯','Ponle, ponle… ¡que se va!','Saca la bolita mágica 🔮','¿Le entras o te rajas?'],
+  confirm:['¿Le picamos? 👀','Aquí se rifa el alma','Esto va con todo o nada','Calladito y a meterle','Última llamada… o te arrepientes','De pantalón largo, ¿no? 😏'],
+  exito:['¡Inventa, Romario! 🎯','¡Eso, mi doc!','Jugóóón 🃏','Pa\' que veas que sí sabías','¡Quedó servido! 🍽️','Ya quedó… ahora a rezar 🙏','¡Cómo no te voy a querer! 💚'],
+  sinPicks:['Tu historial está más vacío que estadio en lunes','Ni un solo pick… ¡inventa, Romario!','Aquí no hay nada, ¡anímate y tírate uno!','Cero picks. ¿Le tienes miedo al éxito? 😎'],
+  sinPartidos:['No hay partidos por ahora… respira ⚽','Ni un partido. Aprovecha y descansa el dedo 📲'],
+  ganando:['🔥 ¡Viene en racha!','😎 Calladito ganando','💰 El que sabe, sabe'],
+  perdiendo:['🙈 Ánimo, ya vendrá la buena','📉 Cuesta arriba, pero no imposible','🎲 La suerte da vueltas']
+};
+function frase(cat){const a=FRASES[cat]||FRASES.pick;return a[Math.floor(Math.random()*a.length)];}
 
 // ── AVATAR ENGINE ─────────────────────────────────────────────
 const SKIN=['#FDDBB4','#F5C18A','#D4956A','#A0634A','#5C3320'];
@@ -611,6 +661,13 @@ async function api(body){
 }
 function eNow(){return Date.now()+serverOffset;}
 function byId(id){return state.partidos.find(p=>p.id===id);}
+// Mapa código FIFA (3 letras) → código flagcdn para la bandera
+const FLAGS={ALG:'dz',ARG:'ar',AUS:'au',AUT:'at',BEL:'be',BIH:'ba',BRA:'br',CAN:'ca',CIV:'ci',COD:'cd',COL:'co',CPV:'cv',CRO:'hr',CUW:'cw',CZE:'cz',ECU:'ec',EGY:'eg',ENG:'gb-eng',ESP:'es',FRA:'fr',GER:'de',GHA:'gh',HAI:'ht',IRN:'ir',IRQ:'iq',JOR:'jo',JPN:'jp',KOR:'kr',KSA:'sa',MAR:'ma',MEX:'mx',NED:'nl',NOR:'no',NZL:'nz',PAN:'pa',PAR:'py',POR:'pt',QAT:'qa',RSA:'za',SCO:'gb-sct',SEN:'sn',SUI:'ch',SWE:'se',TUN:'tn',TUR:'tr',URU:'uy',USA:'us',UZB:'uz'};
+const NOMBRES={ALG:'Argelia',ARG:'Argentina',AUS:'Australia',AUT:'Austria',BEL:'Bélgica',BIH:'Bosnia',BRA:'Brasil',CAN:'Canadá',CIV:'Costa de Marfil',COD:'R.D. Congo',COL:'Colombia',CPV:'Cabo Verde',CRO:'Croacia',CUW:'Curazao',CZE:'Rep. Checa',ECU:'Ecuador',EGY:'Egipto',ENG:'Inglaterra',ESP:'España',FRA:'Francia',GER:'Alemania',GHA:'Ghana',HAI:'Haití',IRN:'Irán',IRQ:'Irak',JOR:'Jordania',JPN:'Japón',KOR:'Corea del Sur',KSA:'Arabia Saudí',MAR:'Marruecos',MEX:'México',NED:'Países Bajos',NOR:'Noruega',NZL:'Nueva Zelanda',PAN:'Panamá',PAR:'Paraguay',POR:'Portugal',QAT:'Catar',RSA:'Sudáfrica',SCO:'Escocia',SEN:'Senegal',SUI:'Suiza',SWE:'Suecia',TUN:'Túnez',TUR:'Turquía',URU:'Uruguay',USA:'Estados Unidos',UZB:'Uzbekistán'};
+function teamName(code){return NOMBRES[code]||code;}
+function flagUrl(code){const fc=FLAGS[code];return fc?`https://flagcdn.com/w40/${fc}.png`:'';}
+function flagImg(code,h){const u=flagUrl(code);if(!u)return '';return `<img src="${u}" alt="${code}" style="height:${h||14}px;width:auto;border-radius:2px;vertical-align:middle;object-fit:cover" loading="lazy">`;}
+function teamFlag(code,h){const f=flagImg(code,h);return f?`<span style="display:inline-flex;align-items:center;gap:5px">${f}${code}</span>`:code;}
 function isLocked(p){return eNow()>=p.kickoff;}
 function lineas(){return state.lineas_ou||[0.5,1.5,2.5,3.5,4.5,5.5];}
 function esOU(pick){return pick==='over'||pick==='under';}
@@ -744,7 +801,7 @@ function refreshHero(){
 async function manualRefresh(){
   const btn=document.getElementById('refreshBtn');btn.classList.remove('spin');void btn.offsetWidth;btn.classList.add('spin');
   await loadState();refreshHero();
-  if(currentTab==='partidos')renderPartidos();
+  if(currentTab==='partidos')renderPartidos(true);
   if(currentTab==='ranking')renderRanking();
   if(currentTab==='mis')renderMis();
   if(currentTab==='admin'&&isAdmin){renderAdmin();renderAdminUsers();}
@@ -779,6 +836,7 @@ function showTab(name){
   if(name==='partidos')renderPartidos();
   if(name==='mis')renderMis();
   if(name==='ranking')renderRanking();
+  if(name==='elim')renderElim();
   if(name==='admin'){renderAdmin();renderAdminUsers();}
 }
 function setAdminTab(name,btn){
@@ -789,14 +847,15 @@ function setAdminTab(name,btn){
   document.getElementById('admin-saldos').style.display=name==='saldos'?'block':'none';
   document.getElementById('admin-usuarios').style.display=name==='usuarios'?'block':'none';
   document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
-  if(name==='saldos'){const sel=document.getElementById('adjJugador');sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');}
+  if(name==='saldos'){const sel=document.getElementById('adjJugador');sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
+    const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}}
   if(name==='usuarios')renderAdminUsers();
 }
 function renderFilters(id,active,cb){
   const grupos=['Todos',...new Set(state.partidos.map(p=>'Gr.'+p.grupo))];
   document.getElementById(id).innerHTML=grupos.map(g=>`<button class="fbtn${g===active?' on':''}" onclick="${cb}('${g}')">${g}</button>`).join('');
 }
-function setGrupoF(g){grupoF=g;renderPartidos();}
+function setGrupoF(g){grupoF=g;daysToShow=3;renderPartidos();}
 function setAdminF(g){adminF=g;renderAdmin();}
 
 // ── COUNTDOWN ─────────────────────────────────────────────────
@@ -808,26 +867,51 @@ function fmtCountdown(ms){
   if(h>0)return `${h}h ${m}m ${ss}s`;
   return `${m}m ${ss}s`;
 }
+// Compacto para la fila del partido ("cierra en …")
+function fmtClose(ms){
+  if(ms<=0)return '🔒 cerrado';
+  const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),ss=s%60;
+  if(d>0)return `cierra en ${d}d ${h}h`;
+  if(h>0)return `cierra en ${h}h ${m}m`;
+  if(m>0)return `cierra en ${m}m ${ss}s`;
+  return `cierra en ${ss}s`;
+}
 function renderCountdown(){
   const box=document.getElementById('countdownBox');if(!box)return;
   const n=nextMatch();
   if(!n){box.innerHTML='';return;}
-  box.innerHTML=`<div class="countdown"><div><div class="cd-label">Próximo partido</div><div class="cd-match">${n.local} vs ${n.visita}</div></div><div class="cd-time">${fmtCountdown(n.kickoff-eNow())}<small>${n.fecha} · ${n.hora}</small></div></div>`;
+  box.innerHTML=`<div class="countdown"><div><div class="cd-label">Próximo partido</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div></div><div class="cd-time">${fmtCountdown(n.kickoff-eNow())}<small>${n.fecha} · ${n.hora}</small></div></div>`;
 }
 
 // ── PARTIDOS ──────────────────────────────────────────────────
-function renderPartidos(){
-  const j=state.jugadores[me];if(!j)return;
+function renderPartidos(skipAnim){
+  const j=state.jugadores[me];if(!j&&!isAdmin)return;
   renderCountdown();
   renderFilters('grupoFilters',grupoF,'setGrupoF');
-  const ps=grupoF==='Todos'?state.partidos:state.partidos.filter(p=>'Gr.'+p.grupo===grupoF);
+  let ps=grupoF==='Todos'?state.partidos:state.partidos.filter(p=>'Gr.'+p.grupo===grupoF);
+  let limited=false,hiddenCount=0;
+  if(grupoF==='Todos'){
+    // Solo próximos (con 2h de gracia para los que están en juego)
+    const cut=eNow()-7200000;
+    let upcoming=ps.filter(p=>p.kickoff>=cut);
+    if(upcoming.length===0)upcoming=ps; // si ya pasaron todos, mostrar todo
+    const days=[...new Set(upcoming.map(p=>p.fecha))];
+    const showDays=new Set(days.slice(0,daysToShow));
+    const shown=upcoming.filter(p=>showDays.has(p.fecha));
+    hiddenCount=upcoming.length-shown.length;
+    limited=days.length>daysToShow;
+    ps=shown;
+  }
   let html='',lastF='';
   ps.forEach((p,i)=>{
     if(p.fecha!==lastF){html+=`<div class="daylabel">${p.fecha}</div>`;lastF=p.fecha;}
-    html+=matchCard(p,state.resultados[p.id],i);
+    html+=matchCard(p,state.resultados[p.id],i,skipAnim);
   });
-  document.getElementById('listaPartidos').innerHTML=html||'<div class="empty"><div class="emoji">⚽</div>No hay partidos</div>';
+  if(!html)html=`<div class="empty"><div class="emoji">⚽</div>${frase('sinPartidos')}</div>`;
+  if(limited)html+=`<button class="vermas-btn" onclick="verMasDias()">▾ Ver más partidos (${hiddenCount} más)</button>`;
+  document.getElementById('listaPartidos').innerHTML=html;
 }
+function verMasDias(){daysToShow+=3;renderPartidos(true);}
 function ouSection(p,done,locked){
   if(done){const r=state.resultados[p.id];return `<div class="ou-label">Total goles</div><div style="font-size:12px;color:var(--muted);padding:3px 0">Resultado: <strong style="color:#fff">${r.gl+r.gv} goles</strong></div>`;}
   const L=getLinea(p.id);const row=p.ou[String(L)];
@@ -850,48 +934,63 @@ function bttsSection(p,done,locked){
   };
   return `<div class="ou-label">Ambos anotan</div><div class="ou-row">${pk('si','Sí',p.btts.si,'sel-local')}${pk('no','No',p.btts.no,'sel-visita')}</div>`;
 }
-function matchCard(p,res,i,skipAnim){
+function matchCard(p,res,i,skipAnim,animBody){
   const done=!!res;
   const locked=!done&&isLocked(p);
-  const mySimple={};
-  Object.values(state.apuestas).forEach(b=>{if(b.tipo!=='parlay'&&b.nombre===me&&b.partidoId===p.id)mySimple[b.mercado]=b;});
+  const isOpen=expanded.has(p.id);
+  const myBets=Object.values(state.apuestas).filter(b=>b.tipo!=='parlay'&&b.nombre===me&&b.partidoId===p.id);
+  const hasBet=myBets.length>0;
   let meta;
   if(done)meta=`<span class="rb rb-info">${res.gl} - ${res.gv}</span>`;
   else if(locked)meta=`<span class="locktag">🔒 En juego</span>`;
-  else meta=`<span class="meta">Gr.${p.grupo} · ${p.hora}</span>`;
-  const pk1=(pick,label,momio,selClass)=>{
-    let cls='pick';
-    if(done)cls+=pickWinsClient(p,res,pick,null)?' win':' lose';
-    else if(locked)cls+=' locked';
-    else if(slipSelected(p.id,pick,null))cls+=' '+selClass;
-    const onc=(done||locked)?'':` onclick="toggleSlip(${p.id},'${pick}',null,${momio})"`;
-    return `<div class="${cls}"${onc}><div class="pt">${label}</div><div class="pm">${momio}x</div></div>`;
-  };
-  const row1x2=`<div class="picks">${pk1('local',p.local,p.momios.local,'sel-local')}${pk1('empate','Empate',p.momios.empate,'sel-empate')}${pk1('visita',p.visita,p.momios.visita,'sel-visita')}</div>`;
-  const rowou=ouSection(p,done,locked);
-  const rowbtts=bttsSection(p,done,locked);
-  let hint='';
-  ['1x2','ou'].forEach(mk=>{
-    const b=mySimple[mk];if(!b)return;
-    const lbl=pickLabel(p,b.pick,b.linea);
-    if(done){
-      const win=b.status==='won';
-      hint+=`<div class="hint" style="color:${win?'var(--green)':'var(--rl)'}">${win?'✓ Ganaste':'✗ Perdiste'} $${b.monto.toLocaleString()} · ${lbl}${win?' → +$'+Math.round(b.monto*b.momio).toLocaleString():''}</div>`;
-    }else{
-      hint+=`<div class="hint bet">🎫 $${b.monto.toLocaleString()} a ${lbl} → $${Math.round(b.monto*b.momio).toLocaleString()}${locked?'':` <button class="cancel-btn" onclick="cancelBet('${b.id}')">cancelar</button>`}</div>`;
-    }
-  });
+  else{
+    const ms=p.kickoff-eNow();const urg=ms<3600000;
+    meta=`<div class="meta-col"><span class="meta">Gr.${p.grupo} · ${p.hora}</span><span class="closein${urg?' urgent':''}" id="cd-${p.id}">⏳ ${fmtClose(ms)}</span></div>`;
+  }
   const animStyle=skipAnim?'animation:none':`animation-delay:${i*.03}s`;
-  return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}" style="${animStyle}">
-    <div class="match-top"><div class="teams">${p.local} vs ${p.visita}</div>${meta}</div>
-    ${row1x2}${rowou}${rowbtts}${hint}</div>`;
+  const header=`<div class="match-head" onclick="toggleExpand(${p.id})">
+    <div class="teams">${teamFlag(p.local,18)} <span class="vsx">vs</span> ${teamFlag(p.visita,18)}</div>
+    <div class="match-meta-wrap">${hasBet?'<span class="bet-dot" title="Tienes apuesta">🎫</span>':''}${meta}<span class="chev">▾</span></div>
+  </div>`;
+  let body='';
+  if(isOpen){
+    const mySimple={};myBets.forEach(b=>{mySimple[b.mercado]=b;});
+    const pk1=(pick,label,momio,selClass)=>{
+      let cls='pick';
+      if(done)cls+=pickWinsClient(p,res,pick,null)?' win':' lose';
+      else if(locked)cls+=' locked';
+      else if(slipSelected(p.id,pick,null))cls+=' '+selClass;
+      const onc=(done||locked)?'':` onclick="toggleSlip(${p.id},'${pick}',null,${momio})"`;
+      return `<div class="${cls}"${onc}><div class="pt">${label}</div><div class="pm">${momio}x</div></div>`;
+    };
+    const row1x2=`<div class="picks">${pk1('local',`${flagImg(p.local,13)} ${p.local}`,p.momios.local,'sel-local')}${pk1('empate','Empate',p.momios.empate,'sel-empate')}${pk1('visita',`${flagImg(p.visita,13)} ${p.visita}`,p.momios.visita,'sel-visita')}</div>`;
+    const rowou=ouSection(p,done,locked);
+    const rowbtts=bttsSection(p,done,locked);
+    let hint='';
+    ['1x2','ou','btts'].forEach(mk=>{
+      const b=mySimple[mk];if(!b)return;
+      const lbl=pickLabel(p,b.pick,b.linea);
+      if(done){
+        const win=b.status==='won';
+        hint+=`<div class="hint" style="color:${win?'var(--green)':'var(--rl)'}">${win?'✓ Ganaste':'✗ Perdiste'} $${b.monto.toLocaleString()} · ${lbl}${win?' → +$'+Math.round(b.monto*b.momio).toLocaleString():''}</div>`;
+      }else{
+        hint+=`<div class="hint bet">🎫 $${b.monto.toLocaleString()} a ${lbl} → $${Math.round(b.monto*b.momio).toLocaleString()}${locked?'':` <button class="cancel-btn" onclick="cancelBet('${b.id}')">cancelar</button>`}</div>`;
+      }
+    });
+    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowou}${rowbtts}${hint}</div>`;
+  }
+  return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}${isOpen?' open':''}" style="${animStyle}">${header}${body}</div>`;
+}
+function toggleExpand(pid){
+  if(expanded.has(pid))expanded.delete(pid);else expanded.add(pid);
+  renderCard(pid,true); // animar el cuerpo solo al desplegar
 }
 // Actualiza SOLO una tarjeta (rápido) en vez de redibujar las 72
-function renderCard(pid){
+function renderCard(pid,animBody){
   const el=document.getElementById('match-'+pid);
-  if(!el){renderPartidos();return;}
+  if(!el){renderPartidos(true);return;}
   const tmp=document.createElement('div');
-  tmp.innerHTML=matchCard(byId(pid),state.resultados[pid],0,true);
+  tmp.innerHTML=matchCard(byId(pid),state.resultados[pid],0,true,animBody);
   el.replaceWith(tmp.firstElementChild);
 }
 
@@ -924,7 +1023,7 @@ function openSlip(){
   const j=state.jugadores[me];const isParlay=betslip.length>1;const min=state.apuesta_min||100;
   let legs='';
   betslip.forEach(s=>{const p=byId(s.partidoId);
-    legs+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${p.local} vs ${p.visita}</div><div class="sl-pick">${pickLabel(p,s.pick,s.linea)} · ${s.momio}x</div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}',${s.linea})">×</button></div>`;});
+    legs+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${teamFlag(p.local,13)} vs ${teamFlag(p.visita,13)}</div><div class="sl-pick">${pickLabel(p,s.pick,s.linea)} · ${s.momio}x</div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}',${s.linea})">×</button></div>`;});
   const tot=slipMomioTotal();
   document.getElementById('mTitle').innerHTML=isParlay?`Cupón <span class="parlay-tag">Parlay</span>`:'Tu apuesta';
   document.getElementById('mBody').innerHTML=`${legs}
@@ -933,6 +1032,7 @@ function openSlip(){
       <input type="tel" id="slipMonto" inputmode="numeric" placeholder="${min}" oninput="slipPreview()"></div>
     <div class="quick-amts">${[500,1000,2000,5000].filter(v=>v<=j.saldo).map(v=>`<button onclick="setSlipMonto(${v})">$${v.toLocaleString()}</button>`).join('')}<button onclick="setSlipMonto(${Math.round(j.saldo)})">Todo</button></div>
     <div class="preview-box" id="slipPrev"></div>
+    <div style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;margin:10px 0 2px">${frase('confirm')}</div>
     <button class="btn btn-primary" style="margin-top:8px" onclick="confirmSlip()">${isParlay?'Apostar parlay':'Confirmar apuesta'}</button>`;
   document.getElementById('overlay').style.display='flex';
 }
@@ -956,10 +1056,10 @@ async function confirmSlip(){
   else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,monto}});}
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
-  clearSlip();refreshHero();renderPartidos();fireConfetti();
+  clearSlip();refreshHero();renderPartidos(true);fireConfetti();
   window._lastBetView=view;
   document.getElementById('mTitle').textContent='¡Listo! 🎉';
-  document.getElementById('mBody').innerHTML=`<div style="text-align:center;padding:8px 0 4px"><div style="font-size:40px">🎯</div><p style="margin:10px 0;color:var(--muted)">Apuesta de <strong style="color:#fff">$${monto.toLocaleString()}</strong> registrada${isParlay?' (parlay '+tot.toFixed(2)+'x)':''}</p></div>
+  document.getElementById('mBody').innerHTML=`<div style="text-align:center;padding:8px 0 4px"><div style="font-size:40px">🎯</div><div style="font-size:16px;font-weight:800;color:var(--gold);margin:6px 0">${frase('exito')}</div><p style="margin:6px 0;color:var(--muted)">Apuesta de <strong style="color:#fff">$${monto.toLocaleString()}</strong> registrada${isParlay?' (parlay '+tot.toFixed(2)+'x)':''}</p></div>
     <button class="btn share-btn" style="width:100%;justify-content:center;margin-bottom:8px;padding:13px" onclick="shareBetImage(window._lastBetView)">📲 Compartir mi pick</button>
     <button class="btn btn-ghost" onclick="closeModal()">Listo</button>`;
 }
@@ -968,7 +1068,7 @@ async function cancelBet(betId){
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
   toast('Apuesta cancelada');refreshHero();
-  if(currentTab==='partidos')renderPartidos();
+  if(currentTab==='partidos')renderPartidos(true);
   if(currentTab==='mis')renderMis();
 }
 
@@ -981,6 +1081,7 @@ function betTicketText(b){
 function legResIcon(l){const r=state.resultados[l.partidoId];if(!r)return ['•','var(--muted2)'];const p=byId(l.partidoId);return pickWinsClient(p,r,l.pick,l.linea)?['✓','var(--green)']:['✗','var(--rl)'];}
 function betCanCancel(b){
   if((b.status||'pending')!=='pending')return false;
+  if(b.tipo==='campeon')return eNow()<(state.campeon_cierra||0)&&!state.campeon;
   if(b.tipo==='parlay')return b.legs.every(l=>{const p=byId(l.partidoId);return p&&!isLocked(p);});
   const p=byId(b.partidoId);return p&&!isLocked(p);
 }
@@ -992,13 +1093,16 @@ function betCard(b){
     :st==='lost'?`<div class="ap-g loss">−$${b.monto.toLocaleString()}</div>`
     :`<div class="ap-g pend">→ $${Math.round(b.monto*factor).toLocaleString()}</div>`;
   let head,body='';
-  if(isP){
+  if(b.tipo==='campeon'){
+    head=`<span style="font-weight:700;font-size:14px">${flagImg(b.equipo,15)} ${teamName(b.equipo)} 🏆</span> <span style="color:var(--muted2);font-size:11px">Campeón</span>`;
+    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">Campeón del Mundial · ${b.momio}x</div>`;
+  }else if(isP){
     head=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span>`;
     body=b.legs.map(l=>{const p=byId(l.partidoId);const[ic,col]=legResIcon(l);
-      return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${p.local} v ${p.visita} · ${pickLabel(p,l.pick,l.linea)}</span><span style="color:${col};font-weight:700">${ic} ${l.momio}x</span></div>`;}).join('');
+      return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${teamFlag(p.local,12)} v ${teamFlag(p.visita,12)} · ${pickLabel(p,l.pick,l.linea)}</span><span style="color:${col};font-weight:700">${ic} ${l.momio}x</span></div>`;}).join('');
   }else{
     const p=byId(b.partidoId);
-    head=`<span style="font-weight:700;font-size:14px">${p.local} vs ${p.visita}</span> <span style="color:var(--muted2);font-size:11px">${p.fecha}</span>`;
+    head=`<span style="font-weight:700;font-size:14px">${teamFlag(p.local,15)} vs ${teamFlag(p.visita,15)}</span> <span style="color:var(--muted2);font-size:11px">${p.fecha}</span>`;
     body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x</div>`;
   }
   let btns='';
@@ -1008,7 +1112,7 @@ function betCard(b){
 }
 function renderMis(){
   const mine=Object.values(state.apuestas).filter(b=>b.nombre===me).sort((a,b)=>b.ts-a.ts);
-  if(!mine.length){document.getElementById('listaMis').innerHTML='<div class="empty"><div class="emoji">🎟️</div>Aún no tienes apuestas.<br>Ve a Partidos y arma tu cupón.</div>';return;}
+  if(!mine.length){document.getElementById('listaMis').innerHTML=`<div class="empty"><div class="emoji">🎟️</div>${frase('sinPicks')}<br><span style="font-size:13px;color:var(--muted2)">Ve a Partidos y arma tu cupón.</span></div>`;return;}
   const pend=mine.filter(b=>(b.status||'pending')==='pending');
   const liq=mine.filter(b=>b.status==='won'||b.status==='lost');
   let html='',tAp=0,tBal=0;
@@ -1033,7 +1137,8 @@ function renderRanking(){
   const medalFor=pos=>pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'';
   const top3=js.slice(0,3);
   const order=[top3[1],top3[0],top3[2]].filter(Boolean);
-  const pc=p=>p===top3[0]?'p1':p===top3[1]?'p2':'p3';
+  // Clase de barra por POSICIÓN real (empatados = misma barra/color/tamaño)
+  const pc=p=>{const pos=posByName[p.nombre];return pos===1?'p1':pos===2?'p2':'p3';};
   const md=p=>medalFor(posByName[p.nombre]);
   let pod='<div class="podium">';
   order.forEach((p,i)=>{pod+=`<div class="pod ${pc(p)}" style="animation-delay:${i*.15}s"><div class="av">${buildAvSvg(p.avatar,pc(p)==='p1'?56:46)}</div><div class="nm">${p.nombre}</div><div class="sl">$${Math.round(p.saldo).toLocaleString()}</div><div class="bar">${md(p)}</div></div>`;});
@@ -1046,17 +1151,132 @@ function renderRanking(){
     const medal=medalFor(pos);
     let mov='';
     if(pp){const ch=pp-pos;mov=ch>0?`<span style="color:var(--green);font-size:10px"> ▲${ch}</span>`:ch<0?`<span style="color:var(--rl);font-size:10px"> ▼${-ch}</span>`:`<span style="color:var(--muted2);font-size:10px"> =</span>`;}
-    list+=`<div class="rank-row${p.nombre===me?' me':''}">
+    list+=`<div class="rank-row${p.nombre===me?' me':''}" onclick="openPlayerPicks('${p.nombre.replace(/'/g,"\\'")}')" style="cursor:pointer">
       <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid var(--line2)">${buildAvSvg(p.avatar,36)}</div>
       <div class="rank-pos">${medal||('#'+pos)}${mov}</div>
-      <div class="rank-nm">${p.nombre}${p.nombre===me?'<span class="yt">TÚ</span>':''}</div>
+      <div class="rank-nm">${p.nombre}${p.nombre===me?'<span class="yt">TÚ</span>':''}<span style="display:block;font-size:10px;color:var(--muted2);font-weight:600">👁 ver picks</span></div>
       <div class="rank-vals"><div class="rank-sd">$${Math.round(p.saldo).toLocaleString()}</div>
         <div class="rank-dl ${d>0?'up':d<0?'dn':'even'}">${d>0?'▲ +':d<0?'▼ −':''}${d===0?'—':'$'+Math.abs(Math.round(d)).toLocaleString()}</div></div></div>`;});
   list+='</div>';
   list+=`<div class="info-card" style="margin-top:12px;background:rgba(255,255,255,.04)"><span style="color:var(--muted);font-size:13px">Partidos liquidados: <strong style="color:#fff">${Object.keys(state.resultados).length}/${state.partidos.length}</strong></span></div>`;
   document.getElementById('listaRanking').innerHTML=pod+list;
 }
-
+// Ver los picks de cualquier jugador (toca su fila en el ranking)
+function openPlayerPicks(nombre){
+  const bets=Object.values(state.apuestas).filter(b=>b.nombre===nombre).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  document.getElementById('mTitle').innerHTML=`Picks de ${nombre}`;
+  let html='';
+  if(!bets.length){
+    html=`<div class="empty" style="padding:24px"><div class="emoji">🤐</div>${nombre} todavía no se tira ningún pick.</div>`;
+  }else{
+    const pend=bets.filter(b=>(b.status||'pending')==='pending');
+    const ganadas=bets.filter(b=>b.status==='won').length;
+    const perdidas=bets.filter(b=>b.status==='lost').length;
+    html+=`<div style="display:flex;gap:8px;margin-bottom:14px">
+      <div class="stat-pill"><div class="sp-n">${bets.length}</div><div class="sp-l">picks</div></div>
+      <div class="stat-pill"><div class="sp-n" style="color:var(--gold)">${pend.length}</div><div class="sp-l">activos</div></div>
+      <div class="stat-pill"><div class="sp-n" style="color:var(--green)">${ganadas}</div><div class="sp-l">ganadas</div></div>
+      <div class="stat-pill"><div class="sp-n" style="color:var(--rl)">${perdidas}</div><div class="sp-l">perdidas</div></div>
+    </div>`;
+    html+=bets.map(playerBetCard).join('');
+  }
+  document.getElementById('mBody').innerHTML=html;
+  document.getElementById('overlay').style.display='flex';
+}
+function playerBetCard(b){
+  const st=b.status||'pending';
+  const tag=st==='won'?'<span style="color:var(--green);font-weight:800;font-size:12px">✓ Ganó</span>':st==='lost'?'<span style="color:var(--rl);font-weight:800;font-size:12px">✗ Perdió</span>':'<span style="color:var(--gold);font-weight:800;font-size:12px">⏳ Activa</span>';
+  let sel;
+  if(b.tipo==='campeon'){
+    sel=`<span style="font-weight:700;font-size:14px">${flagImg(b.equipo,13)} ${teamName(b.equipo)} 🏆</span><div style="font-size:12px;color:var(--muted);margin-top:3px">Campeón del Mundial · ${b.momio}x</div>`;
+  }else if(b.tipo==='parlay'){
+    sel=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span><div style="margin-top:6px">`+b.legs.map(l=>{const p=byId(l.partidoId);return `<div style="font-size:12px;color:var(--muted);padding:1px 0">${teamFlag(p.local,11)} v ${teamFlag(p.visita,11)} · ${pickLabel(p,l.pick,l.linea)} (${l.momio}x)</div>`;}).join('')+'</div>';
+  }else{
+    const p=byId(b.partidoId);
+    sel=`<span style="font-weight:700;font-size:14px">${teamFlag(p.local,13)} vs ${teamFlag(p.visita,13)}</span><div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x</div>`;
+  }
+  const gan=st==='won'?` → +$${Math.round(b.monto*((b.tipo==='parlay'?b.momioTotal:b.momio)-1)).toLocaleString()}`:'';
+  return `<div class="info-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:10px"><div style="flex:1">${sel}</div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800">$${b.monto.toLocaleString()}</div>${tag}<div style="font-size:11px;color:var(--green)">${gan}</div></div></div></div>`;
+}
+// ── LIGUILLA: apuesta al campeón + fase final (próximamente) ───
+function renderElim(){
+  const odds=state.campeon_odds||{};
+  const cierra=state.campeon_cierra||0;
+  const champ=state.campeon||null;
+  const cerrado=eNow()>=cierra||!!champ;
+  const myBet=Object.values(state.apuestas).find(b=>b.tipo==='campeon'&&b.nombre===me);
+  let champHtml=`<div class="sec-title">🏆 ¿Quién gana el Mundial?</div>`;
+  if(champ){
+    const win=myBet&&myBet.equipo===champ;
+    champHtml+=`<div class="elim-hero" style="border-color:rgba(239,159,39,.5)">
+      <div style="font-size:46px">${flagImg(champ,46)||'🏆'}</div>
+      <div style="font-size:20px;font-weight:900;color:#fff;margin-top:8px">${teamName(champ)} 🏆</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Campeón del Mundial</div>
+      ${myBet?`<div class="elim-badge" style="margin-top:12px;background:${win?'rgba(93,202,165,.18)':'rgba(226,75,74,.15)'};border-color:${win?'var(--green)':'var(--rl)'};color:${win?'var(--green)':'var(--rl)'}">${win?`✓ ¡Le atinaste! +$${Math.round(myBet.monto*myBet.momio).toLocaleString()}`:`✗ Tú fuiste por ${teamName(myBet.equipo)}`}</div>`:''}
+    </div>`;
+  }else if(cerrado){
+    champHtml+=`<div class="info-card" style="text-align:center"><div style="font-size:13px;color:var(--muted)">Las apuestas al campeón están <b style="color:#fff">cerradas</b>.<br>Se liquidan cuando termine el Mundial.</div>${myBet?`<div style="margin-top:10px;font-weight:800">Tu pick: ${flagImg(myBet.equipo,16)} ${teamName(myBet.equipo)} · ${myBet.momio}x</div><div style="font-size:12px;color:var(--muted)">$${myBet.monto.toLocaleString()} → posible $${Math.round(myBet.monto*myBet.momio).toLocaleString()}</div>`:'<div style="margin-top:8px;font-size:12px;color:var(--muted2)">No metiste pick de campeón 🤷</div>'}</div>`;
+  }else{
+    const ms=cierra-eNow();
+    champHtml+=`<div class="info-card">
+      <div style="font-size:13px;color:var(--muted);line-height:1.5">Apuesta <b style="color:var(--gold)">una sola vez</b> al campeón. Mientras más improbable, ¡más paga! Cierra cuando arranque el Mundial.</div>
+      <div style="text-align:center;margin:10px 0;font-size:12px;color:var(--gold);font-weight:800">⏳ Cierra en ${fmtCountdown(ms).replace('¡Ya!','¡ya casi!')}</div>
+      ${myBet?`<div class="campeon-mybet">Tu pick: ${flagImg(myBet.equipo,18)} <b>${teamName(myBet.equipo)}</b> · ${myBet.momio}x<div style="font-size:12px;color:var(--muted)">$${myBet.monto.toLocaleString()} → posible $${Math.round(myBet.monto*myBet.momio).toLocaleString()}</div></div>`:''}
+      <button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="openCampeonPicker()">${myBet?'Cambiar mi campeón':'🏆 Elegir campeón'}</button>
+    </div>`;
+  }
+  const fases=[
+    ['Dieciseisavos','32 equipos','28 jun'],['Octavos de final','16 equipos','4 jul'],
+    ['Cuartos de final','8 equipos','9 jul'],['Semifinales','4 equipos','14 jul'],['Final','🏆','19 jul'],
+  ];
+  const filas=fases.map(([n,t,f])=>`<div class="elim-row"><div><div style="font-weight:800;font-size:14px">${n}</div><div style="font-size:11px;color:var(--muted2)">${t}</div></div><div class="elim-date">${f}</div></div>`).join('');
+  document.getElementById('listaElim').innerHTML=champHtml+
+    `<div class="sec-title" style="margin-top:18px">Fase final · próximamente 🔒</div>
+     <div style="font-size:12px;color:var(--muted2);margin-bottom:10px">Los cruces directos se habilitan cuando terminen los grupos (28 jun).</div>
+     <div class="elim-list">${filas}</div>
+     <div style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;margin:16px 0 4px">${frase('pick')}</div>`;
+}
+// Selector de campeón (lista de selecciones ordenadas por momio)
+function openCampeonPicker(){
+  const odds=state.campeon_odds||{};
+  const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);
+  document.getElementById('mTitle').innerHTML='🏆 Elige al campeón';
+  const rows=teams.map(c=>`<div class="campeon-row" onclick="campeonBet('${c}')">
+    <div style="display:flex;align-items:center;gap:9px">${flagImg(c,20)}<span style="font-weight:700">${teamName(c)}</span></div>
+    <span class="campeon-odd">${odds[c]}x</span></div>`).join('');
+  document.getElementById('mBody').innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">${frase('pick')} Mientras más improbable, más paga.</div><div class="campeon-list">${rows}</div>`;
+  document.getElementById('overlay').style.display='flex';
+}
+function campeonBet(equipo){
+  const odds=state.campeon_odds||{};const j=state.jugadores[me];const min=state.apuesta_min||100;
+  document.getElementById('mTitle').innerHTML=`${flagImg(equipo,18)} ${teamName(equipo)} · ${odds[equipo]}x`;
+  document.getElementById('mBody').innerHTML=`
+    <div class="field" style="margin-top:4px"><label>Monto · saldo $${Math.round(j.saldo).toLocaleString()} · mín $${min}</label>
+      <input type="tel" id="campMonto" inputmode="numeric" placeholder="${min}" oninput="campPreview('${equipo}')"></div>
+    <div class="quick-amts">${[500,1000,2000,5000].filter(v=>v<=j.saldo).map(v=>`<button onclick="setCampMonto(${v},'${equipo}')">$${v.toLocaleString()}</button>`).join('')}<button onclick="setCampMonto(${Math.round(j.saldo)},'${equipo}')">Todo</button></div>
+    <div class="preview-box" id="campPrev"></div>
+    <div style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;margin:10px 0 2px">${frase('confirm')}</div>
+    <button class="btn btn-primary" style="margin-top:6px" onclick="confirmCampeon('${equipo}')">Apostar al campeón</button>
+    <button class="btn btn-ghost" style="margin-top:6px" onclick="openCampeonPicker()">← Elegir otro</button>`;
+}
+function setCampMonto(v,eq){document.getElementById('campMonto').value=v;campPreview(eq);}
+function campPreview(eq){
+  const v=parseInt(document.getElementById('campMonto').value);const el=document.getElementById('campPrev');if(!el)return;
+  if(!v||v<=0){el.style.display='none';return;}
+  const g=Math.round(v*(state.campeon_odds[eq]||1));
+  el.innerHTML=`Si ${teamName(eq)} es campeón ganas <strong>$${g.toLocaleString()}</strong><br><span style="color:var(--muted)">Ganancia neta: +$${(g-v).toLocaleString()}</span>`;
+  el.style.display='block';
+}
+async function confirmCampeon(equipo){
+  const monto=parseInt(document.getElementById('campMonto').value);const min=state.apuesta_min||100;
+  if(!monto||monto<min)return toast('Mínimo $'+min);
+  const r=await api({action:'apostarCampeon',payload:{nombre:me,equipo,monto}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;state.apuestas=r.apuestas;
+  refreshHero();
+  document.getElementById('mTitle').textContent='¡Listo! 🏆';
+  document.getElementById('mBody').innerHTML=`<div style="text-align:center;padding:10px 0"><div style="font-size:44px">${flagImg(equipo,44)}</div><div style="font-size:16px;font-weight:800;color:var(--gold);margin:8px 0">${frase('exito')}</div><p style="color:var(--muted);margin:4px 0">Apostaste <b style="color:#fff">$${monto.toLocaleString()}</b> a que <b style="color:#fff">${teamName(equipo)}</b> es campeón.</p></div><button class="btn btn-ghost" onclick="closeModal();renderElim()">Listo</button>`;
+}
 // ── ADMIN ─────────────────────────────────────────────────────
 function renderAdmin(){
   renderFilters('adminFilters',adminF,'setAdminF');
@@ -1065,7 +1285,7 @@ function renderAdmin(){
   ps.forEach(p=>{
     if(p.fecha!==lastF){html+=`<div style="font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;padding:8px 0 4px">${p.fecha}</div>`;lastF=p.fecha;}
     const res=state.resultados[p.id];
-    html+=`<div class="admin-match"><div><span style="font-weight:700;font-size:14px">${p.local} vs ${p.visita}</span> <span style="color:var(--muted2);font-size:11px">Gr.${p.grupo} · ${p.hora}</span></div><div class="rbtns">`;
+    html+=`<div class="admin-match"><div><span style="font-weight:700;font-size:14px">${teamFlag(p.local,14)} vs ${teamFlag(p.visita,14)}</span> <span style="color:var(--muted2);font-size:11px">Gr.${p.grupo} · ${p.hora}</span></div><div class="rbtns">`;
     if(res){
       html+=`<span class="rb rb-info">${res.gl} - ${res.gv}</span>
         <button class="rbtn local" onclick="openScore(${p.id})">✏️ Corregir</button>
@@ -1082,12 +1302,12 @@ function renderAdmin(){
 }
 function openScore(pid){
   const p=byId(pid);const res=state.resultados[pid];
-  document.getElementById('mTitle').textContent=`${p.local} vs ${p.visita}`;
+  document.getElementById('mTitle').innerHTML=`${teamFlag(p.local,16)} vs ${teamFlag(p.visita,16)}`;
   document.getElementById('mBody').innerHTML=`
     <div class="score-entry">
-      <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700">${p.local}</div><input class="score-in" id="scoreL" type="tel" inputmode="numeric" maxlength="2" value="${res?res.gl:''}" oninput="scorePreview(${pid})"></div>
+      <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700;display:flex;align-items:center;gap:4px;justify-content:center">${flagImg(p.local,14)} ${p.local}</div><input class="score-in" id="scoreL" type="tel" inputmode="numeric" maxlength="2" value="${res?res.gl:''}" oninput="scorePreview(${pid})"></div>
       <span class="score-x">−</span>
-      <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700">${p.visita}</div><input class="score-in" id="scoreV" type="tel" inputmode="numeric" maxlength="2" value="${res?res.gv:''}" oninput="scorePreview(${pid})"></div>
+      <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700;display:flex;align-items:center;gap:4px;justify-content:center">${flagImg(p.visita,14)} ${p.visita}</div><input class="score-in" id="scoreV" type="tel" inputmode="numeric" maxlength="2" value="${res?res.gv:''}" oninput="scorePreview(${pid})"></div>
     </div>
     <div class="derived" id="scoreDerived"></div>
     <button class="btn btn-primary" style="margin-top:14px" onclick="saveScore(${pid})">${res?'Corregir resultado':'Guardar resultado'}</button>
@@ -1206,6 +1426,15 @@ async function doBonusTodos(sign){
   const r=await api({action:'bonusTodos',payload:{adminKey,monto:monto*sign}});
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;toast(sign>0?`+$${monto.toLocaleString()} a todos`:`−$${monto.toLocaleString()} a todos`);
+}
+async function doSetCampeon(){
+  const eq=document.getElementById('campSel').value;
+  const txt=eq?`declarar a ${teamName(eq)} campeón del Mundial`:'revertir el campeón (las apuestas vuelven a pendientes)';
+  if(!confirm(`¿Seguro que quieres ${txt}? Esto liquida todas las apuestas de campeón.`))return;
+  const r=await api({action:'setCampeon',payload:{adminKey,equipo:eq}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;state.apuestas=r.apuestas;state.campeon=r.campeon;
+  toast(eq?`🏆 ${teamName(eq)} es campeón`:'Campeón revertido');
 }
 async function doRecotizar(){
   if(!confirm('¿Recotizar todas las apuestas pendientes con los momios actuales? Las apuestas vigentes cambiarán su posible ganancia.'))return;
@@ -1418,7 +1647,7 @@ async function poll(){
   if(newRes.length&&me){newRes.forEach(id=>{const p=byId(+id);const r=state.resultados[id];if(p)toast(`Liquidado: ${p.local} ${r.gl}-${r.gv} ${p.visita}`);});}
   if(me&&prevSaldo!==undefined&&state.jugadores[me]&&state.jugadores[me].saldo>prevSaldo)fireConfetti();
   refreshHero();
-  if(currentTab==='partidos')renderPartidos();
+  if(currentTab==='partidos')renderPartidos(true);
   if(currentTab==='ranking')renderRanking();
   if(currentTab==='mis')renderMis();
   if(currentTab==='admin'&&isAdmin)renderAdmin();
@@ -1431,7 +1660,15 @@ setInterval(()=>{
   if(isAdmin||!me||currentTab!=='partidos')return;
   renderCountdown();
   const n=nextMatch();const id=n?n.id:null;
-  if(id!==cdLastNext){cdLastNext=id;renderPartidos();}
+  if(id!==cdLastNext){cdLastNext=id;renderPartidos(true);return;}
+  // Actualizar solo el texto de las cuentas regresivas visibles (barato, sin redibujar)
+  document.querySelectorAll('.closein').forEach(el=>{
+    const pid=+el.id.slice(3);const p=byId(pid);if(!p)return;
+    const ms=p.kickoff-eNow();
+    el.textContent='⏳ '+fmtClose(ms);
+    if(ms<3600000)el.classList.add('urgent');
+    if(ms<=0){el.classList.remove('urgent');renderCard(pid);} // se bloqueó: redibujar esa tarjeta
+  });
 },1000);
 
 init();
