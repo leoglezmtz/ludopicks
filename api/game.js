@@ -96,6 +96,8 @@ function pickWins(partidoId, r, pick, linea) {
   const total = r.gl + r.gv;
   if (pick === "over") return total > linea;
   if (pick === "under") return total < linea;
+  if (pick === "si") return r.gl > 0 && r.gv > 0;          // ambos anotan
+  if (pick === "no") return !(r.gl > 0 && r.gv > 0);
   return false;
 }
 
@@ -108,10 +110,12 @@ function momioPick(partidoId, pick, linea) {
     const row = m.ou[String(linea)];
     return row ? row[pick] : null;
   }
+  if (pick === "si" || pick === "no") return m.btts ? m.btts[pick] : null;
   return null;
 }
 function esMercadoOU(pick) { return pick === "over" || pick === "under"; }
-function mercadoDe(pick) { return esMercadoOU(pick) ? "ou" : "1x2"; }
+function esBtts(pick) { return pick === "si" || pick === "no"; }
+function mercadoDe(pick) { return esMercadoOU(pick) ? "ou" : esBtts(pick) ? "btts" : "1x2"; }
 
 // Motor recalculable: ajusta saldos solo por transiciones de estado.
 // Idempotente — sirve igual para registrar y para revertir resultados.
@@ -146,7 +150,11 @@ function settleAll(jugadores, apuestas, resultados) {
 function rankingSnapshot(jugadores) {
   const orden = Object.values(jugadores).sort((a, b) => b.saldo - a.saldo);
   const pos = {};
-  orden.forEach((j, i) => { pos[j.nombre] = i + 1; });
+  let r = 0;
+  orden.forEach((j, i) => {
+    if (i === 0 || j.saldo !== orden[i-1].saldo) r++;
+    pos[j.nombre] = r;
+  });
   return pos;
 }
 
@@ -217,7 +225,7 @@ export default async function handler(req, res) {
     const m = BY_ID[partidoId];
     if (!m) return res.status(400).json({ error: "Partido no existe" });
     const esOU = esMercadoOU(pick);
-    if (!PICKS_1X2.includes(pick) && !esOU) return res.status(400).json({ error: "Pick inválido" });
+    if (!PICKS_1X2.includes(pick) && !esOU && !esBtts(pick)) return res.status(400).json({ error: "Pick inválido" });
     const lineaUsada = esOU ? Number(linea) : null;
     const momio = momioPick(partidoId, pick, lineaUsada);
     if (momio == null) return res.status(400).json({ error: "Línea o pick inválido" });
@@ -265,7 +273,7 @@ export default async function handler(req, res) {
       const m = BY_ID[l.partidoId];
       if (!m) return res.status(400).json({ error: "Partido inválido en el parlay" });
       const esOU = esMercadoOU(l.pick);
-      if (!PICKS_1X2.includes(l.pick) && !esOU) return res.status(400).json({ error: "Pick inválido en el parlay" });
+      if (!PICKS_1X2.includes(l.pick) && !esOU && !esBtts(l.pick)) return res.status(400).json({ error: "Pick inválido en el parlay" });
       const mercado = mercadoDe(l.pick);
       const clave = l.partidoId + "_" + mercado;
       if (vistos.has(clave)) return res.status(400).json({ error: "No puedes repetir el mismo mercado de un partido" });
@@ -426,6 +434,32 @@ export default async function handler(req, res) {
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas });
+  }
+
+  // ── ADMIN: recotizar apuestas pendientes con los momios del catálogo actual ──
+  if (action === "recotizar") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const apuestas = (await kv.get("apuestas")) || {};
+    let actualizadas = 0;
+    for (const b of Object.values(apuestas)) {
+      if (b.status !== "pending") continue; // solo pendientes; las liquidadas ya pagaron
+      if (b.tipo === "parlay") {
+        let total = 1, cambio = false;
+        for (const leg of b.legs) {
+          const nm = momioPick(leg.partidoId, leg.pick, leg.linea);
+          if (nm != null && nm !== leg.momio) { leg.momio = nm; cambio = true; }
+          total *= (leg.momio || 1);
+        }
+        total = Math.round(total * 100) / 100;
+        if (total !== b.momioTotal) { b.momioTotal = total; cambio = true; }
+        if (cambio) actualizadas++;
+      } else {
+        const nm = momioPick(b.partidoId, b.pick, b.linea);
+        if (nm != null && nm !== b.momio) { b.momio = nm; actualizadas++; }
+      }
+    }
+    await kv.set("apuestas", apuestas);
+    return res.json({ ok: true, actualizadas, apuestas });
   }
 
   // ── ADMIN: usuarios ────────────────────────────────────────────────
