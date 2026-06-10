@@ -90,6 +90,27 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .elim-row{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;opacity:.9}
 .elim-date{font-weight:900;color:var(--gold);font-size:14px}
 .app-footer{text-align:center;color:var(--muted2);font-size:11px;font-weight:600;padding:18px 0 8px;opacity:.6;letter-spacing:.03em}
+/* ── SPLASH SCREEN ── */
+#splash{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(180deg,#0a1024,#070a14 65%);transition:opacity .55s ease,visibility .55s}
+#splash.hide{opacity:0;visibility:hidden}
+.splash-glow{position:absolute;width:130%;height:60%;top:8%;left:-15%;background:
+  radial-gradient(50% 70% at 78% 0%,rgba(24,95,165,.45),transparent 60%),
+  radial-gradient(55% 60% at 12% 30%,rgba(15,110,86,.4),transparent 60%),
+  radial-gradient(40% 50% at 55% 90%,rgba(250,199,117,.18),transparent 65%);
+  filter:blur(10px);animation:splashGlow 4s ease-in-out infinite alternate}
+@keyframes splashGlow{from{transform:scale(1) translateY(0)}to{transform:scale(1.12) translateY(-10px)}}
+.splash-inner{position:relative;text-align:center;z-index:1}
+.splash-logo{display:inline-flex;animation:splashPop .7s cubic-bezier(.2,.9,.3,1.3) both}
+.splash-logo svg{filter:drop-shadow(0 0 22px rgba(250,199,117,.55));animation:splashFloat 2.6s ease-in-out infinite}
+@keyframes splashPop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+@keyframes splashFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.splash-name{font-size:34px;font-weight:900;letter-spacing:-1px;margin-top:14px;background:linear-gradient(90deg,#fff 30%,#FAC775 50%,#fff 70%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:splashShine 2.2s linear infinite,splashUp .6s ease .15s both}
+@keyframes splashShine{to{background-position:-220% 0}}
+@keyframes splashUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.splash-sub{color:var(--green);font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-top:4px;animation:splashUp .6s ease .28s both}
+.splash-bar{width:120px;height:3px;border-radius:3px;background:rgba(255,255,255,.12);margin:22px auto 0;overflow:hidden;animation:splashUp .6s ease .4s both}
+.splash-bar span{display:block;height:100%;width:40%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--gold));animation:splashLoad 1.1s ease-in-out infinite}
+@keyframes splashLoad{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
 .install-card{background:linear-gradient(135deg,rgba(24,95,165,.25),rgba(15,110,86,.2));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(93,202,165,.3);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
 .install-top{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:#fff}
 .install-x{margin-left:auto;background:none;border:none;color:var(--muted2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
@@ -309,6 +330,32 @@ select option{background:#161c30;color:#fff}
 </style>
 </head>
 <body>
+<div id="splash">
+  <div class="splash-glow"></div>
+  <div class="splash-inner">
+    <div class="splash-logo">
+      <svg viewBox="0 0 120 120" width="92" height="92" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="spt" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FAC775"/><stop offset="1" stop-color="#EF9F27"/>
+          </linearGradient>
+        </defs>
+        <g fill="url(#spt)">
+          <path d="M34 30 q-15 0 -15 15 q0 14 17 16 l0 -9 q-8 -2 -8 -7 q0 -6 6 -6 z"/>
+          <path d="M86 30 q15 0 15 15 q0 14 -17 16 l0 -9 q8 -2 8 -7 q0 -6 -6 -6 z"/>
+          <path d="M34 22 h52 v18 q0 23 -26 28 q-26 -5 -26 -28 z"/>
+          <rect x="55" y="70" width="10" height="13"/>
+          <rect x="44" y="81" width="32" height="7" rx="3"/>
+          <rect x="39" y="87" width="42" height="9" rx="4"/>
+        </g>
+        <path d="M60 30 l4 9 l10 1 l-7 7 l2 10 l-9 -5 l-9 5 l2 -10 l-7 -7 l10 -1 z" fill="#0C447C" opacity=".9"/>
+      </svg>
+    </div>
+    <div class="splash-name">LudoPicks</div>
+    <div class="splash-sub">Mundial 2026</div>
+    <div class="splash-bar"><span></span></div>
+  </div>
+</div>
 <canvas id="confetti"></canvas>
 
 <div id="screen-login" class="screen on">
@@ -477,6 +524,7 @@ select option{background:#161c30;color:#fff}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
 <script>
+const splashStart=Date.now();
 const API='/api/game';
 const VAPID_PUB='BBfvzMFV8QP3kMpdUrX8lF0SIlkriKUdpwLrWEctyN4YVM8HLxyvK8Mm59sGXgMVpgvlFdiB67tdB1Z2YQQeluU';
 
@@ -565,7 +613,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.4.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.5.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados';
@@ -764,9 +812,15 @@ async function init(){
   const savedAdmin=localStorage.getItem('mundial_admin');
   const savedMe=localStorage.getItem('mundial_me');
   const savedPin=localStorage.getItem('mundial_pin');
-  if(savedAdmin){adminKey=savedAdmin;isAdmin=true;enterApp();return;}
-  if(savedMe&&savedPin&&state.jugadores[savedMe]){me=savedMe;myPin=savedPin;enterApp();return;}
-  renderLogin();
+  if(savedAdmin){adminKey=savedAdmin;isAdmin=true;enterApp();}
+  else if(savedMe&&savedPin&&state.jugadores[savedMe]){me=savedMe;myPin=savedPin;enterApp();}
+  else renderLogin();
+  hideSplash();
+}
+function hideSplash(){
+  const el=document.getElementById('splash');if(!el)return;
+  const wait=Math.max(0,1300-(Date.now()-splashStart)); // mínimo en pantalla para que se sienta intencional
+  setTimeout(()=>{el.classList.add('hide');setTimeout(()=>el.remove(),600);},wait);
 }
 function showScreen(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
@@ -1775,6 +1829,7 @@ setInterval(()=>{
 },1000);
 
 init();
+setTimeout(hideSplash,6000); // salvaguarda: nunca dejar el splash pegado
 </script>
 </body>
 </html>
