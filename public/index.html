@@ -6,32 +6,48 @@
 <title>LudoPicks · Mundial 2026</title>
 <style>
 :root{
-  --bg:#0a0e1a;--bg2:#0d1220;--card:#161c30;--card2:#11162a;
+  --bg:#070a14;--bg2:#0d1220;--card:#161c30;--card2:#11162a;
   --line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.12);
   --txt:#fff;--muted:rgba(255,255,255,.55);--muted2:rgba(255,255,255,.35);
   --green:#5DCAA5;--gd:#0F6E56;--blue:#185FA5;--bd:#0C447C;
   --amber:#EF9F27;--al:#FAC775;--red:#E24B4A;--rl:#F09595;
   --gold:#FAC775;
+  /* Premium glass / glow */
+  --glass:rgba(255,255,255,.055);--glass2:rgba(255,255,255,.08);
+  --glass-brd:rgba(255,255,255,.10);--glass-hi:rgba(255,255,255,.16);
+  --blur:saturate(160%) blur(14px);
+  --glow-green:0 0 0 1px rgba(93,202,165,.4),0 8px 30px -8px rgba(93,202,165,.45);
+  --glow-gold:0 0 0 1px rgba(250,199,117,.4),0 8px 30px -8px rgba(250,199,117,.4);
+  --shadow:0 10px 30px -12px rgba(0,0,0,.6);
+  --shadow-sm:0 4px 16px -8px rgba(0,0,0,.5);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;overflow-x:hidden;position:relative}
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:
+  radial-gradient(120% 80% at 80% -5%,rgba(24,95,165,.28),transparent 55%),
+  radial-gradient(120% 70% at -10% 8%,rgba(15,110,86,.22),transparent 50%),
+  radial-gradient(90% 60% at 50% 105%,rgba(250,199,117,.10),transparent 60%),
+  linear-gradient(180deg,#0a1024,#070a14 60%)}
 
-.hero{background:linear-gradient(135deg,#0C447C,#185FA5 55%,#0F6E56);padding:18px 18px 16px;position:relative;overflow:hidden}
-.hero::after{content:'';position:absolute;top:-40px;right:-30px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%);border-radius:50%}
+.hero{background:linear-gradient(135deg,#0C447C,#185FA5 50%,#0F6E56);padding:20px 18px 18px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(80% 120% at 15% 0%,rgba(255,255,255,.10),transparent 60%);pointer-events:none}
+.hero::after{content:'';position:absolute;top:-50px;right:-40px;width:170px;height:170px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%);border-radius:50%}
 .ball{position:absolute;top:16px;right:54px;font-size:22px;animation:spin 8s linear infinite;z-index:1;opacity:.5}
 @keyframes spin{to{transform:rotate(360deg)}}
 .hero h1{font-size:18px;font-weight:800;position:relative;z-index:1}
 .who{color:rgba(255,255,255,.7);font-size:12px;margin-top:2px;position:relative;z-index:1}
-.saldo-card{margin-top:14px;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 15px;position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
-.saldo-label{color:rgba(255,255,255,.75);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-.saldo-val{font-size:27px;font-weight:900;letter-spacing:-1px;line-height:1.1}
+.saldo-card{margin-top:14px;background:rgba(255,255,255,.10);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.22);border-radius:18px;padding:14px 16px;position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 10px 30px -14px rgba(0,0,0,.6);transition:transform .15s}
+.saldo-card:active{transform:scale(.99)}
+.saldo-label{color:rgba(255,255,255,.78);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.saldo-val{font-size:30px;font-weight:900;letter-spacing:-1.2px;line-height:1.1;text-shadow:0 2px 12px rgba(0,0,0,.3)}
 .saldo-delta{font-size:12px;font-weight:700;text-align:right}
 .saldo-delta.up{color:var(--green)}.saldo-delta.dn{color:var(--rl)}.saldo-delta.even{color:rgba(255,255,255,.5)}
 
-.nav{display:flex;background:var(--card2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
-.nav button{flex:1;padding:10px 2px;font-size:11px;font-weight:700;border:none;background:none;color:var(--muted2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2.5px solid transparent;transition:all .2s}
+.nav{display:flex;background:rgba(13,18,32,.7);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-brd);position:sticky;top:0;z-index:50}
+.nav button{flex:1;padding:11px 2px;font-size:11px;font-weight:700;border:none;background:none;color:var(--muted2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2.5px solid transparent;transition:all .2s;position:relative}
 .nav button.on{color:#fff;border-bottom-color:var(--green)}
-.nav button i{font-size:18px}
+.nav button.on i{filter:drop-shadow(0 0 8px rgba(93,202,165,.7));color:var(--green)}
+.nav button i{font-size:18px;transition:all .2s}
 
 .body{padding:14px;padding-bottom:40px;min-height:60vh}
 .screen{display:none;animation:fadeUp .35s ease both}
@@ -43,11 +59,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .daylabel:first-child{margin-top:0}
 .daylabel::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green)}
 
-.match{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:11px;position:relative;overflow:hidden;animation:slideUp .4s ease both}
+.match{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:18px;padding:14px;margin-bottom:11px;position:relative;overflow:hidden;animation:slideUp .4s ease both;box-shadow:var(--shadow-sm)}
+.match::after{content:'';position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--glass-hi),transparent);pointer-events:none}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.match.mx{border-color:rgba(93,202,165,.4)}
-.match.mx::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--green),var(--gd))}
-.match.done{opacity:.75}
+.match.mx{border-color:rgba(93,202,165,.45);box-shadow:0 0 0 1px rgba(93,202,165,.15),0 10px 30px -14px rgba(93,202,165,.4)}
+.match.mx::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--green),var(--gd));z-index:1}
+.match.open{background:var(--glass2)}
+.match.done{opacity:.7}
 .match-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;gap:8px}
 .match-head{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;user-select:none}
 .match.open .match-head{margin-bottom:11px}
@@ -56,17 +74,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .closein{font-size:10px;font-weight:800;color:var(--gold);white-space:nowrap}
 .closein.urgent{color:var(--rl);animation:pulseT 1.2s ease-in-out infinite}
 @keyframes pulseT{0%,100%{opacity:1}50%{opacity:.55}}
-.stat-pill{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center}
+.stat-pill{flex:1;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:10px 6px;text-align:center;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
 .stat-pill .sp-n{font-size:20px;font-weight:900;color:#fff;line-height:1}
 .stat-pill .sp-l{font-size:10px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:3px}
-.elim-hero{text-align:center;padding:28px 18px;background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:18px;margin-bottom:16px}
+.elim-hero{text-align:center;padding:28px 18px;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:20px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
 .elim-badge{display:inline-block;margin-top:14px;background:rgba(239,159,39,.15);border:1.5px solid rgba(239,159,39,.4);color:var(--gold);font-weight:800;font-size:13px;padding:8px 16px;border-radius:30px}
 .elim-list{display:flex;flex-direction:column;gap:7px}
-.elim-row{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:13px;opacity:.85}
+.elim-row{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;opacity:.9}
 .elim-date{font-weight:900;color:var(--gold);font-size:14px}
+.app-footer{text-align:center;color:var(--muted2);font-size:11px;font-weight:600;padding:18px 0 8px;opacity:.6;letter-spacing:.03em}
 .campeon-list{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto}
-.campeon-row{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;cursor:pointer;transition:all .15s}
-.campeon-row:active{transform:scale(.98)}
+.campeon-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px;cursor:pointer;transition:all .15s}
+.campeon-row:active{transform:scale(.98);background:var(--glass2)}
 .campeon-odd{font-weight:900;color:var(--gold);font-size:15px}
 .campeon-mybet{margin-top:10px;padding:10px;background:rgba(239,159,39,.1);border:1px solid rgba(239,159,39,.3);border-radius:11px;font-weight:700;font-size:13px}
 .chev{color:var(--muted2);font-size:13px;transition:transform .25s ease;display:inline-block}
@@ -80,11 +99,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .teams{font-size:16px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:5px;min-width:0}
 .meta{color:var(--muted2);font-size:10px;font-weight:700;background:rgba(255,255,255,.06);padding:3px 8px;border-radius:20px;white-space:nowrap}
 .picks{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
-.pick{background:rgba(255,255,255,.05);border:1.5px solid var(--line2);border-radius:11px;padding:9px 4px;text-align:center;cursor:pointer;transition:all .18s}
+.pick{background:var(--glass);border:1.5px solid var(--glass-brd);border-radius:13px;padding:10px 4px;text-align:center;cursor:pointer;transition:all .18s}
+.pick:active{transform:scale(.96)}
 .pick:active{transform:scale(.95)}
 .pick .pt{font-size:12px;font-weight:800;margin-bottom:3px;color:rgba(255,255,255,.85)}
 .pick .pm{font-size:11px;font-weight:700;color:var(--muted)}
-.pick.sel-local{background:linear-gradient(135deg,rgba(15,110,86,.35),rgba(93,202,165,.18));border-color:var(--green)}
+.pick.sel-local{background:linear-gradient(135deg,rgba(15,110,86,.4),rgba(93,202,165,.22));border-color:var(--green);box-shadow:var(--glow-green)}
 .pick.sel-local .pt,.pick.sel-local .pm{color:var(--green)}
 .pick.sel-empate{background:rgba(239,159,39,.18);border-color:var(--amber)}
 .pick.sel-empate .pt,.pick.sel-empate .pm{color:var(--al)}
@@ -131,7 +151,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rank-dl{font-size:11px;font-weight:700}
 .rank-dl.up{color:var(--green)}.rank-dl.dn{color:var(--rl)}.rank-dl.even{color:var(--muted2)}
 
-.info-card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:10px}
+.info-card{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
 .sec-title{color:var(--muted2);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px}
 .sec-title:first-child{margin-top:0}
 .ap-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
@@ -179,9 +199,9 @@ input:focus,select:focus{border-color:var(--green)}
 input::placeholder{color:var(--muted2)}
 select option{background:#161c30;color:#fff}
 .pin-input{text-align:center;letter-spacing:12px;font-size:24px;font-weight:800;padding-left:12px}
-.btn{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:800;border:none;cursor:pointer;transition:transform .1s,opacity .15s;display:flex;align-items:center;justify-content:center;gap:7px}
+.btn{width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:800;border:none;cursor:pointer;transition:transform .12s,box-shadow .2s,opacity .15s;display:flex;align-items:center;justify-content:center;gap:7px}
 .btn:active{transform:scale(.97)}
-.btn-primary{background:linear-gradient(135deg,var(--green),var(--gd));color:#04231a}
+.btn-primary{background:linear-gradient(135deg,var(--green),var(--gd));color:#04231a;box-shadow:0 8px 26px -10px rgba(93,202,165,.7),inset 0 1px 0 rgba(255,255,255,.25)}
 .btn-ghost{background:rgba(255,255,255,.06);color:#fff;border:1.5px solid var(--line2)}
 .btn-danger{background:rgba(226,75,74,.15);color:var(--rl);border:1.5px solid rgba(226,75,74,.3)}
 .btn-amber{background:rgba(239,159,39,.15);color:var(--al);border:1.5px solid rgba(239,159,39,.3)}
@@ -190,8 +210,8 @@ select option{background:#161c30;color:#fff}
 .back-link{color:var(--muted);font-size:13px;text-align:center;margin-top:16px;cursor:pointer}
 
 /* MODAL */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:flex-end;justify-content:center}
-.sheet{background:linear-gradient(180deg,var(--card),var(--bg2));width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 18px calc(28px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;border-top:1px solid var(--line2);animation:slideSheet .3s ease}
+.overlay{display:none;position:fixed;inset:0;background:rgba(4,7,15,.7);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:200;align-items:flex-end;justify-content:center}
+.sheet{background:linear-gradient(180deg,rgba(28,34,54,.92),rgba(13,18,32,.96));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);width:100%;max-width:480px;border-radius:24px 24px 0 0;padding:20px 18px calc(28px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto;border-top:1px solid var(--glass-hi);box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);animation:slideSheet .3s ease}
 @keyframes slideSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .sheet-head h3{font-size:18px;font-weight:800}
@@ -231,7 +251,7 @@ select option{background:#161c30;color:#fff}
 .refresh-btn.spin{animation:spin 1s linear}
 
 /* COUNTDOWN */
-.countdown{background:linear-gradient(135deg,rgba(15,110,86,.25),rgba(24,95,165,.2));border:1px solid rgba(93,202,165,.25);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.countdown{background:linear-gradient(135deg,rgba(15,110,86,.3),rgba(24,95,165,.24));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(93,202,165,.3);border-radius:16px;padding:13px 15px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.08)}
 .cd-label{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.07em}
 .cd-match{font-size:15px;font-weight:800;margin-top:2px}
 .cd-time{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--al);letter-spacing:-.5px;white-space:nowrap}
@@ -254,7 +274,8 @@ select option{background:#161c30;color:#fff}
 /* BETSLIP */
 .slip-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:150;padding:0 12px calc(12px + env(safe-area-inset-bottom));pointer-events:none}
 .slip-bar.hidden{display:none}
-.slip-inner{background:linear-gradient(135deg,var(--green),var(--gd));color:#04231a;border-radius:14px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;pointer-events:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);font-weight:800}
+.slip-inner{background:linear-gradient(135deg,var(--green),var(--gd));color:#04231a;border-radius:16px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;pointer-events:auto;box-shadow:0 10px 34px -6px rgba(93,202,165,.6),inset 0 1px 0 rgba(255,255,255,.3);font-weight:800;transition:transform .12s}
+.slip-inner:active{transform:scale(.98)}
 .slip-count{background:#04231a;color:var(--green);font-size:12px;font-weight:900;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-right:8px}
 .slip-leg{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:10px}
 .slip-leg:last-of-type{border-bottom:none}
@@ -428,6 +449,7 @@ select option{background:#161c30;color:#fff}
       <button class="btn btn-danger btn-sm" style="width:100%;margin-top:16px" onclick="resetTodo()">⚠️ Reset total</button>
     </div>
     <div style="text-align:center;margin-top:20px"><span class="back-link" onclick="logout()">Cerrar sesión</span></div>
+    <div class="app-footer" id="appFooter"></div>
   </div>
 </div>
 
@@ -438,7 +460,7 @@ select option{background:#161c30;color:#fff}
   </div>
 </div>
 
-<div class="slip-bar hidden" id="slipBar"><div class="slip-inner" onclick="openSlip()"><span><span class="slip-count" id="slipCount">0</span>Ver cupón</span><span id="slipMomio"></span></div></div>
+<div class="slip-bar hidden" id="slipBar"><div class="slip-inner" onclick="openSlip()"><span><span class="slip-count" id="slipCount">0</span>Ver ticket</span><span id="slipMomio"></span></div></div>
 
 <div class="toast" id="toast"></div>
 
@@ -502,6 +524,7 @@ async function subscribePush(nombre){
 }
 registerSW();
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
+const APP_VERSION='1.3.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados';
@@ -695,6 +718,7 @@ function setLinea(pid,l){lineSel[pid]=l;renderCard(pid);}
 
 // ── INIT ──────────────────────────────────────────────────────
 async function init(){
+  const fEl=document.getElementById('appFooter');if(fEl)fEl.textContent='LudoPicks v'+APP_VERSION;
   await loadState();
   const savedAdmin=localStorage.getItem('mundial_admin');
   const savedMe=localStorage.getItem('mundial_me');
@@ -1034,7 +1058,7 @@ function openSlip(){
   betslip.forEach(s=>{const p=byId(s.partidoId);
     legs+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${teamFlag(p.local,13)} vs ${teamFlag(p.visita,13)}</div><div class="sl-pick">${pickLabel(p,s.pick,s.linea)} · ${s.momio}x</div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}',${s.linea})">×</button></div>`;});
   const tot=slipMomioTotal();
-  document.getElementById('mTitle').innerHTML=isParlay?`Cupón <span class="parlay-tag">Parlay</span>`:'Tu apuesta';
+  document.getElementById('mTitle').innerHTML=isParlay?`Ticket <span class="parlay-tag">Parlay</span>`:'Tu apuesta';
   document.getElementById('mBody').innerHTML=`${legs}
     ${isParlay?`<div style="text-align:right;margin:10px 0;font-size:13px;color:var(--muted)">Momio combinado: <strong style="color:var(--al);font-size:17px">${tot.toFixed(2)}x</strong></div>`:''}
     <div class="field" style="margin-top:12px"><label>Monto · saldo $${Math.round(j.saldo).toLocaleString()} · mín $${min}</label>
@@ -1099,10 +1123,13 @@ function betSuccessScreen(view,monto,isParlay,tot){
   },30);
 }
 async function cancelBet(betId){
+  const b=Object.values(state.apuestas).find(x=>x.id===betId);
+  const desc=b?(b.tipo==='parlay'?`el parlay de ${b.legs.length} selecciones`:b.tipo==='campeon'?`tu apuesta al campeón (${teamName(b.equipo)})`:'esta apuesta'):'esta apuesta';
+  if(!confirm(`¿Seguro que quieres cancelar ${desc}? Se te devolverá el dinero apostado.`))return;
   const r=await api({action:'cancelar',payload:{nombre:me,betId}});
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
-  toast('Apuesta cancelada');refreshHero();
+  toast('Apuesta cancelada · dinero devuelto');refreshHero();
   if(currentTab==='partidos')renderPartidos(true);
   if(currentTab==='mis')renderMis();
 }
@@ -1147,7 +1174,7 @@ function betCard(b){
 }
 function renderMis(){
   const mine=Object.values(state.apuestas).filter(b=>b.nombre===me).sort((a,b)=>b.ts-a.ts);
-  if(!mine.length){document.getElementById('listaMis').innerHTML=`<div class="empty"><div class="emoji">🎟️</div>${frase('sinPicks')}<br><span style="font-size:13px;color:var(--muted2)">Ve a Partidos y arma tu cupón.</span></div>`;return;}
+  if(!mine.length){document.getElementById('listaMis').innerHTML=`<div class="empty"><div class="emoji">🎟️</div>${frase('sinPicks')}<br><span style="font-size:13px;color:var(--muted2)">Ve a Partidos y arma tu ticket.</span></div>`;return;}
   const pend=mine.filter(b=>(b.status||'pending')==='pending');
   const liq=mine.filter(b=>b.status==='won'||b.status==='lost');
   let html='',tAp=0,tBal=0;
