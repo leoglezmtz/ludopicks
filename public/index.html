@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>LudoPicks · Mundial 2026</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0C447C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LudoPicks">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
 <style>
 :root{
   --bg:#070a14;--bg2:#0d1220;--card:#161c30;--card2:#11162a;
@@ -83,6 +90,10 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .elim-row{display:flex;justify-content:space-between;align-items:center;padding:13px 15px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;opacity:.9}
 .elim-date{font-weight:900;color:var(--gold);font-size:14px}
 .app-footer{text-align:center;color:var(--muted2);font-size:11px;font-weight:600;padding:18px 0 8px;opacity:.6;letter-spacing:.03em}
+.install-card{background:linear-gradient(135deg,rgba(24,95,165,.25),rgba(15,110,86,.2));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(93,202,165,.3);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+.install-top{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:#fff}
+.install-x{margin-left:auto;background:none;border:none;color:var(--muted2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.install-steps{font-size:13px;color:var(--muted);line-height:1.5;margin-top:8px}
 .campeon-list{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto}
 .campeon-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px;cursor:pointer;transition:all .15s}
 .campeon-row:active{transform:scale(.98);background:var(--glass2)}
@@ -383,7 +394,7 @@ select option{background:#161c30;color:#fff}
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
   <div class="body">
-    <div id="tabc-partidos" class="tabc"><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
+    <div id="tabc-partidos" class="tabc"><div id="installCard"></div><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
     <div id="tabc-mis" class="tabc"><div id="listaMis"></div></div>
     <div id="tabc-ranking" class="tabc"><div id="listaRanking"></div></div>
     <div id="tabc-elim" class="tabc"><div id="listaElim"></div></div>
@@ -523,8 +534,38 @@ async function subscribePush(nombre){
   }catch(e){}
 }
 registerSW();
+
+// ── INSTALACIÓN PWA (instructivo que se auto-oculta si ya está instalada) ──
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;renderInstallCard();});
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;renderInstallCard();toast('🎉 ¡App instalada!');});
+function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;}
+function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent);}
+function renderInstallCard(){
+  const el=document.getElementById('installCard');if(!el)return;
+  if(isStandalone()||localStorage.getItem('ludo_install_dismiss')==='1'){el.innerHTML='';return;}
+  if(isIOS()){
+    el.innerHTML=`<div class="install-card">
+      <div class="install-top"><span style="font-size:22px">📲</span><b>Instala LudoPicks</b><button class="install-x" onclick="dismissInstall()">×</button></div>
+      <div class="install-steps">Para recibir notificaciones y abrirla como app: toca <b>Compartir</b> <span style="font-size:15px">􀈂</span> abajo en Safari → <b>"Agregar a inicio"</b>.</div>
+    </div>`;
+  }else if(deferredPrompt){
+    el.innerHTML=`<div class="install-card">
+      <div class="install-top"><span style="font-size:22px">📲</span><b>Instala LudoPicks</b><button class="install-x" onclick="dismissInstall()">×</button></div>
+      <div class="install-steps">Ábrela como app y recibe notificaciones de tus ganancias.</div>
+      <button class="btn btn-primary" style="margin-top:10px;padding:11px" onclick="installApp()">Instalar app</button>
+    </div>`;
+  }else{ el.innerHTML=''; } // navegador no instalable (ej. desktop) o ya instalada
+}
+async function installApp(){
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  try{await deferredPrompt.userChoice;}catch(e){}
+  deferredPrompt=null;renderInstallCard();
+}
+function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.3.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.4.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados';
@@ -857,7 +898,7 @@ function showTab(name){
   document.getElementById('tab-'+name).classList.add('on');
   document.querySelectorAll('.tabc').forEach(t=>t.style.display='none');
   document.getElementById('tabc-'+name).style.display='block';
-  if(name==='partidos')renderPartidos();
+  if(name==='partidos'){renderPartidos();renderInstallCard();}
   if(name==='mis')renderMis();
   if(name==='ranking')renderRanking();
   if(name==='elim')renderElim();
