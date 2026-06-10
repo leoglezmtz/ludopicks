@@ -876,11 +876,20 @@ function fmtClose(ms){
   if(m>0)return `cierra en ${m}m ${ss}s`;
   return `cierra en ${ss}s`;
 }
+let cdRenderedId=null;
 function renderCountdown(){
   const box=document.getElementById('countdownBox');if(!box)return;
   const n=nextMatch();
-  if(!n){box.innerHTML='';return;}
-  box.innerHTML=`<div class="countdown"><div><div class="cd-label">Próximo partido</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div></div><div class="cd-time">${fmtCountdown(n.kickoff-eNow())}<small>${n.fecha} · ${n.hora}</small></div></div>`;
+  if(!n){box.innerHTML='';cdRenderedId=null;return;}
+  const ms=n.kickoff-eNow();
+  // Si sigue siendo el mismo partido, solo actualiza el texto del tiempo (no recargar banderas → sin parpadeo)
+  if(cdRenderedId===n.id){
+    const t=document.getElementById('cdTimeText');
+    if(t)t.textContent=fmtCountdown(ms);
+    return;
+  }
+  cdRenderedId=n.id;
+  box.innerHTML=`<div class="countdown"><div><div class="cd-label">Próximo partido</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div></div><div class="cd-time"><span id="cdTimeText">${fmtCountdown(ms)}</span><small>${n.fecha} · ${n.hora}</small></div></div>`;
 }
 
 // ── PARTIDOS ──────────────────────────────────────────────────
@@ -1052,16 +1061,42 @@ async function confirmSlip(){
   const isParlay=betslip.length>1;const tot=slipMomioTotal();
   const view=slipToView(monto);  // captura antes de limpiar el cupón
   let r;
-  if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea})),monto}});
-  else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,monto}});}
-  if(r.error)return toast(r.error);
+  try{
+    if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea})),monto}});
+    else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,monto}});}
+  }catch(e){return toast('Error de conexión, intenta de nuevo');}
+  if(!r||r.error)return toast((r&&r.error)||'No se pudo registrar la apuesta');
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
-  clearSlip();refreshHero();renderPartidos(true);fireConfetti();
   window._lastBetView=view;
-  document.getElementById('mTitle').textContent='¡Listo! 🎉';
-  document.getElementById('mBody').innerHTML=`<div style="text-align:center;padding:8px 0 4px"><div style="font-size:40px">🎯</div><div style="font-size:16px;font-weight:800;color:var(--gold);margin:6px 0">${frase('exito')}</div><p style="margin:6px 0;color:var(--muted)">Apuesta de <strong style="color:#fff">$${monto.toLocaleString()}</strong> registrada${isParlay?' (parlay '+tot.toFixed(2)+'x)':''}</p></div>
-    <button class="btn share-btn" style="width:100%;justify-content:center;margin-bottom:8px;padding:13px" onclick="shareBetImage(window._lastBetView)">📲 Compartir mi pick</button>
-    <button class="btn btn-ghost" onclick="closeModal()">Listo</button>`;
+  clearSlip();
+  betSuccessScreen(view,monto,isParlay,tot);            // pantalla amigable PRIMERO (lo crítico)
+  try{refreshHero();}catch(e){}                          // lo demás en segundo plano, sin romper la UI
+  try{if(currentTab==='partidos')renderPartidos(true);}catch(e){}
+  try{fireConfetti();setTimeout(fireConfetti,400);}catch(e){}
+}
+// Pantalla de éxito: cierra el cupón, muestra la imagen de la apuesta + compartir + celebración
+function betSuccessScreen(view,monto,isParlay,tot){
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('mTitle').innerHTML='🎉 ¡Apuesta registrada!';
+  document.getElementById('mBody').innerHTML=`
+    <div style="text-align:center;font-size:16px;font-weight:800;color:var(--gold);margin:2px 0 12px">${frase('exito')}</div>
+    <div id="betImgWrap" style="border-radius:14px;overflow:hidden;border:1px solid var(--line);margin-bottom:14px;min-height:60px;display:flex;align-items:center;justify-content:center">
+      <div style="color:var(--muted);padding:14px;font-size:13px">Preparando tu pick…</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:15px" onclick="shareBetImage(window._lastBetView)">📲 Compartir mi pick</button>
+    <button class="btn btn-ghost" style="margin-top:8px;width:100%" onclick="closeModal()">Listo</button>`;
+  // Renderiza la imagen de la apuesta inline (la misma que se comparte)
+  setTimeout(()=>{
+    const wrap=document.getElementById('betImgWrap');if(!wrap)return;
+    try{
+      const canvas=makeBetImage(view);
+      const img=new Image();img.style.width='100%';img.style.display='block';
+      img.src=canvas.toDataURL('image/png');
+      wrap.innerHTML='';wrap.appendChild(img);
+    }catch(e){
+      wrap.innerHTML=`<div style="text-align:center;padding:16px;color:#fff;font-weight:700">✅ Apuesta de $${monto.toLocaleString()} registrada${isParlay?'<br><span style="color:var(--muted);font-weight:400">Parlay '+tot.toFixed(2)+'x</span>':''}</div>`;
+    }
+  },30);
 }
 async function cancelBet(betId){
   const r=await api({action:'cancelar',payload:{nombre:me,betId}});
@@ -1647,7 +1682,7 @@ async function poll(){
   if(newRes.length&&me){newRes.forEach(id=>{const p=byId(+id);const r=state.resultados[id];if(p)toast(`Liquidado: ${p.local} ${r.gl}-${r.gv} ${p.visita}`);});}
   if(me&&prevSaldo!==undefined&&state.jugadores[me]&&state.jugadores[me].saldo>prevSaldo)fireConfetti();
   refreshHero();
-  if(currentTab==='partidos')renderPartidos(true);
+  if(currentTab==='partidos'&&newRes.length)renderPartidos(true); // solo si hay resultados nuevos (evita recargar banderas)
   if(currentTab==='ranking')renderRanking();
   if(currentTab==='mis')renderMis();
   if(currentTab==='admin'&&isAdmin)renderAdmin();
