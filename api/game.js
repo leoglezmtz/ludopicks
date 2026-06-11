@@ -1,5 +1,5 @@
 import { kv } from "@vercel/kv";
-import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT, CAMPEON, CAMPEON_CIERRA } from "../lib/data.js";
+import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT, CAMPEON, CAMPEON_CIERRA, ESPECIAL } from "../lib/data.js";
 import { webcrypto } from "crypto";
 import crypto from "crypto";
 
@@ -119,11 +119,13 @@ function mercadoDe(pick) { return esMercadoOU(pick) ? "ou" : esBtts(pick) ? "btt
 
 // Motor recalculable: ajusta saldos solo por transiciones de estado.
 // Idempotente — sirve igual para registrar y para revertir resultados.
-function settleAll(jugadores, apuestas, resultados, campeon) {
+function settleAll(jugadores, apuestas, resultados, campeon, especialRes) {
   for (const b of Object.values(apuestas)) {
     let ns;
     if (b.tipo === "campeon") {
       ns = !campeon ? "pending" : (b.equipo === campeon ? "won" : "lost");
+    } else if (b.tipo === "especial") {
+      ns = !especialRes ? "pending" : (b.opcion === especialRes ? "won" : "lost");
     } else if (b.tipo === "parlay") {
       const sts = b.legs.map(l => {
         const r = resultados[l.partidoId];
@@ -172,11 +174,13 @@ export default async function handler(req, res) {
     const resultados = (await kv.get("resultados")) || {};
     const rankPrev   = (await kv.get("rankPrev"))   || {};
     const campeon    = (await kv.get("campeon"))    || null;
+    const especialRes = (await kv.get("especialRes")) || null;
     return res.json({
       jugadores: publicJugadores(jugadores), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
       lineas_ou: LINEAS_OU, linea_default: LINEA_DEFAULT,
       campeon_odds: CAMPEON, campeon_cierra: CAMPEON_CIERRA, campeon,
+      especial: ESPECIAL, especial_res: especialRes,
       now: Date.now(),
     });
   }
@@ -293,10 +297,53 @@ export default async function handler(req, res) {
     const resultados = (await kv.get("resultados")) || {};
     await kv.set("rankPrev", rankingSnapshot(jugadores));
     await kv.set("campeon", equipo || null); // equipo vacío = revertir (vuelve a pending)
-    settleAll(jugadores, apuestas, resultados, equipo || null);
+    settleAll(jugadores, apuestas, resultados, equipo || null, (await kv.get("especialRes")) || null);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas, campeon: equipo || null });
+  }
+
+  // ── APOSTAR ESPECIAL (novelty: color del vestido, etc.) ───────────
+  if (action === "apostarEspecial") {
+    const { nombre, opcion, monto } = payload;
+    const jugadores = (await kv.get("jugadores")) || {};
+    const apuestas  = (await kv.get("apuestas"))  || {};
+    const j = jugadores[nombre];
+    if (!j) return res.status(400).json({ error: "Jugador no existe" });
+    if (!ESPECIAL || !ESPECIAL.activo) return res.status(400).json({ error: "No hay apuesta especial activa" });
+    const op = ESPECIAL.opciones.find(o => o.key === opcion);
+    if (!op) return res.status(400).json({ error: "Opción inválida" });
+    if (Date.now() >= ESPECIAL.cierra) return res.status(400).json({ error: "Apuesta especial cerrada" });
+    if (await kv.get("especialRes")) return res.status(400).json({ error: "El resultado ya fue declarado" });
+    const mInt = Math.floor(Number(monto));
+    if (!mInt || mInt < APUESTA_MIN) return res.status(400).json({ error: `Mínimo $${APUESTA_MIN}` });
+    const prevKey = Object.keys(apuestas).find(k => apuestas[k].tipo === "especial" && apuestas[k].nombre === nombre && (apuestas[k].status || "pending") === "pending");
+    let saldoDisp = j.saldo;
+    if (prevKey) { saldoDisp += apuestas[prevKey].monto; delete apuestas[prevKey]; }
+    if (mInt > saldoDisp) return res.status(400).json({ error: "Saldo insuficiente" });
+    j.saldo = saldoDisp - mInt;
+    const id = "b" + Date.now() + Math.random().toString(36).slice(2, 6);
+    apuestas[id] = { id, tipo: "especial", especialId: ESPECIAL.id, nombre, opcion, opcionLabel: op.label, opcionEmoji: op.emoji, monto: mInt, momio: op.momio, status: "pending", payout: 0, ts: Date.now() };
+    await kv.set("jugadores", jugadores);
+    await kv.set("apuestas", apuestas);
+    return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas });
+  }
+
+  // ── ADMIN: declarar resultado de la apuesta especial ──────────────
+  if (action === "setEspecial") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { opcion } = payload;
+    if (opcion && !ESPECIAL.opciones.find(o => o.key === opcion)) return res.status(400).json({ error: "Opción inválida" });
+    const jugadores  = (await kv.get("jugadores"))  || {};
+    const apuestas   = (await kv.get("apuestas"))   || {};
+    const resultados = (await kv.get("resultados")) || {};
+    const campeon    = (await kv.get("campeon"))    || null;
+    await kv.set("rankPrev", rankingSnapshot(jugadores));
+    await kv.set("especialRes", opcion || null);
+    settleAll(jugadores, apuestas, resultados, campeon, opcion || null);
+    await kv.set("jugadores", jugadores);
+    await kv.set("apuestas", apuestas);
+    return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas, especialRes: opcion || null });
   }
 
   // ── APOSTAR PARLAY (permite 1X2 + O/U del mismo partido) ───────────
@@ -359,6 +406,14 @@ export default async function handler(req, res) {
       await kv.set("apuestas", apuestas);
       return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas });
     }
+    if (b.tipo === "especial") {
+      if (Date.now() >= ESPECIAL.cierra || (await kv.get("especialRes"))) return res.status(400).json({ error: "Ya no se puede cancelar (apuesta cerrada)" });
+      if (jugadores[nombre]) jugadores[nombre].saldo += b.monto;
+      delete apuestas[betId];
+      await kv.set("jugadores", jugadores);
+      await kv.set("apuestas", apuestas);
+      return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas });
+    }
     // No cancelar si algún partido involucrado ya empezó
     const ids = b.tipo === "parlay" ? b.legs.map(l => l.partidoId) : [b.partidoId];
     if (ids.some(id => BY_ID[id] && Date.now() >= BY_ID[id].kickoff)) return res.status(400).json({ error: "Un partido ya empezó, no se puede cancelar" });
@@ -383,9 +438,10 @@ export default async function handler(req, res) {
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
     const campeon    = (await kv.get("campeon"))    || null;
+    const especialRes0 = (await kv.get("especialRes")) || null;
     await kv.set("rankPrev", rankingSnapshot(jugadores));
     resultados[partidoId] = { gl: golL, gv: golV };
-    settleAll(jugadores, apuestas, resultados, campeon);
+    settleAll(jugadores, apuestas, resultados, campeon, especialRes0);
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
@@ -433,7 +489,7 @@ export default async function handler(req, res) {
     if (!resultados[partidoId]) return res.status(400).json({ error: "Ese partido no tiene resultado" });
     delete resultados[partidoId];
     const campeon = (await kv.get("campeon")) || null;
-    settleAll(jugadores, apuestas, resultados, campeon); // revierte pagos automáticamente
+    settleAll(jugadores, apuestas, resultados, campeon, (await kv.get("especialRes")) || null); // revierte pagos automáticamente
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
@@ -443,20 +499,31 @@ export default async function handler(req, res) {
   // ── ADMIN: saldos ──────────────────────────────────────────────────
   if (action === "ajustarSaldo") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { nombre, monto } = payload;
+    const { nombre, monto, mensaje } = payload;
     const jugadores = (await kv.get("jugadores")) || {};
     if (!jugadores[nombre]) return res.status(400).json({ error: "Jugador no existe" });
-    jugadores[nombre].saldo = Math.max(0, jugadores[nombre].saldo + Math.round(Number(monto)));
+    const delta = Math.round(Number(monto));
+    jugadores[nombre].saldo = Math.max(0, jugadores[nombre].saldo + delta);
     await kv.set("jugadores", jugadores);
+    // Push opcional al jugador (típicamente al regalarle dinero)
+    if (mensaje && mensaje.trim()) {
+      const subs = (await kv.get("pushSubs")) || {};
+      if (subs[nombre]) await sendPush(subs[nombre], { title: '💰 LudoPicks', body: mensaje.trim(), tag: 'saldo-' + Date.now(), url: '/' });
+    }
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
 
   if (action === "bonusTodos") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     const monto = Math.round(Number(payload.monto));
+    const mensaje = payload.mensaje;
     const jugadores = (await kv.get("jugadores")) || {};
     for (const j of Object.values(jugadores)) j.saldo = Math.max(0, j.saldo + monto);
     await kv.set("jugadores", jugadores);
+    if (mensaje && mensaje.trim()) {
+      const subs = (await kv.get("pushSubs")) || {};
+      await broadcastPush(subs, { title: '💰 LudoPicks', body: mensaje.trim(), tag: 'bonus-' + Date.now(), url: '/' });
+    }
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
 

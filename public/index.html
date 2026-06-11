@@ -115,6 +115,31 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .install-top{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:#fff}
 .install-x{margin-left:auto;background:none;border:none;color:var(--muted2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
 .install-steps{font-size:13px;color:var(--muted);line-height:1.5;margin-top:8px}
+/* ── APUESTA ESPECIAL ── */
+.especial-banner{position:relative;overflow:hidden;background:linear-gradient(120deg,#7a1fa2,#c2185b 55%,#ef6c00);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:14px 15px;margin-bottom:14px;cursor:pointer;box-shadow:0 10px 30px -10px rgba(194,24,91,.6);animation:slideUp .4s both}
+.especial-banner.done{background:linear-gradient(120deg,#243049,#1a2336);box-shadow:var(--shadow-sm);cursor:default}
+.eb-shine{position:absolute;top:0;left:-60%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:ebShine 3.2s ease-in-out infinite}
+@keyframes ebShine{0%{left:-60%}55%,100%{left:130%}}
+.eb-row{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
+.eb-emoji{font-size:30px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
+.eb-title{font-size:15px;font-weight:900;color:#fff;display:flex;align-items:center;gap:7px}
+.eb-new{font-size:9px;font-weight:900;background:#fff;color:#c2185b;padding:2px 7px;border-radius:20px;letter-spacing:.05em;animation:ebPulse 1.6s infinite}
+@keyframes ebPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.eb-sub{font-size:12px;color:rgba(255,255,255,.85);margin-top:3px;line-height:1.35}
+.eb-foot{display:flex;justify-content:space-between;align-items:center;margin-top:11px;position:relative;z-index:1;font-size:12px;font-weight:800;color:#fff}
+.eb-cta{background:rgba(255,255,255,.22);padding:5px 12px;border-radius:20px}
+/* popup flotante */
+.especial-pop{position:fixed;inset:0;z-index:300;background:rgba(4,7,15,.72);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .25s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.ep-card{position:relative;background:linear-gradient(160deg,#7a1fa2,#c2185b 60%,#ef6c00);border:1px solid rgba(255,255,255,.22);border-radius:24px;padding:26px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 30px 70px -20px rgba(0,0,0,.7);animation:epPop .4s cubic-bezier(.2,.9,.3,1.3)}
+@keyframes epPop{from{opacity:0;transform:scale(.8) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.ep-x{position:absolute;top:12px;right:14px;background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:20px;cursor:pointer;line-height:1}
+.ep-emoji{font-size:56px;animation:splashFloat 2.6s ease-in-out infinite}
+.ep-flash{font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:rgba(255,255,255,.2);display:inline-block;padding:4px 14px;border-radius:20px;margin:8px 0}
+.ep-title{font-size:21px;font-weight:900;color:#fff;margin-top:4px}
+.ep-q{font-size:14px;color:rgba(255,255,255,.9);margin-top:8px;line-height:1.45}
+.ep-card .btn-primary{background:#fff;color:#c2185b;box-shadow:0 8px 24px -8px rgba(0,0,0,.5)}
+.ep-later{background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;font-weight:700;margin-top:10px;cursor:pointer;width:100%;padding:6px}
 .campeon-list{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto}
 .campeon-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px;cursor:pointer;transition:all .15s}
 .campeon-row:active{transform:scale(.98);background:var(--glass2)}
@@ -441,7 +466,7 @@ select option{background:#161c30;color:#fff}
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
   <div class="body">
-    <div id="tabc-partidos" class="tabc"><div id="installCard"></div><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
+    <div id="tabc-partidos" class="tabc"><div id="especialBanner"></div><div id="installCard"></div><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
     <div id="tabc-mis" class="tabc"><div id="listaMis"></div></div>
     <div id="tabc-ranking" class="tabc"><div id="listaRanking"></div></div>
     <div id="tabc-elim" class="tabc"><div id="listaElim"></div></div>
@@ -462,6 +487,7 @@ select option{background:#161c30;color:#fff}
             <button class="btn btn-sm" style="background:var(--green);color:#04231a" onclick="doBonusTodos(1)">+ Dar</button>
             <button class="btn btn-sm btn-danger" onclick="doBonusTodos(-1)">− Quitar</button>
           </div>
+          <input id="bonusMsg" type="text" placeholder="💬 Mensaje push (opcional, ej: ¡Les regalé $500!)" style="width:100%;margin-top:8px">
         </div>
         <div class="sec-title">Ajuste individual</div>
         <div class="info-card">
@@ -473,11 +499,18 @@ select option{background:#161c30;color:#fff}
             <button class="btn btn-sm" style="background:var(--green);color:#04231a" onclick="doAjuste(1)">+ Agregar</button>
             <button class="btn btn-sm btn-danger" onclick="doAjuste(-1)">− Quitar</button>
           </div>
+          <input id="adjMsg" type="text" placeholder="💬 Mensaje push (opcional, ej: ¡Te di un bono!)" style="width:100%;margin-top:8px">
         </div>
         <div class="sec-title">Recotizar apuestas</div>
         <div class="info-card">
           <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Actualiza el momio de las apuestas <b>pendientes</b> a los momios actuales del catálogo. Las ya liquidadas no se tocan. No cambia saldos — solo afecta cuánto pagarán al liquidarse.</div>
           <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doRecotizar()">🔄 Recotizar pendientes con momios actuales</button>
+        </div>
+        <div class="sec-title">👗 Declarar resultado especial</div>
+        <div class="info-card">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Liquida la apuesta especial (color del vestido, etc.). Elige el resultado ganador. Puedes corregirlo o dejarlo en blanco para revertir.</div>
+          <div class="field" style="margin-bottom:10px"><select id="espSel"></select></div>
+          <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doSetEspecial()">👗 Declarar resultado</button>
         </div>
         <div class="sec-title">🏆 Declarar campeón del Mundial</div>
         <div class="info-card">
@@ -519,6 +552,18 @@ select option{background:#161c30;color:#fff}
 </div>
 
 <div class="slip-bar hidden" id="slipBar"><div class="slip-inner" onclick="openSlip()"><span><span class="slip-count" id="slipCount">0</span>Ver ticket</span><span id="slipMomio"></span></div></div>
+
+<div class="especial-pop" id="especialPop" style="display:none">
+  <div class="ep-card">
+    <button class="ep-x" onclick="closeEspecialPop()">×</button>
+    <div class="ep-emoji" id="epEmoji">👗</div>
+    <div class="ep-flash">¡Apuesta especial!</div>
+    <div class="ep-title" id="epTitle"></div>
+    <div class="ep-q" id="epQ"></div>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="closeEspecialPop();openEspecialPicker()">🎯 Hacer mi apuesta</button>
+    <button class="ep-later" onclick="closeEspecialPop()">Ahorita no</button>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -613,7 +658,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.5.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.6.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados';
@@ -905,7 +950,7 @@ function enterApp(){
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
   refreshHero();renderSlipBar();
-  if(!isAdmin)checkNotifStatus();
+  if(!isAdmin){checkNotifStatus();setTimeout(maybeShowEspecialPop,2000);}
 }
 function refreshHero(){
   if(isAdmin)return;
@@ -952,7 +997,7 @@ function showTab(name){
   document.getElementById('tab-'+name).classList.add('on');
   document.querySelectorAll('.tabc').forEach(t=>t.style.display='none');
   document.getElementById('tabc-'+name).style.display='block';
-  if(name==='partidos'){renderPartidos();renderInstallCard();}
+  if(name==='partidos'){renderPartidos();renderInstallCard();renderEspecialBanner();}
   if(name==='mis')renderMis();
   if(name==='ranking')renderRanking();
   if(name==='elim')renderElim();
@@ -967,7 +1012,8 @@ function setAdminTab(name,btn){
   document.getElementById('admin-usuarios').style.display=name==='usuarios'?'block':'none';
   document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
   if(name==='saldos'){const sel=document.getElementById('adjJugador');sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
-    const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}}
+    const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}
+    const es=document.getElementById('espSel');if(es){if(state.especial){es.innerHTML='<option value="">— Sin resultado (revertir) —</option>'+state.especial.opciones.map(o=>`<option value="${o.key}"${state.especial_res===o.key?' selected':''}>${o.emoji} ${o.label} (${o.momio}x)</option>`).join('');}else{es.innerHTML='<option value="">(no hay apuesta especial)</option>';}}}
   if(name==='usuarios')renderAdminUsers();
 }
 function renderFilters(id,active,cb){
@@ -1239,6 +1285,7 @@ function legResIcon(l){const r=state.resultados[l.partidoId];if(!r)return ['•'
 function betCanCancel(b){
   if((b.status||'pending')!=='pending')return false;
   if(b.tipo==='campeon')return eNow()<(state.campeon_cierra||0)&&!state.campeon;
+  if(b.tipo==='especial')return state.especial&&eNow()<state.especial.cierra&&!state.especial_res;
   if(b.tipo==='parlay')return b.legs.every(l=>{const p=byId(l.partidoId);return p&&!isLocked(p);});
   const p=byId(b.partidoId);return p&&!isLocked(p);
 }
@@ -1253,6 +1300,9 @@ function betCard(b){
   if(b.tipo==='campeon'){
     head=`<span style="font-weight:700;font-size:14px">${flagImg(b.equipo,15)} ${teamName(b.equipo)} 🏆</span> <span style="color:var(--muted2);font-size:11px">Campeón</span>`;
     body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">Campeón del Mundial · ${b.momio}x</div>`;
+  }else if(b.tipo==='especial'){
+    head=`<span style="font-weight:700;font-size:14px">${b.opcionEmoji||'🎨'} ${b.opcionLabel||b.opcion}</span> <span style="color:var(--muted2);font-size:11px">Especial</span>`;
+    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${state.especial?state.especial.titulo:'Apuesta especial'} · ${b.momio}x</div>`;
   }else if(isP){
     head=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span>`;
     body=b.legs.map(l=>{const p=byId(l.partidoId);const[ic,col]=legResIcon(l);
@@ -1346,6 +1396,8 @@ function playerBetCard(b){
   let sel;
   if(b.tipo==='campeon'){
     sel=`<span style="font-weight:700;font-size:14px">${flagImg(b.equipo,13)} ${teamName(b.equipo)} 🏆</span><div style="font-size:12px;color:var(--muted);margin-top:3px">Campeón del Mundial · ${b.momio}x</div>`;
+  }else if(b.tipo==='especial'){
+    sel=`<span style="font-weight:700;font-size:14px">${b.opcionEmoji||'🎨'} ${b.opcionLabel||b.opcion}</span><div style="font-size:12px;color:var(--muted);margin-top:3px">Especial · ${b.momio}x</div>`;
   }else if(b.tipo==='parlay'){
     sel=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span><div style="margin-top:6px">`+b.legs.map(l=>{const p=byId(l.partidoId);return `<div style="font-size:12px;color:var(--muted);padding:1px 0">${teamFlag(p.local,11)} v ${teamFlag(p.visita,11)} · ${pickLabel(p,l.pick,l.linea)} (${l.momio}x)</div>`;}).join('')+'</div>';
   }else{
@@ -1434,6 +1486,94 @@ async function confirmCampeon(equipo){
   document.getElementById('mTitle').textContent='¡Listo! 🏆';
   document.getElementById('mBody').innerHTML=`<div style="text-align:center;padding:10px 0"><div style="font-size:44px">${flagImg(equipo,44)}</div><div style="font-size:16px;font-weight:800;color:var(--gold);margin:8px 0">${frase('exito')}</div><p style="color:var(--muted);margin:4px 0">Apostaste <b style="color:#fff">$${monto.toLocaleString()}</b> a que <b style="color:#fff">${teamName(equipo)}</b> es campeón.</p></div><button class="btn btn-ghost" onclick="closeModal();renderElim()">Listo</button>`;
 }
+
+// ── APUESTA ESPECIAL (novelty) ─────────────────────────────────
+function especialEstado(){
+  const e=state.especial;
+  if(!e||!e.activo)return 'none';
+  if(state.especial_res)return 'declarado';
+  if(eNow()>=e.cierra)return 'cerrado';
+  return 'abierto';
+}
+function miApuestaEspecial(){return Object.values(state.apuestas).find(b=>b.tipo==='especial'&&b.nombre===me);}
+function renderEspecialBanner(){
+  const el=document.getElementById('especialBanner');if(!el)return;
+  const e=state.especial;const est=especialEstado();
+  if(est==='none'||est==='cerrado'){el.innerHTML='';return;}
+  const mb=miApuestaEspecial();
+  if(est==='declarado'){
+    const op=e.opciones.find(o=>o.key===state.especial_res);
+    el.innerHTML=`<div class="especial-banner done"><div class="eb-row"><span class="eb-emoji">${e.emoji}</span><div><div class="eb-title">${e.titulo}</div><div class="eb-sub">Resultado: ${op?op.emoji+' '+op.label:state.especial_res}${mb?(mb.opcion===state.especial_res?` · ¡Ganaste $${Math.round(mb.monto*mb.momio).toLocaleString()}! 🎉`:' · No le atinaste'):''}</div></div></div></div>`;
+    return;
+  }
+  const ms=e.cierra-eNow();
+  el.innerHTML=`<div class="especial-banner" onclick="openEspecialPicker()">
+    <div class="eb-shine"></div>
+    <div class="eb-row"><span class="eb-emoji">${e.emoji}</span><div style="flex:1">
+      <div class="eb-title">${e.titulo} <span class="eb-new">NUEVO</span></div>
+      <div class="eb-sub">${mb?`Tu pick: ${mb.opcionEmoji} ${mb.opcionLabel} · ${mb.momio}x`:e.pregunta}</div>
+    </div></div>
+    <div class="eb-foot"><span>⏳ Cierra en ${fmtCountdown(ms)}</span><span class="eb-cta">${mb?'Cambiar ›':'Apostar ›'}</span></div>
+  </div>`;
+}
+function openEspecialPicker(){
+  const e=state.especial;if(!e)return;
+  if(especialEstado()!=='abierto')return toast('La apuesta especial está cerrada');
+  document.getElementById('mTitle').innerHTML=`${e.emoji} ${e.titulo}`;
+  const rows=e.opciones.map(o=>`<div class="campeon-row" onclick="especialBet('${o.key}')">
+    <div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">${o.emoji}</span><span style="font-weight:700">${o.label}</span></div>
+    <span class="campeon-odd">${o.momio}x</span></div>`).join('');
+  document.getElementById('mBody').innerHTML=`<div style="font-size:13px;color:var(--muted);margin-bottom:6px">${e.pregunta}</div><div style="font-size:11px;color:var(--gold);font-weight:700;margin-bottom:10px">${frase('pick')}</div><div class="campeon-list">${rows}</div>`;
+  document.getElementById('overlay').style.display='flex';
+}
+function especialBet(opcion){
+  const e=state.especial;const op=e.opciones.find(o=>o.key===opcion);const j=state.jugadores[me];const min=state.apuesta_min||100;
+  document.getElementById('mTitle').innerHTML=`${op.emoji} ${op.label} · ${op.momio}x`;
+  document.getElementById('mBody').innerHTML=`
+    <div class="field" style="margin-top:4px"><label>Monto · saldo $${Math.round(j.saldo).toLocaleString()} · mín $${min}</label>
+      <input type="tel" id="espMonto" inputmode="numeric" placeholder="${min}" oninput="espPreview('${opcion}')"></div>
+    <div class="quick-amts">${[500,1000,2000,5000].filter(v=>v<=j.saldo).map(v=>`<button onclick="setEspMonto(${v},'${opcion}')">$${v.toLocaleString()}</button>`).join('')}<button onclick="setEspMonto(${Math.round(j.saldo)},'${opcion}')">Todo</button></div>
+    <div class="preview-box" id="espPrev"></div>
+    <div style="text-align:center;font-size:13px;color:var(--gold);font-weight:700;margin:10px 0 2px">${frase('confirm')}</div>
+    <button class="btn btn-primary" style="margin-top:6px" onclick="confirmEspecial('${opcion}')">Apostar</button>
+    <button class="btn btn-ghost" style="margin-top:6px" onclick="openEspecialPicker()">← Elegir otro color</button>`;
+}
+function setEspMonto(v,op){document.getElementById('espMonto').value=v;espPreview(op);}
+function espPreview(op){
+  const v=parseInt(document.getElementById('espMonto').value);const el=document.getElementById('espPrev');if(!el)return;
+  const o=state.especial.opciones.find(x=>x.key===op);
+  if(!v||v<=0){el.style.display='none';return;}
+  const g=Math.round(v*o.momio);
+  el.innerHTML=`Si aciertas ganas <strong>$${g.toLocaleString()}</strong><br><span style="color:var(--muted)">Ganancia neta: +$${(g-v).toLocaleString()}</span>`;
+  el.style.display='block';
+}
+async function confirmEspecial(opcion){
+  const monto=parseInt(document.getElementById('espMonto').value);const min=state.apuesta_min||100;
+  if(!monto||monto<min)return toast('Mínimo $'+min);
+  const r=await api({action:'apostarEspecial',payload:{nombre:me,opcion,monto}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;state.apuestas=r.apuestas;
+  refreshHero();renderEspecialBanner();
+  const op=state.especial.opciones.find(o=>o.key===opcion);
+  try{fireConfetti();}catch(e){}
+  document.getElementById('mTitle').textContent='¡Listo! 🎉';
+  document.getElementById('mBody').innerHTML=`<div style="text-align:center;padding:10px 0"><div style="font-size:46px">${op.emoji}</div><div style="font-size:16px;font-weight:800;color:var(--gold);margin:8px 0">${frase('exito')}</div><p style="color:var(--muted);margin:4px 0">Apostaste <b style="color:#fff">$${monto.toLocaleString()}</b> a <b style="color:#fff">${op.label}</b> · ${op.momio}x</p></div><button class="btn btn-ghost" onclick="closeModal()">Listo</button>`;
+}
+// Popup flotante al abrir la app
+function maybeShowEspecialPop(){
+  const e=state.especial;if(especialEstado()!=='abierto')return;
+  if(miApuestaEspecial())return;                        // ya apostó, no molestar
+  if(localStorage.getItem('ludo_esp_pop')===e.id)return; // ya lo vio y cerró
+  document.getElementById('epEmoji').textContent=e.emoji;
+  document.getElementById('epTitle').textContent=e.titulo;
+  document.getElementById('epQ').textContent=e.pregunta;
+  document.getElementById('especialPop').style.display='flex';
+}
+function closeEspecialPop(){
+  const e=state.especial;if(e)localStorage.setItem('ludo_esp_pop',e.id);
+  document.getElementById('especialPop').style.display='none';
+}
+
 // ── ADMIN ─────────────────────────────────────────────────────
 function renderAdmin(){
   renderFilters('adminFilters',adminF,'setAdminF');
@@ -1580,9 +1720,21 @@ function adminBorrar(nombre){
 async function doBonusTodos(sign){
   const monto=parseInt(document.getElementById('bonusMonto').value);
   if(!monto||monto<=0)return toast('Ingresa un monto');
-  const r=await api({action:'bonusTodos',payload:{adminKey,monto:monto*sign}});
+  const mensaje=sign>0?(document.getElementById('bonusMsg').value||'').trim():'';
+  const r=await api({action:'bonusTodos',payload:{adminKey,monto:monto*sign,mensaje}});
   if(r.error)return toast(r.error);
-  state.jugadores=r.jugadores;toast(sign>0?`+$${monto.toLocaleString()} a todos`:`−$${monto.toLocaleString()} a todos`);
+  state.jugadores=r.jugadores;document.getElementById('bonusMsg').value='';
+  toast(sign>0?`+$${monto.toLocaleString()} a todos${mensaje?' + push 📲':''}`:`−$${monto.toLocaleString()} a todos`);
+}
+async function doSetEspecial(){
+  const op=document.getElementById('espSel').value;
+  const o=state.especial?state.especial.opciones.find(x=>x.key===op):null;
+  const txt=op?`declarar "${o?o.label:op}" como resultado`:'revertir el resultado especial';
+  if(!confirm(`¿Seguro que quieres ${txt}? Esto liquida la apuesta especial.`))return;
+  const r=await api({action:'setEspecial',payload:{adminKey,opcion:op}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;state.apuestas=r.apuestas;state.especial_res=r.especialRes;
+  toast(op?`👗 Resultado: ${o?o.label:op}`:'Resultado revertido');
 }
 async function doSetCampeon(){
   const eq=document.getElementById('campSel').value;
@@ -1604,9 +1756,11 @@ async function doAjuste(sign){
   const nombre=document.getElementById('adjJugador').value;
   const monto=parseInt(document.getElementById('adjMonto').value);
   if(!monto||monto<=0)return toast('Ingresa un monto');
-  const r=await api({action:'ajustarSaldo',payload:{adminKey,nombre,monto:monto*sign}});
+  const mensaje=sign>0?(document.getElementById('adjMsg').value||'').trim():'';
+  const r=await api({action:'ajustarSaldo',payload:{adminKey,nombre,monto:monto*sign,mensaje}});
   if(r.error)return toast(r.error);
-  state.jugadores=r.jugadores;toast(`Saldo de ${nombre} ajustado`);
+  state.jugadores=r.jugadores;document.getElementById('adjMsg').value='';
+  toast(`Saldo de ${nombre} ajustado${mensaje?' + push 📲':''}`);
   setAdminTab('saldos',document.getElementById('atab-saldos'));
 }
 async function resetTodo(){
