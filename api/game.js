@@ -392,6 +392,43 @@ export default async function handler(req, res) {
     return res.json({ ok: true, especiales });
   }
 
+  // ── ADMIN: editar una apuesta especial existente ──────────────────
+  if (action === "editarEspecial") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { especialId, titulo, emoji, pregunta, nota, cierra, opciones, img, tint, activo } = payload;
+    const especiales = await loadEspeciales();
+    const sp = especiales[especialId];
+    if (!sp) return res.status(400).json({ error: "Especial no existe" });
+    if (titulo !== undefined && String(titulo).trim()) sp.titulo = String(titulo).slice(0, 60);
+    if (emoji !== undefined && String(emoji).trim()) sp.emoji = String(emoji).slice(0, 4);
+    if (pregunta !== undefined && String(pregunta).trim()) sp.pregunta = String(pregunta).slice(0, 200);
+    if (nota !== undefined) sp.nota = nota ? String(nota).slice(0, 120) : "";
+    if (cierra !== undefined) { const c = Number(cierra); if (c && !isNaN(c)) sp.cierra = c; }
+    if (img !== undefined) sp.img = (img && /^https?:\/\//i.test(String(img).trim())) ? String(img).trim() : "";
+    if (Array.isArray(tint) && tint.length === 2) sp.tint = tint;
+    if (typeof activo === "boolean") sp.activo = activo;
+    if (Array.isArray(opciones) && opciones.length >= 2) {
+      const usedKeys = {};
+      sp.opciones = opciones.map((o, i) => {
+        let k = o.key && String(o.key).trim() ? String(o.key) : slug(o.label);
+        if (usedKeys[k]) k = k + i; usedKeys[k] = 1;
+        const m = Number(o.momio);
+        return { key: k, label: String(o.label || "Opción " + (i + 1)).slice(0, 40), emoji: o.emoji || "▫️", momio: (m && m >= 1.01) ? Math.round(m * 100) / 100 : 2 };
+      });
+      if (sp.res && !sp.opciones.find(o => o.key === sp.res)) sp.res = null; // el ganador ya no existe → revertir
+    }
+    await kv.set("especiales", especiales);
+    // Re-liquidar por consistencia (idempotente; las apuestas guardan su propio momio)
+    const jugadores  = (await kv.get("jugadores"))  || {};
+    const apuestas   = (await kv.get("apuestas"))   || {};
+    const resultados = (await kv.get("resultados")) || {};
+    const campeon    = (await kv.get("campeon"))    || null;
+    settleAll(jugadores, apuestas, resultados, campeon, especiales);
+    await kv.set("jugadores", jugadores);
+    await kv.set("apuestas", apuestas);
+    return res.json({ ok: true, especiales, jugadores: publicJugadores(jugadores), apuestas });
+  }
+
   // ── ADMIN: declarar resultado de una especial (por id) ────────────
   if (action === "setEspecial") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
