@@ -512,10 +512,10 @@ select option{background:#161c30;color:#fff}
   </div>
   <nav class="nav">
     <button id="tab-partidos" class="on" onclick="showTab('partidos')"><i class="ti ti-ballpen"></i>Partidos</button>
+    <button id="tab-especiales" onclick="showTab('especiales')"><i class="ti ti-sparkles"></i>Especiales</button>
     <button id="tab-mis" onclick="showTab('mis')"><i class="ti ti-ticket"></i>Mis picks</button>
     <button id="tab-ranking" onclick="showTab('ranking')"><i class="ti ti-trophy"></i>Ranking</button>
     <button id="tab-elim" onclick="showTab('elim')"><i class="ti ti-tournament"></i>Liguilla</button>
-    <button id="tab-especiales" onclick="showTab('especiales')"><i class="ti ti-sparkles"></i>Especiales</button>
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
   <div class="body">
@@ -740,7 +740,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.12.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.13.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1756,7 +1756,10 @@ function renderEspAdmin(){
         <select id="espdecl_${e.id}" style="flex:1"><option value="">— Declarar resultado —</option>${opts}</select>
         <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00" onclick="doDeclararEspecial('${e.id}')">Declarar</button>
       </div>
-      <button class="btn btn-ghost btn-sm" style="margin-top:6px;color:var(--rl)" onclick="doBorrarEspecial('${e.id}')">🗑 Borrar (devuelve el dinero)</button>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openEditEspecial('${e.id}')">✏️ Editar</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--rl)" onclick="doBorrarEspecial('${e.id}')">🗑 Borrar</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1800,6 +1803,53 @@ async function doBorrarEspecial(id){
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;state.especiales=r.especiales;
   toast('Apuesta especial borrada');renderEspAdmin();renderEspecialBanner();
+}
+// Convierte un timestamp a valor 'YYYY-MM-DDTHH:MM' en hora local (para datetime-local)
+function toLocalDT(ms){const d=new Date(ms);const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());}
+function escAttr(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function editOpcRow(emoji,label,momio,key){
+  return `<div class="espc-op" data-key="${escAttr(key)}"><input class="espc-em" value="${escAttr(emoji)}" maxlength="3" style="width:48px;text-align:center;font-size:16px"><input class="espc-lb" value="${escAttr(label)}" maxlength="40" style="flex:1"><input class="espc-mo" value="${momio||''}" inputmode="decimal" style="width:64px;text-align:center"></div>`;
+}
+function openEditEspecial(id){
+  const e=state.especiales[id];if(!e)return;
+  const nApu=Object.values(state.apuestas).filter(b=>b.tipo==='especial'&&b.especialId===id).length;
+  document.getElementById('mTitle').innerHTML='✏️ Editar especial';
+  document.getElementById('mBody').innerHTML=`
+    <div class="field" style="margin-bottom:8px"><label>Emoji y título</label>
+      <div style="display:flex;gap:8px"><input id="edEmoji" value="${escAttr(e.emoji)}" maxlength="3" style="width:56px;text-align:center;font-size:18px"><input id="edTitulo" value="${escAttr(e.titulo)}" maxlength="60" style="flex:1"></div></div>
+    <div class="field" style="margin-bottom:8px"><label>Pregunta</label><input id="edPregunta" value="${escAttr(e.pregunta)}" maxlength="200"></div>
+    <div class="field" style="margin-bottom:8px"><label>🕐 Cierre (fecha y hora)</label><input id="edCierra" type="datetime-local" value="${toLocalDT(e.cierra)}"></div>
+    <div class="field" style="margin-bottom:8px"><label>URL de imagen (opcional)</label><input id="edImg" type="url" value="${escAttr(e.img)}" placeholder="https://..."></div>
+    <label style="font-size:11px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Opciones (emoji · texto · momio)</label>
+    ${nApu>0?`<div style="font-size:11px;color:var(--al);margin:4px 0 2px">⚠️ Ya hay ${nApu} apuesta${nApu!==1?'s':''}. Cambiar momios no afecta las ya hechas (guardan su momio). Evita borrar/renombrar opciones con apuestas.</div>`:''}
+    <div id="editOpciones">${e.opciones.map(o=>editOpcRow(o.emoji,o.label,o.momio,o.key)).join('')}</div>
+    <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="document.getElementById('editOpciones').insertAdjacentHTML('beforeend',editOpcRow('▫️','',''))">+ Agregar opción</button>
+    <button class="btn btn-primary" style="margin-top:10px" onclick="doEditarEspecial('${id}')">💾 Guardar cambios</button>`;
+  document.getElementById('overlay').style.display='flex';
+}
+async function doEditarEspecial(id){
+  const titulo=document.getElementById('edTitulo').value.trim();
+  const emoji=document.getElementById('edEmoji').value.trim()||'✨';
+  const pregunta=document.getElementById('edPregunta').value.trim();
+  const cierraStr=document.getElementById('edCierra').value;
+  const img=(document.getElementById('edImg').value||'').trim();
+  if(!titulo||!pregunta)return toast('Pon título y pregunta');
+  if(!cierraStr)return toast('Pon la fecha de cierre');
+  const cierra=new Date(cierraStr).getTime();
+  if(isNaN(cierra))return toast('Fecha de cierre inválida');
+  const opciones=[];
+  document.querySelectorAll('#editOpciones .espc-op').forEach(d=>{
+    const label=d.querySelector('.espc-lb').value.trim();
+    const em=d.querySelector('.espc-em').value.trim()||'▫️';
+    const momio=parseFloat(d.querySelector('.espc-mo').value);
+    const key=d.getAttribute('data-key')||undefined;
+    if(label&&momio>=1.01)opciones.push({label,emoji:em,momio,key});
+  });
+  if(opciones.length<2)return toast('Pon al menos 2 opciones válidas');
+  const r=await api({action:'editarEspecial',payload:{adminKey,especialId:id,titulo,emoji,pregunta,cierra,img,opciones}});
+  if(r.error)return toast(r.error);
+  state.especiales=r.especiales;if(r.jugadores)state.jugadores=r.jugadores;if(r.apuestas)state.apuestas=r.apuestas;
+  closeModal();toast('✅ Especial actualizada');renderEspAdmin();renderEspecialBanner();
 }
 // ── MODO CASINO: ganancia del admin (retroactivo, solo visible para admin) ──
 function casinoStats(){
@@ -2254,13 +2304,5 @@ setInterval(()=>{
 init();
 setTimeout(hideSplash,6000); // salvaguarda: nunca dejar el splash pegado
 </script>
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
