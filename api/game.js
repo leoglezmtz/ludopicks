@@ -140,6 +140,10 @@ async function loadEspeciales() {
         if (!esp[s.id]) { esp[s.id] = { ...s }; changed = true; }
         seeded.push(s.id); seededChanged = true;
       }
+      // Sincronizar campos visuales (img/tint) aunque ya estuviera sembrada, sin tocar apuestas/resultados
+      if (esp[s.id] && s.img && (esp[s.id].img !== s.img || JSON.stringify(esp[s.id].tint || null) !== JSON.stringify(s.tint || null))) {
+        esp[s.id].img = s.img; esp[s.id].tint = s.tint; changed = true;
+      }
     }
     if (seededChanged) await kv.set("seededIds", seeded);
   }
@@ -369,7 +373,7 @@ export default async function handler(req, res) {
   // ── ADMIN: crear una apuesta especial ─────────────────────────────
   if (action === "crearEspecial") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { titulo, emoji, pregunta, nota, cierra, opciones } = payload;
+    const { titulo, emoji, pregunta, nota, cierra, opciones, img, tint } = payload;
     if (!titulo || !pregunta) return res.status(400).json({ error: "Falta título o pregunta" });
     if (!Array.isArray(opciones) || opciones.length < 2) return res.status(400).json({ error: "Pon al menos 2 opciones" });
     const cierraMs = Number(cierra);
@@ -382,7 +386,8 @@ export default async function handler(req, res) {
     });
     const especiales = await loadEspeciales();
     const id = "esp" + Date.now().toString(36);
-    especiales[id] = { id, titulo: String(titulo).slice(0, 60), emoji: emoji || "✨", pregunta: String(pregunta).slice(0, 200), nota: nota ? String(nota).slice(0, 120) : "", cierra: cierraMs, opciones: ops, res: null, activo: true, creado: Date.now() };
+    const imgClean = (img && /^https?:\/\//i.test(String(img).trim())) ? String(img).trim() : "";
+    especiales[id] = { id, titulo: String(titulo).slice(0, 60), emoji: emoji || "✨", pregunta: String(pregunta).slice(0, 200), nota: nota ? String(nota).slice(0, 120) : "", cierra: cierraMs, opciones: ops, img: imgClean, tint: (Array.isArray(tint) && tint.length === 2) ? tint : null, res: null, activo: true, creado: Date.now() };
     await kv.set("especiales", especiales);
     return res.json({ ok: true, especiales });
   }

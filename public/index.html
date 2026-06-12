@@ -45,8 +45,7 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 
 .hero{background:linear-gradient(135deg,#0a0a0a 0%,#141206 45%,#0a2a12 100%);padding:20px 18px 18px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,219,0,.18)}
 .hero::before{content:'';position:absolute;inset:0;background:radial-gradient(90% 130% at 12% -10%,rgba(255,219,0,.16),transparent 55%),radial-gradient(80% 120% at 100% 120%,rgba(31,196,58,.16),transparent 60%);pointer-events:none}
-.hero::after{content:'26';position:absolute;top:-18px;right:6px;font-size:96px;font-weight:900;font-style:italic;letter-spacing:-4px;color:rgba(255,219,0,.10);z-index:0;line-height:1}
-.ball{position:absolute;top:14px;right:18px;font-size:20px;animation:spin 8s linear infinite;z-index:1;opacity:.45}
+.hero::after{content:'26';position:absolute;top:30px;right:50px;font-size:80px;font-weight:900;font-style:italic;letter-spacing:-4px;color:rgba(255,219,0,.09);z-index:0;line-height:1}
 @keyframes spin{to{transform:rotate(360deg)}}
 .hero h1{font-size:18px;font-weight:800;position:relative;z-index:1}
 .who{color:rgba(255,255,255,.7);font-size:12px;margin-top:2px;position:relative;z-index:1}
@@ -171,9 +170,19 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .cas-list{display:flex;flex-direction:column;gap:7px}
 .cas-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px}
 /* ── PESTAÑA ESPECIALES ── */
-.esp-card{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:18px;padding:15px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
-.esp-card.abierto{border-color:rgba(194,24,91,.4);box-shadow:0 0 0 1px rgba(194,24,91,.15),var(--shadow-sm)}
+.esp-card{position:relative;overflow:hidden;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:18px;padding:15px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
+.esp-card.abierto{border-color:rgba(255,219,0,.4);box-shadow:0 0 0 1px rgba(255,219,0,.15),var(--shadow-sm)}
 .esp-card.declarado{opacity:.85}
+.esp-card.has-img{border-color:rgba(255,255,255,.16)}
+.esp-content{position:relative;z-index:2}
+/* Capa imagen + color multiply + cristal */
+.esp-media{position:absolute;inset:0;z-index:0;overflow:hidden}
+.esp-img{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.03)}
+.esp-tint{position:absolute;inset:0;mix-blend-mode:multiply;opacity:.9}
+.esp-glass{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,8,10,.22) 0%,rgba(8,8,10,.5) 55%,rgba(8,8,10,.85) 100%);backdrop-filter:blur(1.2px);-webkit-backdrop-filter:blur(1.2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.esp-card.has-img .esp-q{color:rgba(255,255,255,.82)}
+.especial-banner.has-img{background:#111}
+.especial-banner.has-img .esp-glass{background:linear-gradient(120deg,rgba(8,8,10,.32),rgba(8,8,10,.6))}
 .esp-top{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
 .esp-emoji{font-size:30px;flex-shrink:0}
 .esp-title{font-size:15px;font-weight:900;color:#fff}
@@ -480,7 +489,6 @@ select option{background:#161c30;color:#fff}
 <div id="app" style="display:none">
   <div class="hero">
     <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()" aria-label="Refrescar">⟳</button>
-    <div class="ball">⚽</div>
     <h1>LudoPicks</h1>
     <div class="who" id="appWho"></div>
     <div class="saldo-card" id="saldoCard" onclick="openEditAvatar()">
@@ -589,6 +597,8 @@ select option{background:#161c30;color:#fff}
             <input id="espcPregunta" type="text" maxlength="200" placeholder="¿Qué va a pasar?"></div>
           <div class="field" style="margin-bottom:8px"><label>Cierre (fecha y hora)</label>
             <input id="espcCierra" type="datetime-local"></div>
+          <div class="field" style="margin-bottom:8px"><label>URL de imagen de fondo (opcional)</label>
+            <input id="espcImg" type="url" placeholder="https://... (efecto color + cristal)"></div>
           <label style="font-size:11px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Opciones (emoji · texto · momio)</label>
           <div id="espcOpciones"></div>
           <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="addEspcOpcion()">+ Agregar opción</button>
@@ -730,10 +740,10 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.10.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.12.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
-let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados';
+let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
 let expanded=new Set();   // ids de partidos con la tarjeta desplegada
 let daysToShow=3;          // cuántos días de partidos mostrar (Todos)
 
@@ -1393,20 +1403,31 @@ function betCard(b){
   if(betCanCancel(b))btns+=`<button class="cancel-btn" style="margin-top:0" onclick="cancelBet('${b.id}')">Cancelar apuesta</button>`;
   return `<div class="info-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="flex:1">${head}</div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div>${right}</div></div>${body}${btns?`<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${btns}</div>`:''}</div>`;
 }
+function setMisF(f){misF=f;renderMis();}
 function renderMis(){
   const mine=Object.values(state.apuestas).filter(b=>b.nombre===me).sort((a,b)=>b.ts-a.ts);
-  if(!mine.length){document.getElementById('listaMis').innerHTML=`<div class="empty"><div class="emoji">🎟️</div>${frase('sinPicks')}<br><span style="font-size:13px;color:var(--muted2)">Ve a Partidos y arma tu ticket.</span></div>`;return;}
+  const el=document.getElementById('listaMis');
+  if(!mine.length){el.innerHTML=`<div class="empty"><div class="emoji">🎟️</div>${frase('sinPicks')}<br><span style="font-size:13px;color:var(--muted2)">Ve a Partidos y arma tu ticket.</span></div>`;return;}
   const pend=mine.filter(b=>(b.status||'pending')==='pending');
-  const liq=mine.filter(b=>b.status==='won'||b.status==='lost');
-  let html='',tAp=0,tBal=0;
+  const won=mine.filter(b=>b.status==='won');
+  const lost=mine.filter(b=>b.status==='lost');
+  const counts={todas:mine.length,abiertas:pend.length,ganadas:won.length,perdidas:lost.length};
+  const tabs=[['todas','Todas'],['abiertas','Abiertas'],['ganadas','Ganadas'],['perdidas','Perdidas']];
+  const chips=`<div class="filters">`+tabs.map(([k,l])=>`<button class="fbtn${misF===k?' on':''}" onclick="setMisF('${k}')">${l} <b style="opacity:.7">${counts[k]}</b></button>`).join('')+`</div>`;
+  const list= misF==='abiertas'?pend : misF==='ganadas'?won : misF==='perdidas'?lost : mine;
+  let body;
+  if(!list.length){
+    const lbl={abiertas:'apuestas abiertas',ganadas:'apuestas ganadas',perdidas:'apuestas perdidas',todas:'apuestas'}[misF];
+    body=`<div class="empty" style="padding:30px 12px"><div class="emoji">📭</div>No tienes ${lbl} por aquí.</div>`;
+  } else body=list.map(betCard).join('');
+  // Resumen global (siempre, sin importar el filtro)
+  let tAp=0,tBal=0;
   pend.forEach(b=>tAp+=b.monto);
-  liq.forEach(b=>{const f=b.tipo==='parlay'?b.momioTotal:b.momio;if(b.status==='won')tBal+=Math.round(b.monto*(f-1));else tBal-=b.monto;});
-  if(pend.length){html+=`<div class="sec-title">Pendientes (${pend.length})</div>`+pend.map(betCard).join('');}
-  if(liq.length){html+=`<div class="sec-title">Liquidadas (${liq.length})</div>`+liq.map(betCard).join('');}
-  html+=`<div class="info-card" style="background:rgba(255,255,255,.04)">
+  [...won,...lost].forEach(b=>{const f=b.tipo==='parlay'?b.momioTotal:b.momio;if(b.status==='won')tBal+=Math.round(b.monto*(f-1));else tBal-=b.monto;});
+  const summary=`<div class="info-card" style="background:rgba(255,255,255,.04);margin-top:12px">
     <div class="ap-row" style="border:none;padding:4px 0"><span style="color:var(--muted)">Apostado pendiente</span><strong>$${tAp.toLocaleString()}</strong></div>
     <div class="ap-row" style="border:none;padding:4px 0"><span style="color:var(--muted)">Balance liquidado</span><strong style="color:${tBal>=0?'var(--green)':'var(--rl)'}">${tBal>=0?'+':'−'}$${Math.abs(tBal).toLocaleString()}</strong></div></div>`;
-  document.getElementById('listaMis').innerHTML=html;
+  el.innerHTML=chips+body+summary;
 }
 
 // ── RANKING ───────────────────────────────────────────────────
@@ -1580,16 +1601,23 @@ function renderEspecialBanner(){
   const e=especialAbiertaMasNueva();
   if(!e){el.innerHTML='';return;}
   const mb=miApuestaEsp(e.id);const ms=e.cierra-eNow();
-  el.innerHTML=`<div class="especial-banner" onclick="openEspecialPicker('${e.id}')">
+  el.innerHTML=`<div class="especial-banner${e.img?' has-img':''}" onclick="openEspecialPicker('${e.id}')">
+    ${espMedia(e)}
     <div class="eb-shine"></div>
-    <div class="eb-row"><span class="eb-emoji">${e.emoji}</span><div style="flex:1">
+    <div class="eb-row" style="position:relative;z-index:2"><span class="eb-emoji">${e.emoji}</span><div style="flex:1">
       <div class="eb-title">${e.titulo} <span class="eb-new">NUEVO</span></div>
       <div class="eb-sub">${mb?`Tu pick: ${mb.opcionEmoji} ${mb.opcionLabel} · ${mb.momio}x`:e.pregunta}</div>
     </div></div>
-    <div class="eb-foot"><span>⏳ Cierra en ${fmtCountdown(ms)}</span><span class="eb-cta">${mb?'Cambiar ›':'Apostar ›'}</span></div>
+    <div class="eb-foot" style="position:relative;z-index:2"><span>⏳ Cierra en ${fmtCountdown(ms)}</span><span class="eb-cta">${mb?'Cambiar ›':'Apostar ›'}</span></div>
   </div>`;
 }
 // Pestaña Especiales: lista todas
+// Capa visual: imagen de fondo + color en multiply + cristal (si la especial tiene img)
+function espMedia(e){
+  if(!e.img)return '';
+  const t=Array.isArray(e.tint)&&e.tint.length===2?e.tint:['#C20E2E','#FFB400'];
+  return `<div class="esp-media"><div class="esp-img" style="background-image:url('${e.img}')"></div><div class="esp-tint" style="background:linear-gradient(135deg,${t[0]},${t[1]})"></div><div class="esp-glass"></div></div>`;
+}
 function renderEspeciales(){
   const list=especialesList();
   const el=document.getElementById('listaEspeciales');if(!el)return;
@@ -1605,12 +1633,13 @@ function renderEspeciales(){
       estadoHtml=`<div class="esp-cl">🔒 Cerrada · esperando resultado${mb?` · tu pick: ${mb.opcionEmoji} ${mb.opcionLabel}`:''}</div>`;
     }else{
       const ms=e.cierra-eNow();
-      estadoHtml=`<div class="esp-cl" style="color:var(--gold)">⏳ Cierra en ${fmtCountdown(ms)}${mb?` · tu pick: ${mb.opcionEmoji} ${mb.opcionLabel} (${mb.momio}x)`:''}</div>`;
+      estadoHtml=`<div class="esp-cl" style="color:#fff">⏳ Cierra en ${fmtCountdown(ms)}${mb?` · tu pick: ${mb.opcionEmoji} ${mb.opcionLabel} (${mb.momio}x)`:''}</div>`;
       accion=`<button class="btn btn-primary" style="margin-top:10px;padding:11px" onclick="openEspecialPicker('${e.id}')">${mb?'Cambiar mi pick':'🎯 Apostar'}</button>`;
     }
-    return `<div class="esp-card ${est}">
+    return `<div class="esp-card ${est}${e.img?' has-img':''}">${espMedia(e)}
+      <div class="esp-content">
       <div class="esp-top"><span class="esp-emoji">${e.emoji}</span><div style="flex:1"><div class="esp-title">${e.titulo}</div><div class="esp-q">${e.pregunta}</div></div></div>
-      ${estadoHtml}${accion}</div>`;
+      ${estadoHtml}${accion}</div></div>`;
   }).join('');
 }
 function openEspecialPicker(especialId){
@@ -1748,10 +1777,11 @@ async function doCrearEspecial(){
     if(label&&momio>=1.01)opciones.push({label,emoji,momio});
   });
   if(opciones.length<2)return toast('Pon al menos 2 opciones válidas (texto + momio)');
-  const r=await api({action:'crearEspecial',payload:{adminKey,titulo,emoji,pregunta,cierra,opciones}});
+  const img=(document.getElementById('espcImg').value||'').trim();
+  const r=await api({action:'crearEspecial',payload:{adminKey,titulo,emoji,pregunta,cierra,opciones,img}});
   if(r.error)return toast(r.error);
   state.especiales=r.especiales;
-  document.getElementById('espcTitulo').value='';document.getElementById('espcPregunta').value='';document.getElementById('espcCierra').value='';
+  document.getElementById('espcTitulo').value='';document.getElementById('espcPregunta').value='';document.getElementById('espcCierra').value='';document.getElementById('espcImg').value='';
   toast('✨ ¡Apuesta especial creada!');renderEspAdmin();renderEspecialBanner();
 }
 async function doDeclararEspecial(id){
