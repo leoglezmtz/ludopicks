@@ -1,5 +1,5 @@
 import { kv } from "@vercel/kv";
-import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT, CAMPEON, CAMPEON_CIERRA, ESPECIAL } from "../lib/data.js";
+import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT, CAMPEON, CAMPEON_CIERRA, ESPECIAL, ESPECIALES_SEED } from "../lib/data.js";
 import { webcrypto } from "crypto";
 import crypto from "crypto";
 
@@ -122,14 +122,28 @@ function mercadoDe(pick) { return esMercadoOU(pick) ? "ou" : esBtts(pick) ? "btt
 // Carga el mapa de apuestas especiales desde KV; siembra la inicial (Belinda) si no existe.
 async function loadEspeciales() {
   let esp = await kv.get("especiales");
+  let changed = false;
   if (!esp) {
     const prevRes = await kv.get("especialRes"); // resultado declarado con el sistema viejo
     esp = {};
     if (ESPECIAL && ESPECIAL.id) {
       esp[ESPECIAL.id] = { ...ESPECIAL, res: prevRes || null, creado: ESPECIAL.cierra - 86400000 };
     }
-    await kv.set("especiales", esp);
+    changed = true;
   }
+  // Inyectar apuestas sembradas por Claude (una sola vez por id; si el admin la borró, no revive)
+  if (Array.isArray(ESPECIALES_SEED) && ESPECIALES_SEED.length) {
+    const seeded = (await kv.get("seededIds")) || [];
+    let seededChanged = false;
+    for (const s of ESPECIALES_SEED) {
+      if (!seeded.includes(s.id)) {
+        if (!esp[s.id]) { esp[s.id] = { ...s }; changed = true; }
+        seeded.push(s.id); seededChanged = true;
+      }
+    }
+    if (seededChanged) await kv.set("seededIds", seeded);
+  }
+  if (changed) await kv.set("especiales", esp);
   return esp;
 }
 function slug(s) {

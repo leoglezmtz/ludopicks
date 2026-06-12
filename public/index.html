@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>LudoPicks · Mundial 2026</title>
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0C447C">
+<meta name="theme-color" content="#0a0a0a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="LudoPicks">
@@ -13,47 +13,54 @@
 <link rel="icon" type="image/png" href="/icon-192.png">
 <style>
 :root{
-  --bg:#070a14;--bg2:#0d1220;--card:#161c30;--card2:#11162a;
+  --bg:#060606;--bg2:#0e0e0e;--card:#171717;--card2:#101010;
   --line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.12);
-  --txt:#fff;--muted:rgba(255,255,255,.55);--muted2:rgba(255,255,255,.35);
-  --green:#5DCAA5;--gd:#0F6E56;--blue:#185FA5;--bd:#0C447C;
-  --amber:#EF9F27;--al:#FAC775;--red:#E24B4A;--rl:#F09595;
-  --gold:#FAC775;
+  --txt:#fff;--muted:rgba(255,255,255,.58);--muted2:rgba(255,255,255,.36);
+  /* Paleta oficial Mundial 2026: negro, blanco, oro #FFDB00, verde #02B906 */
+  --green:#1FC43A;--gd:#0C8C26;--blue:#2A7DE1;--bd:#0C447C;
+  --amber:#FFC400;--al:#FFDB00;--red:#E5402A;--rl:#F2938A;
+  --gold:#FFDB00;--gold-d:#E0A400;
   /* Premium glass / glow */
-  --glass:rgba(255,255,255,.055);--glass2:rgba(255,255,255,.08);
-  --glass-brd:rgba(255,255,255,.10);--glass-hi:rgba(255,255,255,.16);
-  --blur:saturate(160%) blur(14px);
-  --glow-green:0 0 0 1px rgba(93,202,165,.4),0 8px 30px -8px rgba(93,202,165,.45);
-  --glow-gold:0 0 0 1px rgba(250,199,117,.4),0 8px 30px -8px rgba(250,199,117,.4);
-  --shadow:0 10px 30px -12px rgba(0,0,0,.6);
-  --shadow-sm:0 4px 16px -8px rgba(0,0,0,.5);
+  --glass:rgba(255,255,255,.05);--glass2:rgba(255,255,255,.075);
+  --glass-brd:rgba(255,255,255,.11);--glass-hi:rgba(255,219,0,.22);
+  --blur:saturate(150%) blur(14px);
+  --glow-green:0 0 0 1px rgba(31,196,58,.4),0 8px 30px -8px rgba(31,196,58,.45);
+  --glow-gold:0 0 0 1px rgba(255,219,0,.45),0 8px 30px -8px rgba(255,219,0,.45);
+  --shadow:0 10px 30px -12px rgba(0,0,0,.7);
+  --shadow-sm:0 4px 16px -8px rgba(0,0,0,.6);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;overflow-x:hidden;position:relative}
 body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:
-  radial-gradient(120% 80% at 80% -5%,rgba(24,95,165,.28),transparent 55%),
-  radial-gradient(120% 70% at -10% 8%,rgba(15,110,86,.22),transparent 50%),
-  radial-gradient(90% 60% at 50% 105%,rgba(250,199,117,.10),transparent 60%),
-  linear-gradient(180deg,#0a1024,#070a14 60%)}
+  radial-gradient(120% 80% at 82% -5%,rgba(255,219,0,.16),transparent 55%),
+  radial-gradient(120% 70% at -10% 10%,rgba(31,196,58,.16),transparent 52%),
+  radial-gradient(90% 60% at 50% 108%,rgba(255,219,0,.06),transparent 60%),
+  linear-gradient(180deg,#0a0a0a,#050505 65%)}
+/* Motivo geométrico "26": cuadros + cuartos de círculo, sutil sobre el fondo */
+body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;background-image:
+  radial-gradient(circle at 0 0,transparent 70%,#fff 70% 72%,transparent 72%),
+  linear-gradient(#fff 0 0),linear-gradient(#fff 0 0);
+  background-size:44px 44px,44px 1px,1px 44px;background-position:0 0,0 0,0 0;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 60%);mask-image:linear-gradient(180deg,#000,transparent 60%)}
 
-.hero{background:linear-gradient(135deg,#0C447C,#185FA5 50%,#0F6E56);padding:20px 18px 18px;position:relative;overflow:hidden}
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(80% 120% at 15% 0%,rgba(255,255,255,.10),transparent 60%);pointer-events:none}
-.hero::after{content:'';position:absolute;top:-50px;right:-40px;width:170px;height:170px;background:radial-gradient(circle,rgba(255,255,255,.16),transparent 70%);border-radius:50%}
-.ball{position:absolute;top:16px;right:54px;font-size:22px;animation:spin 8s linear infinite;z-index:1;opacity:.5}
+.hero{background:linear-gradient(135deg,#0a0a0a 0%,#141206 45%,#0a2a12 100%);padding:20px 18px 18px;position:relative;overflow:hidden;border-bottom:1px solid rgba(255,219,0,.18)}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(90% 130% at 12% -10%,rgba(255,219,0,.16),transparent 55%),radial-gradient(80% 120% at 100% 120%,rgba(31,196,58,.16),transparent 60%);pointer-events:none}
+.hero::after{content:'26';position:absolute;top:-18px;right:6px;font-size:96px;font-weight:900;font-style:italic;letter-spacing:-4px;color:rgba(255,219,0,.10);z-index:0;line-height:1}
+.ball{position:absolute;top:14px;right:18px;font-size:20px;animation:spin 8s linear infinite;z-index:1;opacity:.45}
 @keyframes spin{to{transform:rotate(360deg)}}
 .hero h1{font-size:18px;font-weight:800;position:relative;z-index:1}
 .who{color:rgba(255,255,255,.7);font-size:12px;margin-top:2px;position:relative;z-index:1}
-.saldo-card{margin-top:14px;background:rgba(255,255,255,.10);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.22);border-radius:18px;padding:14px 16px;position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 10px 30px -14px rgba(0,0,0,.6);transition:transform .15s}
+.saldo-card{margin-top:14px;background:rgba(255,255,255,.06);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,219,0,.28);border-radius:18px;padding:14px 16px;position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 10px 30px -14px rgba(0,0,0,.7);transition:transform .15s}
 .saldo-card:active{transform:scale(.99)}
-.saldo-label{color:rgba(255,255,255,.78);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
-.saldo-val{font-size:30px;font-weight:900;letter-spacing:-1.2px;line-height:1.1;text-shadow:0 2px 12px rgba(0,0,0,.3)}
+.saldo-label{color:var(--gold);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.saldo-val{font-size:30px;font-weight:900;letter-spacing:-1.2px;line-height:1.1;text-shadow:0 2px 12px rgba(0,0,0,.4)}
 .saldo-delta{font-size:12px;font-weight:700;text-align:right}
 .saldo-delta.up{color:var(--green)}.saldo-delta.dn{color:var(--rl)}.saldo-delta.even{color:rgba(255,255,255,.5)}
 
-.nav{display:flex;background:rgba(13,18,32,.7);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-brd);position:sticky;top:0;z-index:50}
+.nav{display:flex;background:rgba(8,8,8,.82);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--glass-brd);position:sticky;top:0;z-index:50}
 .nav button{flex:1;padding:11px 2px;font-size:11px;font-weight:700;border:none;background:none;color:var(--muted2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2.5px solid transparent;transition:all .2s;position:relative}
-.nav button.on{color:#fff;border-bottom-color:var(--green)}
-.nav button.on i{filter:drop-shadow(0 0 8px rgba(93,202,165,.7));color:var(--green)}
+.nav button.on{color:#fff;border-bottom-color:var(--gold)}
+.nav button.on i{filter:drop-shadow(0 0 8px rgba(255,219,0,.7));color:var(--gold)}
 .nav button i{font-size:18px;transition:all .2s}
 
 .body{padding:14px;padding-bottom:40px;min-height:60vh}
@@ -91,39 +98,41 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 .elim-date{font-weight:900;color:var(--gold);font-size:14px}
 .app-footer{text-align:center;color:var(--muted2);font-size:11px;font-weight:600;padding:18px 0 8px;opacity:.6;letter-spacing:.03em}
 /* ── SPLASH SCREEN ── */
-#splash{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(180deg,#0a1024,#070a14 65%);transition:opacity .55s ease,visibility .55s}
+#splash{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(180deg,#0a0a0a,#040404 70%);transition:opacity .55s ease,visibility .55s}
 #splash.hide{opacity:0;visibility:hidden}
-.splash-glow{position:absolute;width:130%;height:60%;top:8%;left:-15%;background:
-  radial-gradient(50% 70% at 78% 0%,rgba(24,95,165,.45),transparent 60%),
-  radial-gradient(55% 60% at 12% 30%,rgba(15,110,86,.4),transparent 60%),
-  radial-gradient(40% 50% at 55% 90%,rgba(250,199,117,.18),transparent 65%);
-  filter:blur(10px);animation:splashGlow 4s ease-in-out infinite alternate}
+#splash::after{content:'26';position:absolute;bottom:-30px;right:-10px;font-size:240px;font-weight:900;font-style:italic;letter-spacing:-12px;color:rgba(255,219,0,.05);line-height:.8;z-index:0}
+.splash-glow{position:absolute;width:130%;height:60%;top:6%;left:-15%;background:
+  radial-gradient(50% 70% at 75% 0%,rgba(255,219,0,.35),transparent 60%),
+  radial-gradient(55% 60% at 15% 35%,rgba(31,196,58,.32),transparent 60%),
+  radial-gradient(45% 50% at 55% 95%,rgba(255,219,0,.14),transparent 65%);
+  filter:blur(12px);animation:splashGlow 4s ease-in-out infinite alternate}
 @keyframes splashGlow{from{transform:scale(1) translateY(0)}to{transform:scale(1.12) translateY(-10px)}}
 .splash-inner{position:relative;text-align:center;z-index:1}
 .splash-logo{display:inline-flex;animation:splashPop .7s cubic-bezier(.2,.9,.3,1.3) both}
-.splash-logo svg{filter:drop-shadow(0 0 22px rgba(250,199,117,.55));animation:splashFloat 2.6s ease-in-out infinite}
+.splash-logo svg{filter:drop-shadow(0 0 26px rgba(255,219,0,.65));animation:splashFloat 2.6s ease-in-out infinite}
 @keyframes splashPop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
 @keyframes splashFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-.splash-name{font-size:34px;font-weight:900;letter-spacing:-1px;margin-top:14px;background:linear-gradient(90deg,#fff 30%,#FAC775 50%,#fff 70%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:splashShine 2.2s linear infinite,splashUp .6s ease .15s both}
+.splash-name{font-size:36px;font-weight:900;letter-spacing:-1px;margin-top:14px;background:linear-gradient(90deg,#fff 30%,#FFDB00 50%,#fff 70%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:splashShine 2.2s linear infinite,splashUp .6s ease .15s both}
 @keyframes splashShine{to{background-position:-220% 0}}
 @keyframes splashUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.splash-sub{color:var(--green);font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;margin-top:4px;animation:splashUp .6s ease .28s both}
-.splash-bar{width:120px;height:3px;border-radius:3px;background:rgba(255,255,255,.12);margin:22px auto 0;overflow:hidden;animation:splashUp .6s ease .4s both}
+.splash-sub{color:var(--gold);font-size:12px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;margin-top:6px;animation:splashUp .6s ease .28s both}
+.splash-we26{display:inline-block;margin-top:10px;font-size:10px;font-weight:900;letter-spacing:.18em;color:#000;background:var(--gold);padding:3px 12px;border-radius:20px;animation:splashUp .6s ease .36s both}
+.splash-bar{width:130px;height:3px;border-radius:3px;background:rgba(255,255,255,.12);margin:20px auto 0;overflow:hidden;animation:splashUp .6s ease .46s both}
 .splash-bar span{display:block;height:100%;width:40%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--gold));animation:splashLoad 1.1s ease-in-out infinite}
 @keyframes splashLoad{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
-.install-card{background:linear-gradient(135deg,rgba(24,95,165,.25),rgba(15,110,86,.2));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(93,202,165,.3);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+.install-card{background:linear-gradient(135deg,rgba(255,219,0,.14),rgba(31,196,58,.12));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(255,219,0,.3);border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
 .install-top{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;color:#fff}
 .install-x{margin-left:auto;background:none;border:none;color:var(--muted2);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
 .install-steps{font-size:13px;color:var(--muted);line-height:1.5;margin-top:8px}
 /* ── APUESTA ESPECIAL ── */
-.especial-banner{position:relative;overflow:hidden;background:linear-gradient(120deg,#7a1fa2,#c2185b 55%,#ef6c00);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:14px 15px;margin-bottom:14px;cursor:pointer;box-shadow:0 10px 30px -10px rgba(194,24,91,.6);animation:slideUp .4s both}
+.especial-banner{position:relative;overflow:hidden;background:linear-gradient(120deg,#C20E2E,#E5402A 50%,#FFB400);border:1px solid rgba(255,219,0,.3);border-radius:18px;padding:14px 15px;margin-bottom:14px;cursor:pointer;box-shadow:0 10px 30px -10px rgba(229,64,42,.6);animation:slideUp .4s both}
 .especial-banner.done{background:linear-gradient(120deg,#243049,#1a2336);box-shadow:var(--shadow-sm);cursor:default}
 .eb-shine{position:absolute;top:0;left:-60%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:ebShine 3.2s ease-in-out infinite}
 @keyframes ebShine{0%{left:-60%}55%,100%{left:130%}}
 .eb-row{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
 .eb-emoji{font-size:30px;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
 .eb-title{font-size:15px;font-weight:900;color:#fff;display:flex;align-items:center;gap:7px}
-.eb-new{font-size:9px;font-weight:900;background:#fff;color:#c2185b;padding:2px 7px;border-radius:20px;letter-spacing:.05em;animation:ebPulse 1.6s infinite}
+.eb-new{font-size:9px;font-weight:900;background:var(--gold);color:#1a1400;padding:2px 7px;border-radius:20px;letter-spacing:.05em;animation:ebPulse 1.6s infinite}
 @keyframes ebPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 .eb-sub{font-size:12px;color:rgba(255,255,255,.85);margin-top:3px;line-height:1.35}
 .eb-foot{display:flex;justify-content:space-between;align-items:center;margin-top:11px;position:relative;z-index:1;font-size:12px;font-weight:800;color:#fff}
@@ -131,15 +140,24 @@ body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;ba
 /* popup flotante */
 .especial-pop{position:fixed;inset:0;z-index:300;background:rgba(4,7,15,.72);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeIn .25s}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.ep-card{position:relative;background:linear-gradient(160deg,#7a1fa2,#c2185b 60%,#ef6c00);border:1px solid rgba(255,255,255,.22);border-radius:24px;padding:26px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 30px 70px -20px rgba(0,0,0,.7);animation:epPop .4s cubic-bezier(.2,.9,.3,1.3)}
+.ep-card{position:relative;background:linear-gradient(160deg,#C20E2E,#E5402A 55%,#FFB400);border:1px solid rgba(255,219,0,.3);border-radius:24px;padding:26px 22px;max-width:340px;width:100%;text-align:center;box-shadow:0 30px 70px -20px rgba(0,0,0,.7);animation:epPop .4s cubic-bezier(.2,.9,.3,1.3)}
 @keyframes epPop{from{opacity:0;transform:scale(.8) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
 .ep-x{position:absolute;top:12px;right:14px;background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:20px;cursor:pointer;line-height:1}
 .ep-emoji{font-size:56px;animation:splashFloat 2.6s ease-in-out infinite}
 .ep-flash{font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:rgba(255,255,255,.2);display:inline-block;padding:4px 14px;border-radius:20px;margin:8px 0}
 .ep-title{font-size:21px;font-weight:900;color:#fff;margin-top:4px}
 .ep-q{font-size:14px;color:rgba(255,255,255,.9);margin-top:8px;line-height:1.45}
-.ep-card .btn-primary{background:#fff;color:#c2185b;box-shadow:0 8px 24px -8px rgba(0,0,0,.5)}
+.ep-card .btn-primary{background:#fff;color:#C20E2E;box-shadow:0 8px 24px -8px rgba(0,0,0,.5)}
 .ep-later{background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;font-weight:700;margin-top:10px;cursor:pointer;width:100%;padding:6px}
+/* popup de nuevas apuestas */
+.ep-card.news{background:linear-gradient(160deg,#0a0a0a,#141206 55%,#0a2a12);border:1px solid rgba(255,219,0,.35)}
+.ep-card.news .ep-flash{background:var(--gold);color:#1a1400}
+.ep-card.news .btn-primary{background:linear-gradient(135deg,#FFE34D,var(--gold) 45%,var(--gold-d));color:#1a1400}
+.news-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;text-align:left}
+.news-item{display:flex;gap:11px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,219,0,.2);border-radius:13px;padding:11px 12px}
+.news-em{font-size:24px;flex-shrink:0}
+.news-t{font-size:14px;font-weight:800;color:#fff}
+.news-q{font-size:11.5px;color:rgba(255,255,255,.65);margin-top:2px;line-height:1.35}
 /* ── MODO CASINO ── */
 .cas-hero{text-align:center;padding:22px 16px;background:linear-gradient(160deg,rgba(15,110,86,.3),rgba(12,68,124,.25));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:20px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
 .cas-hero-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
@@ -283,7 +301,7 @@ select option{background:#161c30;color:#fff}
 .pin-input{text-align:center;letter-spacing:12px;font-size:24px;font-weight:800;padding-left:12px}
 .btn{width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:800;border:none;cursor:pointer;transition:transform .12s,box-shadow .2s,opacity .15s;display:flex;align-items:center;justify-content:center;gap:7px}
 .btn:active{transform:scale(.97)}
-.btn-primary{background:linear-gradient(135deg,var(--green),var(--gd));color:#04231a;box-shadow:0 8px 26px -10px rgba(93,202,165,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+.btn-primary{background:linear-gradient(135deg,#FFE34D,var(--gold) 45%,var(--gold-d));color:#1a1400;box-shadow:0 8px 26px -10px rgba(255,219,0,.7),inset 0 1px 0 rgba(255,255,255,.4)}
 .btn-ghost{background:rgba(255,255,255,.06);color:#fff;border:1.5px solid var(--line2)}
 .btn-danger{background:rgba(226,75,74,.15);color:var(--rl);border:1.5px solid rgba(226,75,74,.3)}
 .btn-amber{background:rgba(239,159,39,.15);color:var(--al);border:1.5px solid rgba(239,159,39,.3)}
@@ -333,7 +351,7 @@ select option{background:#161c30;color:#fff}
 .refresh-btn.spin{animation:spin 1s linear}
 
 /* COUNTDOWN */
-.countdown{background:linear-gradient(135deg,rgba(15,110,86,.3),rgba(24,95,165,.24));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(93,202,165,.3);border-radius:16px;padding:13px 15px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.08)}
+.countdown{background:linear-gradient(135deg,rgba(255,219,0,.16),rgba(31,196,58,.16));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(255,219,0,.3);border-radius:16px;padding:13px 15px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:var(--shadow-sm),inset 0 1px 0 rgba(255,255,255,.08)}
 .cd-label{font-size:10px;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:.07em}
 .cd-match{font-size:15px;font-weight:800;margin-top:2px}
 .cd-time{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--al);letter-spacing:-.5px;white-space:nowrap}
@@ -356,7 +374,7 @@ select option{background:#161c30;color:#fff}
 /* BETSLIP */
 .slip-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:150;padding:0 12px calc(12px + env(safe-area-inset-bottom));pointer-events:none}
 .slip-bar.hidden{display:none}
-.slip-inner{background:linear-gradient(135deg,var(--green),var(--gd));color:#04231a;border-radius:16px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;pointer-events:auto;box-shadow:0 10px 34px -6px rgba(93,202,165,.6),inset 0 1px 0 rgba(255,255,255,.3);font-weight:800;transition:transform .12s}
+.slip-inner{background:linear-gradient(135deg,#FFE34D,var(--gold) 50%,var(--gold-d));color:#1a1400;border-radius:16px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;pointer-events:auto;box-shadow:0 10px 34px -6px rgba(255,219,0,.6),inset 0 1px 0 rgba(255,255,255,.4);font-weight:800;transition:transform .12s}
 .slip-inner:active{transform:scale(.98)}
 .slip-count{background:#04231a;color:var(--green);font-size:12px;font-weight:900;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-right:8px}
 .slip-leg{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:10px}
@@ -398,11 +416,12 @@ select option{background:#161c30;color:#fff}
           <rect x="44" y="81" width="32" height="7" rx="3"/>
           <rect x="39" y="87" width="42" height="9" rx="4"/>
         </g>
-        <path d="M60 30 l4 9 l10 1 l-7 7 l2 10 l-9 -5 l-9 5 l2 -10 l-7 -7 l10 -1 z" fill="#0C447C" opacity=".9"/>
+        <path d="M60 30 l4 9 l10 1 l-7 7 l2 10 l-9 -5 l-9 5 l2 -10 l-7 -7 l10 -1 z" fill="#1FC43A" opacity=".95"/>
       </svg>
     </div>
     <div class="splash-name">LudoPicks</div>
     <div class="splash-sub">Mundial 2026</div>
+    <div class="splash-we26">WE ARE 26</div>
     <div class="splash-bar"><span></span></div>
   </div>
 </div>
@@ -594,6 +613,18 @@ select option{background:#161c30;color:#fff}
 
 <div class="slip-bar hidden" id="slipBar"><div class="slip-inner" onclick="openSlip()"><span><span class="slip-count" id="slipCount">0</span>Ver ticket</span><span id="slipMomio"></span></div></div>
 
+<div class="especial-pop" id="newsPop" style="display:none">
+  <div class="ep-card news">
+    <button class="ep-x" onclick="closeNewsPop()">×</button>
+    <div class="ep-emoji">🎉</div>
+    <div class="ep-flash">Nuevas apuestas</div>
+    <div class="ep-title">¡Ya hay apuestas especiales!</div>
+    <div class="news-list" id="newsList"></div>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="newsGoEspeciales()">✨ Ver apuestas especiales</button>
+    <button class="ep-later" onclick="closeNewsPop()">Ahorita no</button>
+  </div>
+</div>
+
 <div class="especial-pop" id="especialPop" style="display:none">
   <div class="ep-card">
     <button class="ep-x" onclick="closeEspecialPop()">×</button>
@@ -699,7 +730,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.8.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.10.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados';
@@ -991,7 +1022,7 @@ function enterApp(){
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
   refreshHero();renderSlipBar();
-  if(!isAdmin){checkNotifStatus();setTimeout(maybeShowEspecialPop,2000);}
+  if(!isAdmin){checkNotifStatus();setTimeout(()=>{ if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);}
 }
 function refreshHero(){
   if(isAdmin)return;
@@ -1645,6 +1676,27 @@ function popApostar(){
   const eid=document.getElementById('especialPop').getAttribute('data-eid');
   closeEspecialPop();if(eid)openEspecialPicker(eid);
 }
+// Popup de "nuevas apuestas" — sale una vez por release tras actualizar
+const NEWS_ID='v1_10';
+function maybeShowNewsPop(){
+  if(localStorage.getItem('ludo_news_'+NEWS_ID)==='1')return false;
+  const abiertas=especialesList().filter(e=>especialEstado(e)==='abierto');
+  if(!abiertas.length)return false; // nada que anunciar
+  document.getElementById('newsList').innerHTML=abiertas.slice(0,4).map(e=>{
+    const mb=miApuestaEsp(e.id);
+    return `<div class="news-item"><span class="news-em">${e.emoji}</span><div><div class="news-t">${e.titulo}</div><div class="news-q">${mb?'Ya tienes pick ✓':e.pregunta}</div></div></div>`;
+  }).join('');
+  document.getElementById('newsPop').style.display='flex';
+  return true;
+}
+function closeNewsPop(){
+  localStorage.setItem('ludo_news_'+NEWS_ID,'1');
+  document.getElementById('newsPop').style.display='none';
+}
+function newsGoEspeciales(){
+  closeNewsPop();
+  showTab('especiales');
+}
 
 // ── ADMIN: editor de apuestas especiales ──────────────────────
 let espcOpcRows=0;
@@ -2131,7 +2183,7 @@ function toast(msg){
 }
 function fireConfetti(){
   if(typeof confetti==='undefined')return;
-  confetti({particleCount:120,spread:75,origin:{y:.6},colors:['#5DCAA5','#FAC775','#185FA5','#fff']});
+  confetti({particleCount:120,spread:75,origin:{y:.6},colors:['#FFDB00','#1FC43A','#ffffff','#E5402A']});
 }
 
 // ── POLLING ───────────────────────────────────────────────────
