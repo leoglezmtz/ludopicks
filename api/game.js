@@ -90,6 +90,12 @@ function publicJugadores(jugadores) {
 function pickWins(partidoId, r, pick, linea) {
   const m = BY_ID[partidoId];
   if (!m) return false;
+  // Pago Anticipado (2 Up): si el partido tiene PA y el equipo del pick llegó a +2,
+  // la apuesta a ganador se considera GANADA aunque el marcador final cambie.
+  if (m.pa && r.pa) {
+    if (pick === "local" && r.pa.l) return true;
+    if (pick === "visita" && r.pa.v) return true;
+  }
   if (pick === "local") return r.gl > r.gv;
   if (pick === "empate") return r.gl === r.gv;
   if (pick === "visita") return r.gl < r.gv;
@@ -154,6 +160,19 @@ function slug(s) {
   return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "").slice(0, 16) || "op";
 }
 
+// Evalúa una pata/apuesta de partido considerando resultado parcial (solo PA aplicado en vivo).
+// Devuelve 'won' | 'lost' | 'pending'.
+function legStatus(partidoId, r, pick, linea) {
+  if (!r) return "pending";
+  if (r.gl == null || r.gv == null) {
+    // Resultado parcial: solo PA aplicado, sin marcador final
+    const m = BY_ID[partidoId];
+    if (m && m.pa && r.pa && ((pick === "local" && r.pa.l) || (pick === "visita" && r.pa.v))) return "won";
+    return "pending"; // los demás mercados/lado esperan al marcador final
+  }
+  return pickWins(partidoId, r, pick, linea) ? "won" : "lost";
+}
+
 function settleAll(jugadores, apuestas, resultados, campeon, especiales) {
   especiales = especiales || {};
   for (const b of Object.values(apuestas)) {
@@ -165,15 +184,10 @@ function settleAll(jugadores, apuestas, resultados, campeon, especiales) {
       const r = sp ? sp.res : null;
       ns = !r ? "pending" : (b.opcion === r ? "won" : "lost");
     } else if (b.tipo === "parlay") {
-      const sts = b.legs.map(l => {
-        const r = resultados[l.partidoId];
-        if (!r) return "pending";
-        return pickWins(l.partidoId, r, l.pick, l.linea) ? "won" : "lost";
-      });
+      const sts = b.legs.map(l => legStatus(l.partidoId, resultados[l.partidoId], l.pick, l.linea));
       ns = sts.includes("lost") ? "lost" : sts.every(s => s === "won") ? "won" : "pending";
     } else {
-      const r = resultados[b.partidoId];
-      ns = !r ? "pending" : (pickWins(b.partidoId, r, b.pick, b.linea) ? "won" : "lost");
+      ns = legStatus(b.partidoId, resultados[b.partidoId], b.pick, b.linea);
     }
     const old = b.status || "pending";
     const j = jugadores[b.nombre];
@@ -555,9 +569,33 @@ export default async function handler(req, res) {
   }
 
   // ── ADMIN: registrar resultado con marcador exacto ─────────────────
+  // ── ADMIN: aplicar Pago Anticipado EN VIVO (sin marcador final) ────
+  if (action === "aplicarPA") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { partidoId, pa } = payload;
+    const m = BY_ID[partidoId];
+    if (!m) return res.status(400).json({ error: "Partido no existe" });
+    if (!m.pa) return res.status(400).json({ error: "Ese partido no tiene Pago Anticipado" });
+    if (!pa || (!pa.l && !pa.v)) return res.status(400).json({ error: "Marca al menos un equipo que haya llegado a +2" });
+    const jugadores  = (await kv.get("jugadores"))  || {};
+    const apuestas   = (await kv.get("apuestas"))   || {};
+    const resultados = (await kv.get("resultados")) || {};
+    const campeon    = (await kv.get("campeon"))    || null;
+    const especialesMap = await loadEspeciales();
+    if (resultados[partidoId] && resultados[partidoId].gl != null)
+      return res.status(400).json({ error: "Ese partido ya tiene marcador final; edítalo desde Resultados" });
+    await kv.set("rankPrev", rankingSnapshot(jugadores));
+    resultados[partidoId] = { pa: { l: !!pa.l, v: !!pa.v }, parcial: true }; // sin gl/gv = parcial
+    settleAll(jugadores, apuestas, resultados, campeon, especialesMap);
+    await kv.set("resultados", resultados);
+    await kv.set("jugadores", jugadores);
+    await kv.set("apuestas", apuestas);
+    return res.json({ ok: true, resultados, jugadores: publicJugadores(jugadores), apuestas });
+  }
+
   if (action === "resultado") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { partidoId, gl, gv } = payload;
+    const { partidoId, gl, gv, pa } = payload;
     if (partidoId === -1) return res.json({ ok: true }); // ping de validación de clave
     const m = BY_ID[partidoId];
     if (!m) return res.status(400).json({ error: "Partido no existe" });
@@ -570,7 +608,15 @@ export default async function handler(req, res) {
     const campeon    = (await kv.get("campeon"))    || null;
     const especialesMap = await loadEspeciales();
     await kv.set("rankPrev", rankingSnapshot(jugadores));
-    resultados[partidoId] = { gl: golL, gv: golV };
+    const rEntry = { gl: golL, gv: golV };
+    // Pago Anticipado: flags de qué equipo llegó a +2 (solo en partidos con PA).
+    // Si el admin no los manda pero el marcador FINAL ya es +2, se infieren.
+    if (m.pa) {
+      const paL = pa && typeof pa.l === "boolean" ? pa.l : (golL - golV >= 2);
+      const paV = pa && typeof pa.v === "boolean" ? pa.v : (golV - golL >= 2);
+      rEntry.pa = { l: paL, v: paV };
+    }
+    resultados[partidoId] = rEntry;
     settleAll(jugadores, apuestas, resultados, campeon, especialesMap);
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
