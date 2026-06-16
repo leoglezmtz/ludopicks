@@ -1099,7 +1099,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.18.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.18.3';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1513,23 +1513,26 @@ async function manualRefresh(){
 function openEditAvatar(){
   if(!me)return;
   const j=state.jugadores[me];
+  // Solo resetear editAv si viene de fuera (no desde el cropper que ya lo tiene actualizado)
   editAv=j?.avatar?{...j.avatar}:{skin:0,hairC:2,hairS:0,shirt:0,expr:0,bg:0,acc:0};
-  // Asegurar campos nuevos
   if(editAv.bg==null)editAv.bg=0;
   if(editAv.acc==null)editAv.acc=0;
+  document.getElementById('overlay').style.display='flex';
   document.getElementById('mTitle').textContent='Tu avatar';
+  renderEditAvatarBody();
+}
+function renderEditAvatarBody(){
   document.getElementById('mBody').innerHTML=`
     <div class="av-preview" style="margin-bottom:6px;position:relative">
       <div id="editAvSvg" class="av-circle" style="width:108px;height:108px;margin:0 auto;display:block;cursor:pointer" onclick="document.getElementById('avPhotoInput').click()" title="Toca para subir tu foto"></div>
-      <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--muted2)">Toca la imagen para subir tu foto · o personaliza el avatar abajo</div>
+      <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--muted2)">${editAv.photo?'📸 Foto subida · toca para cambiarla':'Toca la imagen para subir tu foto · o personaliza el avatar abajo'}</div>
       <input id="avPhotoInput" type="file" accept="image/*" style="display:none" onchange="onAvPhoto(event)">
     </div>
     <div id="editAvControls"></div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="clearAvPhoto()">🎨 Volver al avatar</button>
+      ${editAv.photo?`<button class="btn btn-ghost btn-sm" style="flex:1" onclick="clearAvPhoto()">🎨 Quitar foto</button>`:'<button class="btn btn-ghost btn-sm" style="flex:1;opacity:.4" disabled>🎨 Sin foto</button>'}
       <button class="btn btn-primary" style="flex:2" onclick="saveAvatar()">Guardar</button>
     </div>`;
-  document.getElementById('overlay').style.display='flex';
   setAvEl(document.getElementById('editAvSvg'),editAv,108);
   buildAvControls('editAvControls',editAv,()=>setAvEl(document.getElementById('editAvSvg'),editAv,108));
 }
@@ -1575,7 +1578,7 @@ function showCropPanel(){
       <span style="font-size:16px;opacity:.6">+</span>
     </div>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openEditAvatar()">← Cancelar</button>
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="renderEditAvatarBody()">← Cancelar</button>
       <button class="btn btn-primary" style="flex:2" onclick="confirmCrop()">✓ Usar esta foto</button>
     </div>`;
   initCropInteraction();
@@ -1698,13 +1701,13 @@ function confirmCrop(){
   const out=document.createElement('canvas');out.width=200;out.height=200;
   out.getContext('2d').drawImage(c,0,0,CROP_SIZE,CROP_SIZE,0,0,200,200);
   const data=out.toDataURL('image/jpeg',.82);
-  editAv={...editAv,photo:data};
-  openEditAvatar();
+  editAv.photo=data; // mutar in-place sin resetear el objeto
+  renderEditAvatarBody(); // redibujar la UI del editor sin tocar editAv
 }
 
 function clearAvPhoto(){
   delete editAv.photo;
-  setAvEl(document.getElementById('editAvSvg'),editAv,108);
+  renderEditAvatarBody();
 }
 async function saveAvatar(){
   const avatarToSave={...editAv};
