@@ -123,6 +123,47 @@ function esMercadoOU(pick) { return pick === "over" || pick === "under"; }
 function esBtts(pick) { return pick === "si" || pick === "no"; }
 function mercadoDe(pick) { return esMercadoOU(pick) ? "ou" : esBtts(pick) ? "btts" : "1x2"; }
 
+// Detecta incongruencias entre patas de un MISMO partido en un parlay.
+// Retorna un string con el error, o null si todo cuadra. Mensajes amigables.
+function validarIncongruenciasParlay(legs) {
+  const byMatch = {};
+  for (const l of legs) {
+    if (!byMatch[l.partidoId]) byMatch[l.partidoId] = [];
+    byMatch[l.partidoId].push(l);
+  }
+  for (const [pid, plegs] of Object.entries(byMatch)) {
+    if (plegs.length < 2) continue;
+    const m = BY_ID[pid]; if (!m) continue;
+    const matchName = `${m.local} vs ${m.visita}`;
+    const r1x2 = plegs.find(l => PICKS_1X2.includes(l.pick));
+    const ou   = plegs.find(l => esMercadoOU(l.pick));
+    const btts = plegs.find(l => esBtts(l.pick));
+    const ouLinea = ou ? Number(ou.linea) : null;
+
+    // 1) BTTS Sí + Under N (N ≤ 1.5): imposible — BTTS Sí ≥ 2 goles, Under ≤ N implica menos
+    if (btts && btts.pick === "si" && ou && ou.pick === "under" && ouLinea <= 1.5) {
+      return `Imposible en ${matchName}: "Ambos anotan: Sí" requiere al menos 2 goles, pero "Under ${ouLinea}" requiere máximo 1.`;
+    }
+    // 2) BTTS No + Over N (N ≥ 1.5) cuando el partido SOLO podría cumplir ambos con goleada de un lado:
+    //    BTTS No con Over 2.5 sí es posible (3-0). NO bloqueamos. Pero BTTS Sí + Over X siempre OK.
+    // 3) Under N (N < 1) implica 0-0 → empate forzoso, no admite Local ni Visita
+    if (ou && ou.pick === "under" && ouLinea < 1) {
+      if (r1x2 && r1x2.pick !== "empate") {
+        return `Imposible en ${matchName}: "Under ${ouLinea}" implica 0-0, pero elegiste a ${r1x2.pick === "local" ? m.local : m.visita} ganador.`;
+      }
+      if (btts && btts.pick === "si") {
+        return `Imposible en ${matchName}: "Under ${ouLinea}" implica 0-0, pero "Ambos anotan: Sí" requiere que ambos anoten.`;
+      }
+    }
+    // 4) Empate + BTTS No con Under bajo: imposible (Empate + BTTS No = 0-0, Under 0.5 OK; pero Empate + BTTS No + Over X requiere
+    //    empate con ambos sin anotar... contradicción con Over). Lo cubrimos:
+    if (r1x2 && r1x2.pick === "empate" && btts && btts.pick === "no" && ou && ou.pick === "over") {
+      return `Imposible en ${matchName}: "Empate + Ambos anotan: No" obliga a 0-0, pero "Over ${ouLinea}" requiere goles.`;
+    }
+  }
+  return null;
+}
+
 // Motor recalculable: ajusta saldos solo por transiciones de estado.
 // Idempotente — sirve igual para registrar y para revertir resultados.
 // Carga el mapa de apuestas especiales desde KV; siembra la inicial (Belinda) si no existe.
@@ -657,6 +698,10 @@ export default async function handler(req, res) {
       cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, linea: lineaUsada, mercado, momio: mo });
     }
     momioTotal = Math.round(momioTotal * 100) / 100;
+
+    // Bloquear parlays con incongruencias matemáticas (ej. Under 1.5 + Ambos anotan: Sí)
+    const incongruencia = validarIncongruenciasParlay(cleanLegs);
+    if (incongruencia) return res.status(400).json({ error: incongruencia });
 
     j.saldo -= mInt;
     const id = "p" + Date.now() + Math.random().toString(36).slice(2, 6);
