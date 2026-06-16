@@ -496,6 +496,13 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .av-style{padding:6px 13px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid var(--line2);background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
 .av-style:hover{background:rgba(255,255,255,.1);color:#fff}
 .av-style.on{background:var(--green);color:#04231a;border-color:var(--green);box-shadow:0 0 10px -2px rgba(31,196,58,.4)}
+/* ── PHOTO CROPPER ── */
+.av-crop-wrap{position:relative;width:240px;height:240px;margin:0 auto;border-radius:50%;overflow:hidden;cursor:grab;touch-action:none;user-select:none;box-shadow:0 0 0 3px var(--green),0 8px 24px rgba(0,0,0,.6)}
+.av-crop-wrap:active{cursor:grabbing}
+.av-crop-canvas{display:block;width:240px;height:240px;border-radius:50%}
+.av-crop-ring{position:absolute;inset:0;border-radius:50%;border:3px solid rgba(255,255,255,.7);pointer-events:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.3)}
+.av-crop-mask{position:absolute;inset:-40px;background:radial-gradient(circle 120px at center,transparent 118px,rgba(0,0,0,.55) 122px);pointer-events:none}
+.av-crop-zoom{display:flex;align-items:center;gap:8px;margin-top:14px;padding:0 4px}
 
 /* FORMS */
 .field{margin-bottom:14px}
@@ -1092,7 +1099,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.18.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.18.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1526,28 +1533,139 @@ function openEditAvatar(){
   setAvEl(document.getElementById('editAvSvg'),editAv,108);
   buildAvControls('editAvControls',editAv,()=>setAvEl(document.getElementById('editAvSvg'),editAv,108));
 }
+// Estado del cropper
+let _cropImg=null,_cropScale=1,_cropX=0,_cropY=0,_cropDrag=null,_cropPinch=null;
+
 function onAvPhoto(e){
   const file=e.target.files[0];if(!file)return;
-  const MAX=200; // px — comprime a 200x200 máx
   const reader=new FileReader();
   reader.onload=ev=>{
     const img=new Image();
     img.onload=()=>{
-      const c=document.createElement('canvas');
-      const s=Math.min(MAX,img.width,img.height);
-      c.width=s;c.height=s;
-      const x=c.getContext('2d');
-      // Centrar y recortar cuadrado
-      const sx=(img.width-s)/2,sy=(img.height-s)/2;
-      x.drawImage(img,sx,sy,s,s,0,0,s,s);
-      const data=c.toDataURL('image/jpeg',.72); // ~8-25 KB
-      editAv={...editAv,photo:data};
-      setAvEl(document.getElementById('editAvSvg'),editAv,108);
+      _cropImg=img;
+      // Escala inicial: que la imagen llene el círculo
+      const SIZE=240; // px del cropper
+      _cropScale=Math.max(SIZE/img.width,SIZE/img.height);
+      _cropX=(SIZE-img.width*_cropScale)/2;
+      _cropY=(SIZE-img.height*_cropScale)/2;
+      showCropPanel();
     };
     img.src=ev.target.result;
   };
   reader.readAsDataURL(file);
+  // Reset input para poder re-elegir la misma imagen
+  e.target.value='';
 }
+
+function showCropPanel(){
+  document.getElementById('mBody').innerHTML=`
+    <div style="text-align:center;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:800">Ajusta tu foto</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:3px">Arrastra para centrar · Pellizca o desliza para ajustar el tamaño</div>
+    </div>
+    <div class="av-crop-wrap" id="avCropWrap">
+      <canvas id="avCropCanvas" class="av-crop-canvas" width="240" height="240"></canvas>
+      <div class="av-crop-ring"></div>
+      <div class="av-crop-mask"></div>
+    </div>
+    <div class="av-crop-zoom">
+      <span style="font-size:13px">🔍</span>
+      <input id="avCropRange" type="range" min="0.5" max="3" step="0.01" style="flex:1;accent-color:var(--green)" oninput="onCropZoom(this.value)">
+      <span style="font-size:16px">🔍</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openEditAvatar()">← Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="confirmCrop()">✓ Usar esta foto</button>
+    </div>`;
+  initCropInteraction();
+  drawCrop();
+  // Ajusta el slider al valor de escala actual
+  const range=document.getElementById('avCropRange');
+  if(range)range.value=_cropScale;
+}
+
+function drawCrop(){
+  const c=document.getElementById('avCropCanvas');if(!c||!_cropImg)return;
+  const x=c.getContext('2d');
+  x.clearRect(0,0,240,240);
+  x.drawImage(_cropImg,_cropX,_cropY,_cropImg.width*_cropScale,_cropImg.height*_cropScale);
+}
+
+function onCropZoom(v){
+  const SIZE=240;
+  // Zoom desde el centro del canvas
+  const newScale=parseFloat(v);
+  const cx=SIZE/2,cy=SIZE/2;
+  _cropX=cx-(_cropImg.width/2)*newScale+((_cropX-(cx-(_cropImg.width/2)*_cropScale))/_cropScale)*newScale;
+  _cropY=cy-(_cropImg.height/2)*newScale+((_cropY-(cy-(_cropImg.height/2)*_cropScale))/_cropScale)*newScale;
+  _cropScale=newScale;
+  clampCrop();drawCrop();
+}
+
+function clampCrop(){
+  const SIZE=240;
+  const iw=_cropImg.width*_cropScale,ih=_cropImg.height*_cropScale;
+  // No dejar espacios blancos: la imagen siempre cubre el círculo de 240px
+  if(_cropX>0)_cropX=0;
+  if(_cropY>0)_cropY=0;
+  if(_cropX+iw<SIZE)_cropX=SIZE-iw;
+  if(_cropY+ih<SIZE)_cropY=SIZE-ih;
+}
+
+function initCropInteraction(){
+  const c=document.getElementById('avCropCanvas');if(!c)return;
+  // Touch
+  c.addEventListener('touchstart',e=>{
+    if(e.touches.length===1){_cropDrag={sx:e.touches[0].clientX-_cropX,sy:e.touches[0].clientY-_cropY};}
+    else if(e.touches.length===2){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      _cropPinch={dist:d,scale:_cropScale};
+    }
+    e.preventDefault();
+  },{passive:false});
+  c.addEventListener('touchmove',e=>{
+    if(e.touches.length===1&&_cropDrag){
+      _cropX=e.touches[0].clientX-_cropDrag.sx;
+      _cropY=e.touches[0].clientY-_cropDrag.sy;
+      clampCrop();drawCrop();
+    }else if(e.touches.length===2&&_cropPinch){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      _cropScale=Math.max(0.5,Math.min(3,_cropPinch.scale*(d/_cropPinch.dist)));
+      const range=document.getElementById('avCropRange');if(range)range.value=_cropScale;
+      clampCrop();drawCrop();
+    }
+    e.preventDefault();
+  },{passive:false});
+  c.addEventListener('touchend',()=>{_cropDrag=null;_cropPinch=null;});
+  // Mouse
+  c.addEventListener('mousedown',e=>{_cropDrag={sx:e.clientX-_cropX,sy:e.clientY-_cropY};e.preventDefault();});
+  c.addEventListener('mousemove',e=>{if(!_cropDrag)return;_cropX=e.clientX-_cropDrag.sx;_cropY=e.clientY-_cropDrag.sy;clampCrop();drawCrop();});
+  c.addEventListener('mouseup',()=>{_cropDrag=null;});
+  c.addEventListener('mouseleave',()=>{_cropDrag=null;});
+  // Scroll para zoom en desktop
+  c.addEventListener('wheel',e=>{
+    const delta=e.deltaY>0?-0.08:0.08;
+    _cropScale=Math.max(0.5,Math.min(3,_cropScale+delta));
+    const range=document.getElementById('avCropRange');if(range)range.value=_cropScale;
+    clampCrop();drawCrop();e.preventDefault();
+  },{passive:false});
+}
+
+function confirmCrop(){
+  const c=document.getElementById('avCropCanvas');if(!c)return;
+  // Exportar el canvas recortado en 200×200
+  const out=document.createElement('canvas');out.width=200;out.height=200;
+  const x=out.getContext('2d');
+  // Escala del canvas CSS vs real (el canvas tiene 240px pero puede estar escalado por CSS)
+  const rect=c.getBoundingClientRect();
+  const ratio=240/rect.width;
+  x.drawImage(c,0,0,240,240,0,0,200,200);
+  const data=out.toDataURL('image/jpeg',.82);
+  editAv={...editAv,photo:data};
+  // Restaurar el body del modal de avatar
+  openEditAvatar();
+}
+
 function clearAvPhoto(){
   delete editAv.photo;
   setAvEl(document.getElementById('editAvSvg'),editAv,108);
@@ -1939,7 +2057,19 @@ function betTicketText(b){
     return `🎯 Mi parlay en LudoPicks (${b.momioTotal.toFixed(2)}x):\n${legs}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momioTotal).toLocaleString()}\nhttps://ludopicks.vercel.app`;}
   const p=byId(b.partidoId);return `🎯 Mi pick en LudoPicks:\n${pickLabel(p,b.pick,b.linea)} en ${p.local} vs ${p.visita} @${b.momio}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momio).toLocaleString()}\nhttps://ludopicks.vercel.app`;
 }
-function legResIcon(l){const r=state.resultados[l.partidoId];if(!r)return ['•','var(--muted2)'];const p=byId(l.partidoId);return pickWinsClient(p,r,l.pick,l.linea)?['✓','var(--green)']:['✗','var(--rl)'];}
+function legResIcon(l){
+  const r=state.resultados[l.partidoId];
+  if(!r)return ['•','var(--muted2)'];
+  const p=byId(l.partidoId);
+  // PA parcial: revisamos por el status real de la apuesta si lo tiene,
+  // o por la lógica del cliente
+  if(r.gl==null&&r.pa){
+    // resultado parcial (PA en vivo)
+    if((l.pick==='local'&&r.pa.l)||(l.pick==='visita'&&r.pa.v))return ['⚡','var(--gold)'];
+    return ['•','var(--muted2)'];
+  }
+  return pickWinsClient(p,r,l.pick,l.linea)?['✓','var(--green)']:['✗','var(--rl)'];
+}
 function betCanCancel(b){
   if((b.status||'pending')!=='pending')return false;
   if(b.tipo==='campeon')return eNow()<(state.campeon_cierra||0)&&!state.campeon;
@@ -1951,7 +2081,11 @@ function betCard(b){
   const st=b.status||'pending';
   const isP=b.tipo==='parlay';
   const factor=isP?b.momioTotal:b.momio;
-  const right=st==='won'?`<div class="ap-g win">+$${Math.round(b.monto*factor).toLocaleString()}</div>`
+  // Detectar si el pago fue por PA (resultado parcial)
+  const r=b.partidoId?state.resultados[b.partidoId]:null;
+  const esPaWon=st==='won'&&r&&r.gl==null&&r.pa;
+  const right=st==='won'
+    ?`<div class="ap-g win">${esPaWon?'⚡ ':'+'}$${Math.round(b.monto*factor).toLocaleString()}</div>`
     :st==='lost'?`<div class="ap-g loss">−$${b.monto.toLocaleString()}</div>`
     :`<div class="ap-g pend">→ $${Math.round(b.monto*factor).toLocaleString()}</div>`;
   let head,body='';
@@ -1968,7 +2102,7 @@ function betCard(b){
   }else{
     const p=byId(b.partidoId);
     head=`<span style="font-weight:700;font-size:14px">${teamFlag(p.local,15)} vs ${teamFlag(p.visita,15)}</span> <span style="color:var(--muted2);font-size:11px">${p.fecha}</span>`;
-    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x</div>`;
+    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x${esPaWon?' <span style="color:var(--gold);font-weight:800">· ⚡ Cobrado por PA</span>':''}</div>`;
   }
   let btns='';
   if(st==='pending')btns+=`<button class="share-btn" onclick="shareBetById('${b.id}')">📲 Compartir</button>`;
@@ -2587,11 +2721,21 @@ async function aplicarPALive(pid){
   if(!pa.l&&!pa.v)return toast('Marca qué equipo llegó a +2');
   const p=byId(pid);
   const quien=`${pa.l?p.local:''}${pa.l&&pa.v?' y ':''}${pa.v?p.visita:''}`;
-  if(!confirm(`¿Aplicar Pago Anticipado a ${quien}? Se pagan ya las apuestas simples a ese ganador.`))return;
+  if(!confirm(`¿Aplicar Pago Anticipado a ${quien}?\n\nLas apuestas simples a ese ganador se cobran al instante. Los parlays esperan al marcador final.`))return;
   const r=await api({action:'aplicarPA',payload:{adminKey,partidoId:pid,pa}});
   if(r.error)return toast(r.error);
-  state.resultados=r.resultados;state.jugadores=r.jugadores;state.apuestas=r.apuestas;
-  closeModal();toast('⚡ PA aplicado y pagado ✓');renderAdmin();
+  // Actualizar todo el state
+  state.resultados=r.resultados;
+  state.jugadores=r.jugadores;
+  state.apuestas=r.apuestas;
+  closeModal();
+  // Contar cuántas apuestas se pagaron
+  const pagadas=Object.values(r.apuestas).filter(b=>b.status==='won'&&b.partidoId===pid&&!b.tipo?.includes('parlay')).length;
+  toast(`⚡ PA aplicado · ${pagadas} apuesta${pagadas!==1?'s':''} cobrada${pagadas!==1?'s':''} ✓`);
+  // Refrescar todas las vistas relevantes
+  renderAdmin();
+  try{refreshHero();}catch(e){}
+  try{if(currentTab==='partidos')renderCard(pid,false);}catch(e){}
 }
 function scorePreview(pid){
   const p=byId(pid);
