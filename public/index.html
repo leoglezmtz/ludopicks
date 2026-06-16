@@ -31,6 +31,9 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;overflow-x:hidden;position:relative}
+body.modal-open{overflow:hidden;touch-action:none;-webkit-overflow-scrolling:none}
+body.modal-open #app{pointer-events:none}
+body.modal-open .overlay,body.modal-open .ruleta-overlay,body.modal-open .rl-result,body.modal-open .bet-err,body.modal-open .especial-pop,body.modal-open .rl-announce{pointer-events:auto}
 body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:
   radial-gradient(120% 80% at 82% -5%,rgba(255,219,0,.16),transparent 55%),
   radial-gradient(120% 70% at -10% 10%,rgba(31,196,58,.16),transparent 52%),
@@ -73,6 +76,8 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .daylabel::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green)}
 
 .match{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:18px;padding:14px;margin-bottom:11px;position:relative;overflow:hidden;animation:slideUp .4s ease both;box-shadow:var(--shadow-sm)}
+.match-flash{animation:matchFlash 1.4s ease-out}
+@keyframes matchFlash{0%{box-shadow:0 0 0 0 rgba(255,219,0,.7),var(--shadow-sm)}50%{box-shadow:0 0 0 6px rgba(255,219,0,.18),0 0 30px rgba(255,219,0,.3)}100%{box-shadow:0 0 0 0 rgba(255,219,0,0),var(--shadow-sm)}}
 .match::after{content:'';position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,var(--glass-hi),transparent);pointer-events:none}
 @keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .match.mx{border-color:rgba(93,202,165,.45);box-shadow:0 0 0 1px rgba(93,202,165,.15),0 10px 30px -14px rgba(93,202,165,.4)}
@@ -211,7 +216,8 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .rl-head p{font-size:11.5px;color:var(--rl-muted);margin-top:3px}
 .rl-close{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:10px;border:1px solid var(--rl-glass-brd);background:var(--rl-glass);color:var(--rl-muted);font-size:16px;cursor:pointer;display:grid;place-items:center}
 .rl-close:hover{color:#fff;background:rgba(255,255,255,.12)}
-.rl-body{padding:6px 18px 20px;overflow-y:auto}
+.rl-body{padding:6px 18px 20px;overflow-y:auto;min-height:540px}
+.rl-tab-pane{min-height:420px}
 
 /* Jackpot */
 .rl-jackpot{margin:12px auto 8px;display:flex;align-items:center;justify-content:center;gap:10px;padding:9px 16px;border-radius:16px;width:fit-content;background:linear-gradient(180deg,rgba(245,194,75,.18),rgba(245,194,75,.04));border:1px solid rgba(245,194,75,.3);box-shadow:0 8px 24px -14px rgba(245,194,75,.7),inset 0 1px 0 rgba(255,255,255,.12)}
@@ -285,6 +291,7 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .rl-rprize.flat{background:none;-webkit-text-fill-color:initial;color:var(--rl-ink)}
 .rl-rdesc{font-size:13px;color:var(--rl-muted);margin-top:10px;line-height:1.5}
 .rl-rbtn{margin-top:22px;width:100%;padding:14px;border:none;border-radius:14px;cursor:pointer;font-size:15px;font-weight:800;color:#06231a;background:linear-gradient(180deg,#46e6ad,#1fae7e);box-shadow:0 10px 24px -10px rgba(39,212,155,.7)}
+.rl-share-btn{margin-top:10px;width:100%;padding:11px;border:1px solid rgba(245,194,75,.4);border-radius:14px;cursor:pointer;font-size:13.5px;font-weight:800;background:rgba(245,194,75,.1);color:#f5c24b;box-shadow:none}
 
 /* Anuncio nueva función */
 .rl-announce{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(4,9,20,.8);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transition:opacity .35s}
@@ -316,7 +323,29 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .cas-warn{background:rgba(239,159,39,.08);border:1px solid rgba(239,159,39,.3);border-radius:14px;padding:13px 14px;margin-bottom:16px}
 .cas-list{display:flex;flex-direction:column;gap:7px}
 .cas-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px}
-/* ── MODAL: APUESTA INVÁLIDA (combinación imposible) ── */
+/* ── PANEL UNIFICADO: REGALAR + AVISAR ── */
+.gift-panel{background:linear-gradient(180deg,rgba(255,219,0,.05),rgba(255,255,255,.03));border:1px solid rgba(255,219,0,.22);border-radius:18px;padding:16px;margin-bottom:14px}
+.gp-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 7px}
+.gp-label:first-child{margin-top:0}
+.gp-label small{font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted2);margin-left:4px}
+.gp-switch{display:flex;gap:6px;background:rgba(0,0,0,.25);padding:4px;border-radius:13px}
+.gp-sw{flex:1;padding:9px;border-radius:9px;font-size:13px;font-weight:800;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:.2s}
+.gp-sw.on{background:linear-gradient(135deg,#FFE34D,var(--gold));color:#1a1400}
+.gp-chips{display:flex;gap:6px;flex-wrap:wrap}
+.gp-chip{flex:1;min-width:60px;padding:9px 8px;border-radius:11px;font-size:12.5px;font-weight:800;background:rgba(255,255,255,.05);border:1px solid var(--line2);color:var(--muted);cursor:pointer;text-align:center;transition:.15s}
+.gp-chip.on{background:rgba(255,219,0,.18);border-color:rgba(255,219,0,.42);color:var(--gold)}
+.gp-rcp{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.gp-rb{padding:10px 8px;border-radius:11px;font-size:12px;font-weight:700;background:rgba(255,255,255,.04);border:1px solid var(--line2);color:rgba(255,255,255,.78);cursor:pointer;text-align:center;display:flex;flex-direction:column;gap:1px;line-height:1.2;transition:.15s}
+.gp-rb small{font-size:9.5px;font-weight:600;color:var(--muted2)}
+.gp-rb.on{background:rgba(31,196,58,.13);border-color:rgba(31,196,58,.4);color:#3ee35a}
+.gp-rb.on small{color:#9bd9a8}
+.gp-prev-wrap{margin-top:14px;padding:11px;background:linear-gradient(180deg,#1b1f2a,#0f1117);border:1px solid rgba(255,255,255,.1);border-radius:14px}
+.gp-prev-lbl{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.gp-push{display:flex;gap:9px;align-items:flex-start;background:rgba(255,255,255,.06);border-radius:11px;padding:9px 10px}
+.gp-push-ic{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#FFE34D,var(--gold));color:#1a1400;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.gp-push-app{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em}
+.gp-push-t{font-size:13px;font-weight:800;color:#fff;margin-top:1px;line-height:1.2}
+.gp-push-d{font-size:11.5px;color:rgba(255,255,255,.72);margin-top:2px;line-height:1.35}
 .bet-err{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(4,4,8,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity .25s}
 .bet-err.show{display:flex;opacity:1}
 .be-card{width:100%;max-width:340px;text-align:center;padding:28px 22px 20px;border-radius:22px;background:linear-gradient(165deg,#1a1407 0%,#0a0a0a 55%,#1a1407 100%);border:1.5px solid rgba(255,219,0,.45);box-shadow:0 30px 80px -20px rgba(0,0,0,.9),0 0 60px -20px rgba(255,219,0,.35);transform:scale(.88) translateY(8px);opacity:0;transition:transform .35s cubic-bezier(.2,1.2,.3,1),opacity .25s;color:#fff}
@@ -389,9 +418,14 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .rb-lose{background:rgba(226,75,74,.2);color:var(--rl)}
 .rb-info{background:rgba(255,255,255,.1);color:var(--muted)}
 
-.filters{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px;scrollbar-width:none}
+.filters{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;margin-bottom:6px;scrollbar-width:none;mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 24px),transparent 100%);-webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 24px),transparent 100%)}
 .filters::-webkit-scrollbar{display:none}
-.fbtn{padding:6px 13px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s}
+.filters::-webkit-scrollbar{display:none}
+.fbtn{padding:6px 13px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s}
+.admin-tabs{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 24px),transparent 100%);-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 24px),transparent 100%)}
+.admin-tabs::-webkit-scrollbar{display:none}
+.fbtn-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
+.fbtn-row::-webkit-scrollbar{display:none}
 .fbtn.on{background:var(--green);color:#04231a;border-color:var(--green)}
 
 .podium{display:flex;justify-content:center;align-items:flex-end;gap:8px;padding:18px 8px 14px;background:linear-gradient(180deg,var(--bg2),var(--bg));border-radius:16px;margin-bottom:12px}
@@ -449,16 +483,19 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 /* AVATAR BUILDER */
 .av-builder{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px}
 .av-preview{text-align:center;margin-bottom:14px}
-.av-circle{width:96px;height:96px;border-radius:50%;overflow:hidden;border:3px solid var(--green);margin:0 auto;display:block}
+.av-circle{width:96px;height:96px;border-radius:50%;overflow:hidden;border:3px solid var(--green);margin:0 auto;display:block;box-shadow:0 0 0 1px rgba(31,196,58,.15),0 8px 20px -8px rgba(0,0,0,.6)}
+.av-circle:hover{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,219,0,.25),0 8px 24px -8px rgba(255,219,0,.4);transition:all .2s}
 .av-circle svg{display:block;width:100%;height:100%}
-.av-section{margin-bottom:14px}
+.av-section{margin-bottom:16px}
 .av-section-label{font-size:11px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.av-swatches{display:flex;gap:7px;flex-wrap:wrap}
-.av-swatch{width:30px;height:30px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .15s;flex-shrink:0}
-.av-swatch.on{border-color:#fff;transform:scale(1.2)}
+.av-swatches{display:flex;gap:8px;flex-wrap:wrap}
+.av-swatch{width:32px;height:32px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .18s;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.av-swatch:hover{transform:scale(1.12)}
+.av-swatch.on{border-color:#fff;transform:scale(1.22);box-shadow:0 0 0 3px rgba(255,255,255,.25),0 4px 10px rgba(0,0,0,.5)}
 .av-styles{display:flex;gap:6px;flex-wrap:wrap}
-.av-style{padding:5px 12px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid var(--line2);background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;transition:all .15s}
-.av-style.on{background:var(--green);color:#04231a;border-color:var(--green)}
+.av-style{padding:6px 13px;font-size:12px;font-weight:700;border-radius:20px;border:1.5px solid var(--line2);background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
+.av-style:hover{background:rgba(255,255,255,.1);color:#fff}
+.av-style.on{background:var(--green);color:#04231a;border-color:var(--green);box-shadow:0 0 10px -2px rgba(31,196,58,.4)}
 
 /* FORMS */
 .field{margin-bottom:14px}
@@ -692,7 +729,7 @@ select option{background:#161c30;color:#fff}
     <div id="tabc-especiales" class="tabc"><div id="listaEspeciales"></div></div>
     <div id="tabc-admin" class="tabc">
       <div class="admin-banner"><strong>Modo administrador</strong> — Registra resultados y gestiona jugadores.</div>
-      <div id="adminTabs" style="display:flex;gap:8px;margin-bottom:14px">
+      <div id="adminTabs" class="admin-tabs">
         <button class="fbtn on" id="atab-resultados" onclick="setAdminTab('resultados',this)">Resultados</button>
         <button class="fbtn" id="atab-saldos" onclick="setAdminTab('saldos',this)">Saldos</button>
         <button class="fbtn" id="atab-usuarios" onclick="setAdminTab('usuarios',this)">Usuarios</button>
@@ -702,27 +739,43 @@ select option{background:#161c30;color:#fff}
       </div>
       <div id="admin-resultados"><div class="filters" id="adminFilters"></div><div id="listaAdmin"></div></div>
       <div id="admin-saldos" style="display:none">
-        <div class="sec-title">🎰 Regalar tickets de ruleta</div>
-        <div class="info-card">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Por defecto cada quien recibe 2 tickets al día. Aquí puedes regalar más, a uno o a todos.</div>
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-            <select id="tixJugador" style="flex:1"></select>
-            <input id="tixCant" type="tel" inputmode="numeric" placeholder="N° tickets" value="1" style="width:90px">
-            <button class="btn btn-sm" style="background:linear-gradient(135deg,#FFE34D,var(--gold));color:#1a1400" onclick="doDarTickets(false)">🎫 Dar</button>
+        <div class="sec-title">🎁 Regalar + Avisar</div>
+        <div class="gift-panel">
+          <div class="gp-label">1 · ¿Qué regalas?</div>
+          <div class="gp-switch">
+            <button class="gp-sw on" id="gpKindTix" onclick="setGiftKind('tickets')">🎟️ Tickets</button>
+            <button class="gp-sw" id="gpKindFer" onclick="setGiftKind('feria')">💵 Feria</button>
           </div>
-          <button class="btn btn-sm" style="background:rgba(255,219,0,.15);border:1px solid rgba(255,219,0,.3);color:var(--gold);width:100%" onclick="doDarTickets(true)">🎫 Dar tickets a TODOS (mismo N° de arriba)</button>
-          <input id="tixMsg" type="text" placeholder="💬 Mensaje push (opcional)" style="width:100%;margin-top:8px">
-        </div>
-        <div class="sec-title">Bonus / penalización para todos</div>
-        <div class="info-card">
-          <div style="display:flex;gap:8px">
-            <input id="bonusMonto" type="tel" inputmode="numeric" placeholder="Ej: 500" style="flex:1">
-            <button class="btn btn-sm" style="background:var(--green);color:#04231a" onclick="doBonusTodos(1)">+ Dar</button>
-            <button class="btn btn-sm btn-danger" onclick="doBonusTodos(-1)">− Quitar</button>
+          <div class="gp-label">2 · Cantidad</div>
+          <div class="gp-chips" id="gpChips"></div>
+          <input id="gpCant" type="tel" inputmode="numeric" placeholder="O escribe la cantidad..." style="width:100%;margin-top:6px">
+          <div class="gp-label">3 · ¿A quién?</div>
+          <div class="gp-rcp">
+            <button class="gp-rb on" id="gpRcpAll"   onclick="setGiftRcp('all')">👥 Todos</button>
+            <button class="gp-rb"    id="gpRcpShort" onclick="setGiftRcp('short')">😅 Los cortos<small>menos saldo</small></button>
+            <button class="gp-rb"    id="gpRcpTop"   onclick="setGiftRcp('top')">🏆 Top 3</button>
+            <button class="gp-rb"    id="gpRcpOne"   onclick="setGiftRcp('one')">👤 Solo uno</button>
           </div>
-          <input id="bonusMsg" type="text" placeholder="💬 Mensaje push (opcional, ej: ¡Les regalé $500!)" style="width:100%;margin-top:8px">
+          <select id="gpJugSel" style="width:100%;display:none;margin-top:6px"></select>
+          <div class="gp-label">4 · Mensaje push <small>(opcional)</small></div>
+          <input id="gpPushT" type="text" maxlength="50" placeholder="Título (ej: 🎰 ¡Tickets gratis!)" oninput="renderGiftPreview()" style="width:100%">
+          <textarea id="gpPushD" maxlength="140" rows="2" placeholder="Descripción (ej: Entra a la ruleta y recupérate)" oninput="renderGiftPreview()" style="width:100%;margin-top:6px;resize:none;font-family:inherit"></textarea>
+          <div class="gp-prev-wrap" id="gpPrevWrap" style="display:none">
+            <div class="gp-prev-lbl">Vista previa del push</div>
+            <div class="gp-push">
+              <div class="gp-push-ic">🎰</div>
+              <div style="flex:1;min-width:0">
+                <div class="gp-push-app">LudoPicks · ahora</div>
+                <div class="gp-push-t" id="gpPrevT"></div>
+                <div class="gp-push-d" id="gpPrevD"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:14px;width:100%;font-size:14.5px;padding:13px" onclick="doRegaloUnif()">📲 Enviar regalo<span id="gpBtnPush"></span></button>
+          <div id="gpDestInfo" style="font-size:11px;color:var(--muted2);margin-top:8px;text-align:center"></div>
         </div>
-        <div class="sec-title">Ajuste individual</div>
+
+        <div class="sec-title">Ajuste individual <small style="color:var(--muted2);font-weight:600;text-transform:none;letter-spacing:0">(quitar feria o corregir)</small></div>
         <div class="info-card">
           <div class="field" style="margin-bottom:10px">
             <select id="adjJugador"></select>
@@ -732,7 +785,7 @@ select option{background:#161c30;color:#fff}
             <button class="btn btn-sm" style="background:var(--green);color:#04231a" onclick="doAjuste(1)">+ Agregar</button>
             <button class="btn btn-sm btn-danger" onclick="doAjuste(-1)">− Quitar</button>
           </div>
-          <input id="adjMsg" type="text" placeholder="💬 Mensaje push (opcional, ej: ¡Te di un bono!)" style="width:100%;margin-top:8px">
+          <input id="adjMsg" type="text" placeholder="💬 Mensaje push (opcional)" style="width:100%;margin-top:8px">
         </div>
         <div class="sec-title">Recotizar apuestas</div>
         <div class="info-card">
@@ -808,7 +861,7 @@ select option{background:#161c30;color:#fff}
           <button class="rl-tab" data-rltab="hist" onclick="setRuletaTab('hist')">🧾 Historial</button>
         </div>
 
-        <div id="ruletaTabR">
+        <div id="ruletaTabR" class="rl-tab-pane">
           <div class="rl-wheel-wrap">
             <div class="rl-wheel-glow"></div>
             <div class="rl-pointer" id="ruletaPointer"></div>
@@ -831,7 +884,7 @@ select option{background:#161c30;color:#fff}
           </div>
         </div>
 
-        <div id="ruletaTabH" hidden>
+        <div id="ruletaTabH" class="rl-tab-pane" hidden>
           <div class="rl-hist" id="ruletaHistList"></div>
         </div>
       </div>
@@ -846,6 +899,7 @@ select option{background:#161c30;color:#fff}
     <div class="rl-rprize" id="rrPrize">$1,000</div>
     <div class="rl-rdesc" id="rrDesc"></div>
     <button class="rl-rbtn" onclick="closeRuletaResult()">Seguir jugando</button>
+    <button class="rl-share-btn" id="rrShareBtn" onclick="shareRuletaResult()" style="display:none">📸 Compartir</button>
   </div>
 </div>
 
@@ -1038,7 +1092,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.17.3';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.18.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1057,102 +1111,180 @@ const FRASES={
 };
 function frase(cat){const a=FRASES[cat]||FRASES.pick;return a[Math.floor(Math.random()*a.length)];}
 
-// ── AVATAR ENGINE ─────────────────────────────────────────────
-const SKIN=['#FDDBB4','#F5C18A','#D4956A','#A0634A','#5C3320'];
-const HAIR_C=['#1a0800','#3D2B1F','#7B4A2D','#C8831A','#E8C87A','#C0C0C0','#FF6B6B','#4A90D9'];
-const SHIRT=['#185FA5','#0F6E56','#E24B4A','#EF9F27','#7F77DD','#C44E8A','#888780','#1a0e2e'];
-const HAIR_S=['Liso','Rizado','Corto','Calvo'];
-const EXPR=['😊','😄','😎','😐','🤩'];
-const EXPR_L=['Feliz','Emocionado','Cool','Serio','Estrellado'];
+// ── AVATAR ENGINE v2 — diseño 10/10 ──────────────────────────
+const SKIN_C=['#FDDBB4','#F5C18A','#D4956A','#B07244','#7B4A2D','#4A2A1A'];
+const HAIR_C=['#1a0800','#3D2B1F','#7B4A2D','#C8831A','#E8C87A','#C0C0C0','#FF6B6B','#4A90D9','#2A9D8F'];
+const SHIRT_C=['#185FA5','#0F6E56','#E24B4A','#EF9F27','#7F77DD','#C44E8A','#111','#F4F4F0','#E76F51'];
+const HAIR_STYLES=['Largo','Rizado','Corto','Calvo','Moño','Afro'];
+const EXPR_EMOJI=['😊','😄','😎','😐','🤩','😏'];
+const EXPR_LBL=['Feliz','Emocionado','Cool','Serio','Estrellado','Coyote'];
+const BG_C=['#0d1220','#1a0a30','#0a1a0d','#1a0808','#08181a','#1a1508'];
+const BG_LBL=['Noche','Morado','Verde','Rojo','Teal','Café'];
+const ACCESSORY=['Ninguno','Lentes sol 😎','Gorra 🧢','Barba 🧔','Aretes 💎'];
 
-function buildAvSvg(av,size=120){
-  const cfg=av||{skin:0,hairC:0,hairS:0,shirt:0,expr:0};
-  const sk=SKIN[cfg.skin]||SKIN[0];
+function buildAvSvg(av){
+  // Si tiene foto, devuelve un img circular
+  if(av&&av.photo){
+    return `<svg width="100%" height="100%" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="display:block">
+      <defs><clipPath id="cp-ph"><circle cx="60" cy="60" r="60"/></clipPath></defs>
+      <circle cx="60" cy="60" r="60" fill="#0d1220"/>
+      <image href="${av.photo}" x="0" y="0" width="120" height="120" clip-path="url(#cp-ph)" preserveAspectRatio="xMidYMid slice"/>
+    </svg>`;
+  }
+  const cfg={skin:0,hairC:0,hairS:0,shirt:0,expr:0,bg:0,acc:0,...(av||{})};
+  const sk=SKIN_C[cfg.skin]||SKIN_C[0];
   const hc=HAIR_C[cfg.hairC]||HAIR_C[0];
-  const sh=SHIRT[cfg.shirt]||SHIRT[0];
-  const bald=cfg.hairS===3,curly=cfg.hairS===1,short=cfg.hairS===2;
-  const expr=cfg.expr||0;
-  // Todos los elementos centrados en cx=60, cara centrada en cy=52
-  // Camisa empieza en cy=90 y queda cortada por clipPath
-  const CX=60, FY=52; // centro de la cara
+  const sh=SHIRT_C[cfg.shirt]||SHIRT_C[0];
+  const bgC=BG_C[cfg.bg]||BG_C[0];
+  const bald=cfg.hairS===3;
+  const uid='av'+Math.random().toString(36).slice(2,7);
+  const CX=60,FY=50;
+  const isLight=['#FDDBB4','#F5C18A','#D4956A'].includes(sk);
+  const shadowSk=isLight?'#c07540':'#2a1408';
+  const blushC=isLight?'#FFB0A0':'#a04040';
+
+  // Boca según expresión
   const mouths=[
-    `M${CX-13} ${FY+18} Q${CX} ${FY+26} ${CX+13} ${FY+18}`,
-    `M${CX-15} ${FY+16} Q${CX} ${FY+27} ${CX+15} ${FY+16}`,
-    `M${CX-11} ${FY+15} Q${CX} ${FY+22} ${CX+11} ${FY+15}`,
-    `M${CX-13} ${FY+18} L${CX+13} ${FY+18}`,
-    `M${CX-15} ${FY+14} Q${CX} ${FY+28} ${CX+15} ${FY+14}`,
+    `M${CX-12} ${FY+18} Q${CX} ${FY+26} ${CX+12} ${FY+18}`,          // 0 feliz
+    `M${CX-14} ${FY+15} Q${CX} ${FY+28} ${CX+14} ${FY+15}`,           // 1 emocionado
+    `M${CX-10} ${FY+15} Q${CX} ${FY+21} ${CX+10} ${FY+15}`,           // 2 cool
+    `M${CX-11} ${FY+18} L${CX+11} ${FY+18}`,                           // 3 serio
+    `M${CX-14} ${FY+14} Q${CX} ${FY+29} ${CX+14} ${FY+14}`,           // 4 estrellado
+    `M${CX-12} ${FY+19} Q${CX} ${FY+14} ${CX+12} ${FY+19}`,           // 5 coyote
   ];
+
+  // Pelo
   let hair='';
   if(!bald){
-    if(curly){
-      hair=`<circle cx="${CX-28}" cy="${FY-18}" r="10" fill="${hc}"/>
-        <circle cx="${CX-18}" cy="${FY-31}" r="12" fill="${hc}"/>
-        <circle cx="${CX}" cy="${FY-36}" r="13" fill="${hc}"/>
-        <circle cx="${CX+18}" cy="${FY-31}" r="12" fill="${hc}"/>
-        <circle cx="${CX+28}" cy="${FY-18}" r="10" fill="${hc}"/>
-        <rect x="${CX-28}" y="${FY-20}" width="56" height="14" fill="${hc}" rx="2"/>`;
-    } else if(short){
-      hair=`<ellipse cx="${CX}" cy="${FY-24}" rx="28" ry="15" fill="${hc}"/>`;
-    } else {
-      hair=`<ellipse cx="${CX}" cy="${FY-26}" rx="29" ry="18" fill="${hc}"/>
-        <rect x="${CX-33}" y="${FY-18}" width="8" height="22" rx="4" fill="${hc}"/>
-        <rect x="${CX+25}" y="${FY-18}" width="8" height="22" rx="4" fill="${hc}"/>`;
+    if(cfg.hairS===1){// rizado/afro-ish
+      hair=`<ellipse cx="${CX}" cy="${FY-22}" rx="30" ry="18" fill="${hc}"/>
+        <circle cx="${CX-26}" cy="${FY-10}" r="10" fill="${hc}"/>
+        <circle cx="${CX+26}" cy="${FY-10}" r="10" fill="${hc}"/>
+        <circle cx="${CX-16}" cy="${FY-32}" r="9" fill="${hc}"/>
+        <circle cx="${CX+16}" cy="${FY-32}" r="9" fill="${hc}"/>
+        <circle cx="${CX}" cy="${FY-36}" r="10" fill="${hc}"/>`;
+    }else if(cfg.hairS===2){// corto
+      hair=`<ellipse cx="${CX}" cy="${FY-22}" rx="27" ry="14" fill="${hc}"/>
+        <rect x="${CX-27}" y="${FY-26}" width="54" height="10" fill="${hc}" rx="4"/>`;
+    }else if(cfg.hairS===4){// moño
+      hair=`<ellipse cx="${CX}" cy="${FY-22}" rx="27" ry="14" fill="${hc}"/>
+        <ellipse cx="${CX}" cy="${FY-38}" rx="10" ry="8" fill="${hc}"/>
+        <circle cx="${CX-7}" cy="${FY-43}" r="6" fill="${hc}"/>
+        <circle cx="${CX+7}" cy="${FY-43}" r="6" fill="${hc}"/>`;
+    }else if(cfg.hairS===5){// afro
+      hair=`<ellipse cx="${CX}" cy="${FY-20}" rx="32" ry="25" fill="${hc}"/>
+        <circle cx="${CX-28}" cy="${FY-12}" r="12" fill="${hc}"/>
+        <circle cx="${CX+28}" cy="${FY-12}" r="12" fill="${hc}"/>`;
+    }else{// largo liso
+      hair=`<ellipse cx="${CX}" cy="${FY-24}" rx="29" ry="18" fill="${hc}"/>
+        <rect x="${CX-33}" y="${FY-18}" width="9" height="26" rx="4.5" fill="${hc}"/>
+        <rect x="${CX+24}" y="${FY-18}" width="9" height="26" rx="4.5" fill="${hc}"/>`;
     }
   }
-  const isLight=sk==='#FDDBB4'||sk==='#F5C18A';
-  const blushC=isLight?'#FFB0B0':'#bb5555';
-  const EY=FY-4; // y de los ojos
-  const eyes=expr===4
-    ?`<text x="${CX-16}" y="${EY+4}" font-size="13" text-anchor="middle" font-family="serif">⭐</text>
-      <text x="${CX+16}" y="${EY+4}" font-size="13" text-anchor="middle" font-family="serif">⭐</text>`
-    :(expr===2
-      ?`<path d="M${CX-22} ${EY} L${CX-10} ${EY}" stroke="#1a0a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <path d="M${CX+10} ${EY} L${CX+22} ${EY}" stroke="#1a0a00" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <circle cx="${CX-16}" cy="${EY+4}" r="3.5" fill="#1a0a00"/>
-        <circle cx="${CX+16}" cy="${EY+4}" r="3.5" fill="#1a0a00"/>
-        <circle cx="${CX-14.5}" cy="${EY+2.5}" r="1.2" fill="white"/>
-        <circle cx="${CX+17.5}" cy="${EY+2.5}" r="1.2" fill="white"/>`
-      :`<ellipse cx="${CX-16}" cy="${EY+3}" rx="5" ry="${expr===1?6:4.5}" fill="#1a0a00"/>
-        <ellipse cx="${CX+16}" cy="${EY+3}" rx="5" ry="${expr===1?6:4.5}" fill="#1a0a00"/>
-        <circle cx="${CX-14.5}" cy="${EY+1}" r="1.5" fill="white"/>
-        <circle cx="${CX+17.5}" cy="${EY+1}" r="1.5" fill="white"/>`);
-  const uid='c'+Math.random().toString(36).slice(2,6);
-  return `<svg width="100%" height="100%" viewBox="0 0 120 120" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block">
-    <defs><clipPath id="${uid}"><circle cx="60" cy="60" r="60"/></clipPath></defs>
-    <circle cx="60" cy="60" r="60" fill="#0d1220"/>
+
+  // Ojos
+  const EY=FY-5;
+  let eyes='';
+  if(cfg.expr===4){
+    eyes=`<text x="${CX-15}" y="${EY+6}" font-size="13" text-anchor="middle">⭐</text>
+      <text x="${CX+15}" y="${EY+6}" font-size="13" text-anchor="middle">⭐</text>`;
+  }else if(cfg.expr===2){
+    eyes=`<path d="M${CX-22} ${EY} L${CX-10} ${EY}" stroke="${shadowSk}" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M${CX+10} ${EY} L${CX+22} ${EY}" stroke="${shadowSk}" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="${CX-16}" cy="${EY+5}" rx="5" ry="4.5" fill="${shadowSk}"/>
+      <ellipse cx="${CX+16}" cy="${EY+5}" rx="5" ry="4.5" fill="${shadowSk}"/>
+      <circle cx="${CX-14.5}" cy="${EY+3}" r="1.5" fill="white"/>
+      <circle cx="${CX+17.5}" cy="${EY+3}" r="1.5" fill="white"/>`;
+  }else{
+    const eyeH=cfg.expr===1?6.5:cfg.expr===5?4:5;
+    eyes=`<ellipse cx="${CX-16}" cy="${EY+4}" rx="5.5" ry="${eyeH}" fill="${shadowSk}"/>
+      <ellipse cx="${CX+16}" cy="${EY+4}" rx="5.5" ry="${eyeH}" fill="${shadowSk}"/>
+      <circle cx="${CX-14.5}" cy="${EY+2}" r="1.8" fill="white"/>
+      <circle cx="${CX+17.5}" cy="${EY+2}" r="1.8" fill="white"/>
+      <ellipse cx="${CX-16}" cy="${EY-1}" rx="6.5" ry="2.5" fill="${hc}" opacity="${bald?0:.9}"/>
+      <ellipse cx="${CX+16}" cy="${EY-1}" rx="6.5" ry="2.5" fill="${hc}" opacity="${bald?0:.9}"/>`;
+  }
+
+  // Accesorios
+  let acc='';
+  if(cfg.acc===1){// gafas sol
+    acc=`<rect x="${CX-26}" y="${EY-2}" width="18" height="13" rx="4" fill="#1a1a1a" opacity=".88"/>
+      <rect x="${CX+8}" y="${EY-2}" width="18" height="13" rx="4" fill="#1a1a1a" opacity=".88"/>
+      <line x1="${CX-8}" y1="${EY+4}" x2="${CX+8}" y2="${EY+4}" stroke="#555" stroke-width="1.5"/>`;
+  }else if(cfg.acc===2){// gorra
+    acc=`<ellipse cx="${CX}" cy="${FY-28}" rx="30" ry="12" fill="${hc}"/>
+      <rect x="${CX-30}" y="${FY-36}" width="60" height="14" fill="${hc}" rx="3"/>
+      <rect x="${CX-34}" y="${FY-28}" width="10" height="5" fill="${hc}" rx="2"/>`;
+  }else if(cfg.acc===3){// barba
+    acc=`<ellipse cx="${CX}" cy="${FY+26}" rx="20" ry="10" fill="${hc}" opacity=".9"/>
+      <ellipse cx="${CX-14}" cy="${FY+22}" rx="8" ry="6" fill="${hc}" opacity=".85"/>
+      <ellipse cx="${CX+14}" cy="${FY+22}" rx="8" ry="6" fill="${hc}" opacity=".85"/>`;
+  }else if(cfg.acc===4){// aretes
+    acc=`<circle cx="${CX-31}" cy="${FY+5}" r="4" fill="#f5c24b" stroke="#caa033" stroke-width="1"/>
+      <circle cx="${CX+31}" cy="${FY+5}" r="4" fill="#f5c24b" stroke="#caa033" stroke-width="1"/>`;
+  }
+
+  // Gradiente de piel para volumen
+  return `<svg width="100%" height="100%" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style="display:block">
+    <defs>
+      <clipPath id="${uid}"><circle cx="60" cy="60" r="60"/></clipPath>
+      <radialGradient id="${uid}bg" cx="50%" cy="40%" r="60%">
+        <stop offset="0%" stop-color="${bgC}" stop-opacity=".7"/>
+        <stop offset="100%" stop-color="${bgC}"/>
+      </radialGradient>
+      <radialGradient id="${uid}sk" cx="40%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="${sk}" stop-opacity="1"/>
+        <stop offset="100%" stop-color="${shadowSk}" stop-opacity=".6"/>
+      </radialGradient>
+    </defs>
+    <circle cx="60" cy="60" r="60" fill="url(#${uid}bg)"/>
     <g clip-path="url(#${uid})">
-      <ellipse cx="${CX}" cy="118" rx="46" ry="32" fill="${sh}"/>
-      <ellipse cx="${CX}" cy="${FY}" rx="27" ry="31" fill="${sk}"/>
+      <!-- cuerpo / camiseta -->
+      <ellipse cx="${CX}" cy="116" rx="44" ry="28" fill="${sh}"/>
+      <rect x="${CX-44}" y="100" width="88" height="40" fill="${sh}"/>
+      <!-- pelo atrás -->
       ${hair}
-      <ellipse cx="${CX}" cy="${FY}" rx="27" ry="31" fill="${sk}" opacity=".88"/>
+      <!-- cara con gradiente 3D -->
+      <ellipse cx="${CX}" cy="${FY}" rx="28" ry="30" fill="url(#${uid}sk)"/>
+      <!-- sombra mandíbula -->
+      <ellipse cx="${CX}" cy="${FY+24}" rx="22" ry="8" fill="${shadowSk}" opacity=".18"/>
+      <!-- nariz -->
+      <ellipse cx="${CX}" cy="${FY+10}" rx="4.5" ry="3" fill="${isLight?'#e8a090':'#965040'}" opacity=".65"/>
+      <!-- ojos -->
       ${eyes}
-      <ellipse cx="${CX-20}" cy="${FY+12}" rx="7" ry="4" fill="${blushC}" opacity=".38"/>
-      <ellipse cx="${CX+20}" cy="${FY+12}" rx="7" ry="4" fill="${blushC}" opacity=".38"/>
-      <ellipse cx="${CX}" cy="${FY+14}" rx="4.5" ry="3" fill="${isLight?'#e8a090':'#965040'}" opacity=".7"/>
-      <path d="${mouths[expr]}" stroke="#2a1000" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <!-- rubor -->
+      <ellipse cx="${CX-20}" cy="${FY+12}" rx="8" ry="4.5" fill="${blushC}" opacity=".35"/>
+      <ellipse cx="${CX+20}" cy="${FY+12}" rx="8" ry="4.5" fill="${blushC}" opacity=".35"/>
+      <!-- boca -->
+      <path d="${mouths[cfg.expr]||mouths[0]}" stroke="${shadowSk}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      ${cfg.expr===0||cfg.expr===1?`<path d="${mouths[cfg.expr]}" stroke="${isLight?'#FF9090':'#b04040'}" stroke-width="1" fill="${isLight?'rgba(255,180,160,.45)':'rgba(180,80,60,.35)'}" opacity=".8"/>`:''}
+      <!-- accesorios encima -->
+      ${acc}
     </g>
+    <!-- borde sutil -->
+    <circle cx="60" cy="60" r="59" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
   </svg>`;
 }
 
 function setAvEl(el,av,size){if(el)el.innerHTML=buildAvSvg(av);}
 
-let regAv={skin:0,hairC:0,hairS:0,shirt:0,expr:0};
-let editAv={skin:0,hairC:0,hairS:0,shirt:0,expr:0};
+let regAv={skin:0,hairC:0,hairS:0,shirt:0,expr:0,bg:0,acc:0};
+let editAv={skin:0,hairC:0,hairS:0,shirt:0,expr:0,bg:0,acc:0};
 
-function buildAvControls(containerId, avObj, onUpdate){
-  const c=document.getElementById(containerId);
-  if(!c)return;
+function buildAvControls(containerId,avObj,onUpdate){
+  const c=document.getElementById(containerId);if(!c)return;
   const sections=[
-    {label:'Tono de piel',items:SKIN,key:'skin',type:'swatch'},
-    {label:'Estilo de pelo',items:HAIR_S,key:'hairS',type:'style'},
-    {label:'Color de pelo',items:HAIR_C,key:'hairC',type:'swatch'},
-    {label:'Playera',items:SHIRT,key:'shirt',type:'swatch'},
-    {label:'Expresión',items:EXPR_L,key:'expr',type:'style'},
+    {label:'🎨 Fondo',items:BG_C,key:'bg',type:'swatch',lbls:BG_LBL},
+    {label:'🎨 Tono de piel',items:SKIN_C,key:'skin',type:'swatch'},
+    {label:'💇 Estilo de pelo',items:HAIR_STYLES,key:'hairS',type:'style'},
+    {label:'🎨 Color de pelo',items:HAIR_C,key:'hairC',type:'swatch'},
+    {label:'👕 Camiseta',items:SHIRT_C,key:'shirt',type:'swatch'},
+    {label:'🕶️ Accesorio',items:ACCESSORY,key:'acc',type:'style'},
+    {label:'😊 Expresión',items:EXPR_LBL,key:'expr',type:'style',emojis:EXPR_EMOJI},
   ];
   c.innerHTML='';
   sections.forEach(sec=>{
-    const wrap=document.createElement('div');
-    wrap.className='av-section';
+    const wrap=document.createElement('div');wrap.className='av-section';
     wrap.innerHTML=`<div class="av-section-label">${sec.label}</div>`;
     const row=document.createElement('div');
     row.className=sec.type==='swatch'?'av-swatches':'av-styles';
@@ -1161,20 +1293,20 @@ function buildAvControls(containerId, avObj, onUpdate){
       if(sec.type==='swatch'){
         el.className='av-swatch'+(avObj[sec.key]===i?' on':'');
         el.style.background=v;
+        el.title=(sec.lbls||[])[i]||'';
       }else{
         el.className='av-style'+(avObj[sec.key]===i?' on':'');
-        el.textContent=sec.key==='expr'?EXPR[i]+' '+v:v;
+        el.textContent=(sec.emojis?sec.emojis[i]+' ':'')+v;
       }
       el.onclick=()=>{avObj[sec.key]=i;onUpdate();buildAvControls(containerId,avObj,onUpdate);};
       row.appendChild(el);
     });
-    wrap.appendChild(row);
-    c.appendChild(wrap);
+    wrap.appendChild(row);c.appendChild(wrap);
   });
 }
 
 function initRegAvatar(){
-  regAv={skin:0,hairC:0,hairS:0,shirt:0,expr:0};
+  regAv={skin:0,hairC:0,hairS:0,shirt:0,expr:0,bg:0,acc:0};
   buildAvControls('regAvControls',regAv,()=>setAvEl(document.getElementById('regAvSvg'),regAv,90));
   setAvEl(document.getElementById('regAvSvg'),regAv,90);
 }
@@ -1234,6 +1366,7 @@ function setLinea(pid,l){lineSel[pid]=l;renderCard(pid);}
 // ── INIT ──────────────────────────────────────────────────────
 async function init(){
   const fEl=document.getElementById('appFooter');if(fEl)fEl.textContent='LudoPicks v'+APP_VERSION;
+  setupBodyScrollLock();
   await loadState();
   const savedAdmin=localStorage.getItem('mundial_admin');
   const savedMe=localStorage.getItem('mundial_me');
@@ -1242,6 +1375,21 @@ async function init(){
   else if(savedMe&&savedPin&&state.jugadores[savedMe]){me=savedMe;myPin=savedPin;enterApp();}
   else renderLogin();
   hideSplash();
+}
+// Bloquea scroll del body cuando hay cualquier modal/overlay visible.
+function setupBodyScrollLock(){
+  const ids=['overlay','ruletaOv','ruletaResult','ruletaPromo','paPromo','newsPop','espPop','betErr','editAvatarOverlay'];
+  function recompute(){
+    const anyOpen=ids.some(id=>{const el=document.getElementById(id);if(!el)return false;
+      const cs=getComputedStyle(el);
+      return cs.display!=='none'&&cs.visibility!=='hidden';
+    });
+    document.body.classList.toggle('modal-open',anyOpen);
+  }
+  // Observar cambios de style/class en cada uno
+  const obs=new MutationObserver(recompute);
+  ids.forEach(id=>{const el=document.getElementById(id);if(el)obs.observe(el,{attributes:true,attributeFilter:['style','class','hidden']});});
+  recompute();
 }
 function hideSplash(){
   const el=document.getElementById('splash');if(!el)return;
@@ -1358,17 +1506,74 @@ async function manualRefresh(){
 function openEditAvatar(){
   if(!me)return;
   const j=state.jugadores[me];
-  editAv=j?.avatar?{...j.avatar}:{skin:0,hairC:0,hairS:0,shirt:0,expr:0};
-  document.getElementById('mTitle').textContent='Editar avatar';
-  document.getElementById('mBody').innerHTML=`<div class="av-preview" style="margin-bottom:12px"><div id="editAvSvg" class="av-circle"></div></div><div id="editAvControls"></div><button class="btn btn-primary" style="margin-top:14px" onclick="saveAvatar()">Guardar avatar</button>`;
+  editAv=j?.avatar?{...j.avatar}:{skin:0,hairC:2,hairS:0,shirt:0,expr:0,bg:0,acc:0};
+  // Asegurar campos nuevos
+  if(editAv.bg==null)editAv.bg=0;
+  if(editAv.acc==null)editAv.acc=0;
+  document.getElementById('mTitle').textContent='Tu avatar';
+  document.getElementById('mBody').innerHTML=`
+    <div class="av-preview" style="margin-bottom:6px;position:relative">
+      <div id="editAvSvg" class="av-circle" style="width:108px;height:108px;margin:0 auto;display:block;cursor:pointer" onclick="document.getElementById('avPhotoInput').click()" title="Toca para subir tu foto"></div>
+      <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--muted2)">Toca la imagen para subir tu foto · o personaliza el avatar abajo</div>
+      <input id="avPhotoInput" type="file" accept="image/*" style="display:none" onchange="onAvPhoto(event)">
+    </div>
+    <div id="editAvControls"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-ghost btn-sm" style="flex:1" onclick="clearAvPhoto()">🎨 Volver al avatar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveAvatar()">Guardar</button>
+    </div>`;
   document.getElementById('overlay').style.display='flex';
-  setAvEl(document.getElementById('editAvSvg'),editAv,90);
-  buildAvControls('editAvControls',editAv,()=>setAvEl(document.getElementById('editAvSvg'),editAv,90));
+  setAvEl(document.getElementById('editAvSvg'),editAv,108);
+  buildAvControls('editAvControls',editAv,()=>setAvEl(document.getElementById('editAvSvg'),editAv,108));
+}
+function onAvPhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  const MAX=200; // px — comprime a 200x200 máx
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement('canvas');
+      const s=Math.min(MAX,img.width,img.height);
+      c.width=s;c.height=s;
+      const x=c.getContext('2d');
+      // Centrar y recortar cuadrado
+      const sx=(img.width-s)/2,sy=(img.height-s)/2;
+      x.drawImage(img,sx,sy,s,s,0,0,s,s);
+      const data=c.toDataURL('image/jpeg',.72); // ~8-25 KB
+      editAv={...editAv,photo:data};
+      setAvEl(document.getElementById('editAvSvg'),editAv,108);
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function clearAvPhoto(){
+  delete editAv.photo;
+  setAvEl(document.getElementById('editAvSvg'),editAv,108);
 }
 async function saveAvatar(){
-  const r=await api({action:'updateAvatar',payload:{nombre:me,pin:myPin,avatar:{...editAv}}});
+  const avatarToSave={...editAv};
+  // Quitar la photo del payload si es muy grande (>150KB)
+  if(avatarToSave.photo&&avatarToSave.photo.length>200000){
+    toast('La foto es muy grande, comprimiendo...');
+    // Re-comprimir a calidad más baja
+    const img=new Image();
+    img.onload=async()=>{
+      const c=document.createElement('canvas');c.width=100;c.height=100;
+      c.getContext('2d').drawImage(img,0,0,100,100);
+      avatarToSave.photo=c.toDataURL('image/jpeg',.55);
+      await _doSaveAvatar(avatarToSave);
+    };
+    img.src=avatarToSave.photo;
+    return;
+  }
+  await _doSaveAvatar(avatarToSave);
+}
+async function _doSaveAvatar(avatarObj){
+  const r=await api({action:'updateAvatar',payload:{nombre:me,pin:myPin,avatar:avatarObj}});
   if(r.error)return toast(r.error);
-  state.jugadores=r.jugadores;closeModal();toast('Avatar actualizado');refreshHero();
+  state.jugadores=r.jugadores;closeModal();toast('Avatar actualizado ✓');refreshHero();
   if(currentTab==='ranking')renderRanking();
 }
 
@@ -1396,9 +1601,12 @@ function setAdminTab(name,btn){
   document.getElementById('admin-casino').style.display=name==='casino'?'block':'none';
   document.getElementById('admin-especiales').style.display=name==='especiales'?'block':'none';
   document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
-  if(name==='saldos'){const sel=document.getElementById('adjJugador');sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
-    const tx=document.getElementById('tixJugador');if(tx)tx.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} (${j.tickets||0} 🎫)</option>`).join('');
-    const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}}
+  if(name==='saldos'){const sel=document.getElementById('adjJugador');if(sel)sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
+    const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}
+    // Inicializar panel unificado
+    renderGiftChips();renderGiftPreview();
+    setGiftRcp('all');
+  }
   if(name==='usuarios')renderAdminUsers();
   if(name==='casino')renderCasino();
   if(name==='especiales')renderEspAdmin();
@@ -1441,7 +1649,21 @@ function renderCountdown(){
     return;
   }
   cdRenderedId=n.id;
-  box.innerHTML=`<div class="countdown"><div><div class="cd-label">Próximo partido</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div></div><div class="cd-time"><span id="cdTimeText">${fmtCountdown(ms)}</span><small>${n.fecha} · ${n.hora}</small></div></div>`;
+  box.innerHTML=`<div class="countdown" onclick="goToMatch(${n.id})" role="button" tabindex="0" style="cursor:pointer" aria-label="Ir a apostar por ${n.local} vs ${n.visita}"><div><div class="cd-label">Próximo partido · toca para apostar</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div></div><div class="cd-time"><span id="cdTimeText">${fmtCountdown(ms)}</span><small>${n.fecha} · ${n.hora}</small></div></div>`;
+}
+// Lleva al usuario a la ficha del partido y la expande para apostar.
+function goToMatch(pid){
+  // Si está en otra pestaña, ir a Partidos
+  if(currentTab!=='partidos'){showTab('partidos',document.getElementById('tab-partidos'));}
+  // Si el filtro de grupo no muestra el partido, regresar a Todos
+  const p=byId(pid);if(!p)return;
+  if(grupoF!=='Todos'&&grupoF!=='Gr.'+p.grupo){setGrupoF('Todos');}
+  // Expandir y scrollear
+  if(!expanded.has(pid)){expanded.add(pid);renderCard(pid,true);}
+  setTimeout(()=>{
+    const el=document.getElementById('match-'+pid);
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('match-flash');setTimeout(()=>el.classList.remove('match-flash'),1400);}
+  },150);
 }
 
 // ── PARTIDOS ──────────────────────────────────────────────────
@@ -1937,6 +2159,7 @@ async function confirmCampeon(equipo){
 // ── APUESTA ESPECIAL (novelty) ─────────────────────────────────
 // ── APUESTAS ESPECIALES (múltiples) ────────────────────────────
 function especialesList(){return Object.values(state.especiales||{}).sort((a,b)=>(b.creado||0)-(a.creado||0));}
+function especialesListVisible(){return especialesList().filter(e=>!e.archivada);}
 function especialEstado(e){
   if(!e||e.activo===false)return 'none';
   if(e.res)return 'declarado';
@@ -1944,7 +2167,7 @@ function especialEstado(e){
   return 'abierto';
 }
 function miApuestaEsp(especialId){return Object.values(state.apuestas).find(b=>b.tipo==='especial'&&b.especialId===especialId&&b.nombre===me);}
-function especialAbiertaMasNueva(){return especialesList().find(e=>especialEstado(e)==='abierto');}
+function especialAbiertaMasNueva(){return especialesListVisible().find(e=>especialEstado(e)==='abierto');}
 // Banner arriba en Partidos: muestra la especial abierta más nueva
 function renderEspecialBanner(){
   const el=document.getElementById('especialBanner');if(!el)return;
@@ -1969,9 +2192,24 @@ function espMedia(e){
   return `<div class="esp-media"><div class="esp-img" style="background-image:url('${e.img}')"></div><div class="esp-tint" style="background:linear-gradient(135deg,${t[0]},${t[1]})"></div><div class="esp-glass"></div></div>`;
 }
 function renderEspeciales(){
-  const list=especialesList();
+  const list=especialesListVisible();
   const el=document.getElementById('listaEspeciales');if(!el)return;
-  if(!list.length){el.innerHTML=`<div class="empty"><div class="emoji">✨</div>Aún no hay apuestas especiales.<br><span style="font-size:13px;color:var(--muted2)">El admin las irá soltando durante el Mundial 👀</span></div>`;return;}
+  // Si no hay nada visible, mensaje amigable con teasers de qué tipo de apuestas vienen
+  if(!list.length){
+    const teasers=['🎤 ¿Qué cantará el artista en la inauguración?','🤝 ¿Mascarazo o suspenso en la final?','🥇 ¿Quién será el goleador del torneo?','🎯 Goles del primer partido','🃏 Tarjetas rojas del fin de semana','😅 Penal fallado por...','🏟️ ¿Hat-trick de algún goleador?'];
+    const t=teasers[Math.floor(Math.random()*teasers.length)];
+    el.innerHTML=`<div class="empty">
+      <div class="emoji">✨</div>
+      <div style="font-size:16px;font-weight:800;margin-top:8px">Nada nuevo por ahora</div>
+      <div style="font-size:13px;color:var(--muted2);margin-top:6px;line-height:1.5">Las apuestas <b style="color:var(--gold)">especiales</b> son sorpresa.<br>El admin las suelta cuando pasa algo bueno 👀</div>
+      <div style="margin-top:18px;padding:12px 14px;background:rgba(255,219,0,.06);border:1px solid rgba(255,219,0,.18);border-radius:14px;font-size:12.5px;color:rgba(255,255,255,.78);line-height:1.45;text-align:left">
+        <div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--gold);margin-bottom:4px">PRÓXIMAMENTE</div>
+        ${t}
+      </div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:14px">💡 Activa las notis y te avisamos cuando salga una</div>
+    </div>`;
+    return;
+  }
   el.innerHTML=list.map(e=>{
     const est=especialEstado(e);const mb=miApuestaEsp(e.id);
     let estadoHtml,accion='';
@@ -2079,7 +2317,7 @@ function closePaPromo(){
 }
 function maybeShowNewsPop(){
   if(localStorage.getItem('ludo_news_'+NEWS_ID)==='1')return false;
-  const abiertas=especialesList().filter(e=>especialEstado(e)==='abierto');
+  const abiertas=especialesListVisible().filter(e=>especialEstado(e)==='abierto');
   if(!abiertas.length)return false; // nada que anunciar
   document.getElementById('newsList').innerHTML=abiertas.slice(0,4).map(e=>{
     const mb=miApuestaEsp(e.id);
@@ -2128,8 +2366,10 @@ function renderEspAdmin(){
       </div>
       <div style="display:flex;gap:6px;margin-top:6px">
         <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openEditEspecial('${e.id}')">✏️ Editar</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="doArchivarEspecial('${e.id}',${e.archivada?false:true})">${e.archivada?'📤 Mostrar':'📦 Ocultar'}</button>
         <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--rl)" onclick="doBorrarEspecial('${e.id}')">🗑 Borrar</button>
       </div>
+      ${e.archivada?'<div style="font-size:10.5px;color:var(--muted2);margin-top:6px;text-align:center">📦 Oculta a los jugadores · las apuestas siguen intactas</div>':''}
     </div>`;
   }).join('');
 }
@@ -2165,6 +2405,13 @@ async function doDeclararEspecial(id){
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;state.especiales=r.especiales;
   toast(op?`✅ Resultado declarado`:'Resultado revertido');renderEspAdmin();
+}
+async function doArchivarEspecial(id,archivar){
+  const r=await api({action:'editarEspecial',payload:{adminKey,especialId:id,archivada:!!archivar}});
+  if(r.error)return toast(r.error);
+  state.especiales=r.especiales;
+  toast(archivar?'📦 Apuesta oculta a los jugadores':'📤 Apuesta visible de nuevo');
+  renderEspAdmin();renderEspecialBanner();
 }
 async function doBorrarEspecial(id){
   const e=state.especiales[id];
@@ -2464,26 +2711,83 @@ function adminBorrar(nombre){
     state.jugadores=r.jugadores;toast(`${nombre} eliminado`);renderAdminUsers();
   });
 }
-async function doDarTickets(todos){
-  const cantidad=parseInt(document.getElementById('tixCant').value)||1;
-  if(cantidad<1||cantidad>20)return toast('Cantidad entre 1 y 20');
-  const nombre=todos?null:document.getElementById('tixJugador').value;
-  const mensaje=(document.getElementById('tixMsg').value||'').trim();
-  const r=await api({action:'darTickets',payload:{adminKey,nombre,cantidad,mensaje}});
-  if(r.error)return toast(r.error);
-  state.jugadores=r.jugadores;document.getElementById('tixMsg').value='';
-  toast(`🎫 ${cantidad} ticket${cantidad!==1?'s':''} ${todos?'a todos':'a '+nombre}${mensaje?' + push 📲':''}`);
-  setAdminTab('saldos',document.getElementById('atab-saldos'));
+// ── PANEL UNIFICADO: Regalar + Avisar ─────────────────────────
+const GIFT_PRESETS={tickets:[2,5,10],feria:[500,1000,2000]};
+let giftKind='tickets',giftRcp='all',giftQty=2;
+function setGiftKind(k){
+  giftKind=k;
+  document.getElementById('gpKindTix').classList.toggle('on',k==='tickets');
+  document.getElementById('gpKindFer').classList.toggle('on',k==='feria');
+  // Default monto al primer chip
+  giftQty=GIFT_PRESETS[k][0];
+  document.getElementById('gpCant').value='';
+  document.getElementById('gpCant').placeholder=k==='tickets'?'O escribe tickets...':'O escribe pesos...';
+  renderGiftChips();renderGiftPreview();
 }
-async function doBonusTodos(sign){
-  const monto=parseInt(document.getElementById('bonusMonto').value);
-  if(!monto||monto<=0)return toast('Ingresa un monto');
-  const mensaje=sign>0?(document.getElementById('bonusMsg').value||'').trim():'';
-  const r=await api({action:'bonusTodos',payload:{adminKey,monto:monto*sign,mensaje}});
-  if(r.error)return toast(r.error);
-  state.jugadores=r.jugadores;document.getElementById('bonusMsg').value='';
-  toast(sign>0?`+$${monto.toLocaleString()} a todos${mensaje?' + push 📲':''}`:`−$${monto.toLocaleString()} a todos`);
+function renderGiftChips(){
+  const box=document.getElementById('gpChips');if(!box)return;
+  box.innerHTML=GIFT_PRESETS[giftKind].map(v=>`<button class="gp-chip${v===giftQty?' on':''}" onclick="setGiftQty(${v})">${giftKind==='tickets'?v+' 🎟️':'$'+v.toLocaleString()}</button>`).join('');
 }
+function setGiftQty(v){giftQty=v;document.getElementById('gpCant').value='';renderGiftChips();renderGiftPreview();}
+function setGiftRcp(r){
+  giftRcp=r;
+  ['all','short','top','one'].forEach(x=>{const el=document.getElementById('gpRcp'+x.charAt(0).toUpperCase()+x.slice(1));if(el)el.classList.toggle('on',x===r);});
+  const sel=document.getElementById('gpJugSel');
+  if(r==='one'){
+    sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()} · ${j.tickets||0}🎫)</option>`).join('');
+    sel.style.display='block';
+  }else{sel.style.display='none';}
+  renderGiftPreview();
+}
+function readGiftQty(){
+  const free=parseInt(document.getElementById('gpCant').value);
+  return (!isNaN(free)&&free>0)?free:giftQty;
+}
+function giftRcpCount(){
+  const jug=Object.values(state.jugadores||{});
+  if(giftRcp==='all')return jug.length;
+  if(giftRcp==='top')return Math.min(3,jug.length);
+  if(giftRcp==='short'){const med=jug.map(j=>j.saldo).sort((a,b)=>a-b)[Math.floor(jug.length/2)];return jug.filter(j=>j.saldo<med).length;}
+  if(giftRcp==='one')return 1;
+  return 0;
+}
+function giftRcpLbl(){return {all:'todos los jugadores',short:'los jugadores cortos',top:'top 3 del ranking',one:'1 jugador'}[giftRcp];}
+function renderGiftPreview(){
+  const t=(document.getElementById('gpPushT').value||'').trim();
+  const d=(document.getElementById('gpPushD').value||'').trim();
+  const wrap=document.getElementById('gpPrevWrap');
+  if(t||d){wrap.style.display='block';document.getElementById('gpPrevT').textContent=t||'(sin título)';document.getElementById('gpPrevD').textContent=d||'(sin descripción)';}
+  else wrap.style.display='none';
+  document.getElementById('gpBtnPush').textContent=(t||d)?' + push 📲':'';
+  const n=giftRcpCount();const q=readGiftQty();
+  document.getElementById('gpDestInfo').textContent=`Llegará a ${n} jugador${n!==1?'es':''} · ${giftKind==='tickets'?q+' 🎟️ c/u':'$'+q.toLocaleString()+' c/u'}`;
+}
+function giftRcpNombres(){
+  const jug=Object.values(state.jugadores||{});
+  if(giftRcp==='all')return jug.map(j=>j.nombre);
+  if(giftRcp==='top')return [...jug].sort((a,b)=>b.saldo-a.saldo).slice(0,3).map(j=>j.nombre);
+  if(giftRcp==='short'){const med=jug.map(j=>j.saldo).sort((a,b)=>a-b)[Math.floor(jug.length/2)];return jug.filter(j=>j.saldo<med).map(j=>j.nombre);}
+  if(giftRcp==='one')return [document.getElementById('gpJugSel').value];
+  return [];
+}
+async function doRegaloUnif(){
+  const qty=readGiftQty();
+  if(qty<=0)return toast('Cantidad inválida');
+  const titulo=(document.getElementById('gpPushT').value||'').trim();
+  const desc=(document.getElementById('gpPushD').value||'').trim();
+  const dest=giftRcpNombres();
+  if(!dest.length||(giftRcp==='one'&&!dest[0]))return toast('Selecciona destinatario');
+  const r=await api({action:'regaloUnif',payload:{adminKey,kind:giftKind,cantidad:qty,destinatarios:dest,titulo,descripcion:desc}});
+  if(r.error)return toast(r.error);
+  state.jugadores=r.jugadores;
+  document.getElementById('gpPushT').value='';document.getElementById('gpPushD').value='';
+  renderGiftPreview();
+  const verbo=giftKind==='tickets'?`${qty} 🎟️`:`$${qty.toLocaleString()}`;
+  toast(`✅ ${verbo} a ${dest.length} jugador${dest.length!==1?'es':''}${(titulo||desc)?' + push 📲':''}`);
+}
+// ── Compat: deja que los listeners antiguos sigan llamando si quedó algún rastro
+async function doDarTickets(){return toast('Ahora usa el nuevo panel "Regalar + Avisar"');}
+async function doBonusTodos(){return toast('Ahora usa el nuevo panel "Regalar + Avisar"');}
 async function doSetCampeon(){
   const eq=document.getElementById('campSel').value;
   const txt=eq?`declarar a ${teamName(eq)} campeón del Mundial`:'revertir el campeón (las apuestas vuelven a pendientes)';
@@ -2861,7 +3165,9 @@ function countUpEl(el,to,pre){
     if(t<1)requestAnimationFrame(f);
   })(t0);
 }
+let _lastRuletaResult=null;
 function showRuletaResult(r){
+  _lastRuletaResult=r;
   const p=r.premio;const seg=ruletaSegs()[r.segIdx];
   const em=document.getElementById('rrEmoji');
   const ti=document.getElementById('rrTitle');
@@ -2890,9 +3196,65 @@ function showRuletaResult(r){
     de.textContent='La ruleta no te quiso. Aprovecha tu próxima tirada.';
   }
   document.getElementById('ruletaResult').classList.add('show');
+  // Mostrar botón compartir solo si hay algo para presumir
+  const shareable=p&&(p.tipo==='money'||p.tipo==='jackpot'||p.tipo==='social');
+  const shareBtn=document.getElementById('rrShareBtn');
+  if(shareBtn)shareBtn.style.display=shareable?'block':'none';
 }
-
-// ── POLLING ───────────────────────────────────────────────────
+async function shareRuletaResult(){
+  const r=_lastRuletaResult;if(!r)return;
+  const p=r.premio;
+  let texto='';
+  if(p.tipo==='money')texto=`🎰 Giré la Ruleta de la Suerte en LudoPicks y gané ${document.getElementById('rrPrize').textContent} de feria! ⚡`;
+  else if(p.tipo==='jackpot')texto=`🎰🏆 ¡ME SAQUÉ EL JACKPOT en LudoPicks! ${document.getElementById('rrPrize').textContent} de una. Leyenda del grupo 👑`;
+  else if(p.tipo==='social')texto=`😈 Giré la Ruleta de la Suerte en LudoPicks y le bajé $${(r.extra&&r.extra.robo?r.extra.robo:2000).toLocaleString()} al líder. El chat arde 🔥`;
+  if(navigator.share){
+    try{await navigator.share({title:'LudoPicks · Ruleta de la Suerte',text:texto,url:'https://ludopicks.vercel.app/'});return;}
+    catch(e){if(e.name==='AbortError')return;}
+  }
+  // Fallback: canvas → imagen
+  try{
+    const C=document.createElement('canvas');C.width=800;C.height=420;
+    const x=C.getContext('2d');
+    // Fondo degradado navy → oscuro
+    const bg=x.createLinearGradient(0,0,0,420);bg.addColorStop(0,'#0e1f3b');bg.addColorStop(1,'#070f1f');
+    x.fillStyle=bg;x.fillRect(0,0,800,420);
+    // Patrón sutil
+    x.strokeStyle='rgba(255,255,255,.04)';x.lineWidth=1;
+    for(let i=0;i<800;i+=60){x.beginPath();x.moveTo(i,0);x.lineTo(i,420);x.stroke();}
+    for(let j=0;j<420;j+=60){x.beginPath();x.moveTo(0,j);x.lineTo(800,j);x.stroke();}
+    // Título
+    x.fillStyle='rgba(255,255,255,.55)';x.font='bold 24px sans-serif';x.textAlign='center';
+    x.fillText('🎰 RULETA DE LA SUERTE · LudoPicks',400,56);
+    // Premio
+    const prizeText=document.getElementById('rrPrize').textContent;
+    const grad=x.createLinearGradient(0,90,0,200);grad.addColorStop(0,'#fff7d6');grad.addColorStop(0.6,'#f5c24b');grad.addColorStop(1,'#caa033');
+    x.fillStyle=grad;x.font='bold 110px sans-serif';x.textAlign='center';
+    x.fillText(prizeText,400,190);
+    // Emoji
+    x.font='64px sans-serif';x.fillText(document.getElementById('rrEmoji').textContent,400,280);
+    // Descripción
+    x.fillStyle='rgba(255,255,255,.72)';x.font='20px sans-serif';
+    x.fillText(document.getElementById('rrDesc').textContent.slice(0,60),400,340);
+    // Tag
+    x.fillStyle='rgba(255,255,255,.38)';x.font='bold 18px sans-serif';
+    x.fillText('ludopicks.vercel.app',400,395);
+    C.toBlob(async b=>{
+      if(!b)return toast('Tu navegador no soporta captura');
+      const file=new File([b],'ludopicks-ruleta.png',{type:'image/png'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file],title:'LudoPicks Ruleta',text:texto});return;}catch(e){}
+      }
+      // Último fallback: descarga
+      const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ludopicks-ruleta.png';a.click();
+      toast('Imagen descargada — compártela donde quieras 📸');
+    },'image/png');
+  }catch(e){
+    // Si canvas falla, copiar texto
+    try{await navigator.clipboard.writeText(texto);toast('Texto copiado al portapapeles 📋');}
+    catch(e2){toast('No se pudo compartir desde este navegador');}
+  }
+}
 async function poll(){
   if(!me&&!isAdmin)return;
   if(document.hidden||modalOpen())return;
