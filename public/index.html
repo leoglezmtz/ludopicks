@@ -1099,7 +1099,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.18.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.18.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1533,8 +1533,8 @@ function openEditAvatar(){
   setAvEl(document.getElementById('editAvSvg'),editAv,108);
   buildAvControls('editAvControls',editAv,()=>setAvEl(document.getElementById('editAvSvg'),editAv,108));
 }
-// Estado del cropper
-let _cropImg=null,_cropScale=1,_cropX=0,_cropY=0,_cropDrag=null,_cropPinch=null;
+let _cropImg=null,_cropScale=1,_cropScaleMin=1,_cropX=0,_cropY=0,_cropDrag=null,_cropPinch=null;
+const CROP_SIZE=240;
 
 function onAvPhoto(e){
   const file=e.target.files[0];if(!file)return;
@@ -1543,35 +1543,36 @@ function onAvPhoto(e){
     const img=new Image();
     img.onload=()=>{
       _cropImg=img;
-      // Escala inicial: que la imagen llene el círculo
-      const SIZE=240; // px del cropper
-      _cropScale=Math.max(SIZE/img.width,SIZE/img.height);
-      _cropX=(SIZE-img.width*_cropScale)/2;
-      _cropY=(SIZE-img.height*_cropScale)/2;
+      // Escala mínima = la que hace que la imagen llene el círculo sin blancos
+      _cropScaleMin=Math.max(CROP_SIZE/img.width,CROP_SIZE/img.height);
+      _cropScale=_cropScaleMin; // arrancar al mínimo (imagen llena el círculo)
+      // Centrar
+      _cropX=(CROP_SIZE-img.width*_cropScale)/2;
+      _cropY=(CROP_SIZE-img.height*_cropScale)/2;
       showCropPanel();
     };
     img.src=ev.target.result;
   };
   reader.readAsDataURL(file);
-  // Reset input para poder re-elegir la misma imagen
   e.target.value='';
 }
 
 function showCropPanel(){
+  const scaleMax=Math.min(4,_cropScaleMin*4); // máximo = 4x el tamaño mínimo
   document.getElementById('mBody').innerHTML=`
     <div style="text-align:center;margin-bottom:10px">
       <div style="font-size:15px;font-weight:800">Ajusta tu foto</div>
-      <div style="font-size:12px;color:var(--muted2);margin-top:3px">Arrastra para centrar · Pellizca o desliza para ajustar el tamaño</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:3px">Arrastra para centrar · Desliza para zoom</div>
     </div>
     <div class="av-crop-wrap" id="avCropWrap">
-      <canvas id="avCropCanvas" class="av-crop-canvas" width="240" height="240"></canvas>
+      <canvas id="avCropCanvas" class="av-crop-canvas" width="${CROP_SIZE}" height="${CROP_SIZE}"></canvas>
       <div class="av-crop-ring"></div>
       <div class="av-crop-mask"></div>
     </div>
     <div class="av-crop-zoom">
-      <span style="font-size:13px">🔍</span>
-      <input id="avCropRange" type="range" min="0.5" max="3" step="0.01" style="flex:1;accent-color:var(--green)" oninput="onCropZoom(this.value)">
-      <span style="font-size:16px">🔍</span>
+      <span style="font-size:12px;opacity:.6">−</span>
+      <input id="avCropRange" type="range" min="0" max="100" step="1" value="0" style="flex:1;accent-color:var(--green)" oninput="onCropZoom(this.value)">
+      <span style="font-size:16px;opacity:.6">+</span>
     </div>
     <div style="display:flex;gap:8px;margin-top:14px">
       <button class="btn btn-ghost btn-sm" style="flex:1" onclick="openEditAvatar()">← Cancelar</button>
@@ -1579,90 +1580,125 @@ function showCropPanel(){
     </div>`;
   initCropInteraction();
   drawCrop();
-  // Ajusta el slider al valor de escala actual
-  const range=document.getElementById('avCropRange');
-  if(range)range.value=_cropScale;
+}
+
+function cropSliderToScale(pct){
+  // 0% = escala mínima (llena el círculo exacto), 100% = 4x el mínimo
+  const min=_cropScaleMin, max=Math.min(4,_cropScaleMin*4);
+  return min+(max-min)*(pct/100);
 }
 
 function drawCrop(){
   const c=document.getElementById('avCropCanvas');if(!c||!_cropImg)return;
   const x=c.getContext('2d');
-  x.clearRect(0,0,240,240);
+  x.clearRect(0,0,CROP_SIZE,CROP_SIZE);
   x.drawImage(_cropImg,_cropX,_cropY,_cropImg.width*_cropScale,_cropImg.height*_cropScale);
 }
 
-function onCropZoom(v){
-  const SIZE=240;
-  // Zoom desde el centro del canvas
-  const newScale=parseFloat(v);
-  const cx=SIZE/2,cy=SIZE/2;
-  _cropX=cx-(_cropImg.width/2)*newScale+((_cropX-(cx-(_cropImg.width/2)*_cropScale))/_cropScale)*newScale;
-  _cropY=cy-(_cropImg.height/2)*newScale+((_cropY-(cy-(_cropImg.height/2)*_cropScale))/_cropScale)*newScale;
+function onCropZoom(pct){
+  const newScale=cropSliderToScale(parseFloat(pct));
+  // Zoom anclado al centro del canvas — sin fórmulas acumulativas
+  const cx=CROP_SIZE/2, cy=CROP_SIZE/2;
+  // Qué punto de la imagen está ahora en el centro
+  const imgCx=(cx-_cropX)/_cropScale;
+  const imgCy=(cy-_cropY)/_cropScale;
+  // Con la nueva escala, reposicionar para que ese mismo punto quede en el centro
+  _cropX=cx-imgCx*newScale;
+  _cropY=cy-imgCy*newScale;
   _cropScale=newScale;
   clampCrop();drawCrop();
 }
 
 function clampCrop(){
-  const SIZE=240;
+  if(!_cropImg)return;
   const iw=_cropImg.width*_cropScale,ih=_cropImg.height*_cropScale;
-  // No dejar espacios blancos: la imagen siempre cubre el círculo de 240px
+  // La imagen siempre debe cubrir todo el canvas (sin huecos blancos)
   if(_cropX>0)_cropX=0;
   if(_cropY>0)_cropY=0;
-  if(_cropX+iw<SIZE)_cropX=SIZE-iw;
-  if(_cropY+ih<SIZE)_cropY=SIZE-ih;
+  if(_cropX+iw<CROP_SIZE)_cropX=CROP_SIZE-iw;
+  if(_cropY+ih<CROP_SIZE)_cropY=CROP_SIZE-ih;
+}
+
+function getCanvasOffset(){
+  const c=document.getElementById('avCropCanvas');if(!c)return {left:0,top:0,ratio:1};
+  const rect=c.getBoundingClientRect();
+  return {left:rect.left,top:rect.top,ratio:CROP_SIZE/rect.width};
 }
 
 function initCropInteraction(){
   const c=document.getElementById('avCropCanvas');if(!c)return;
-  // Touch
   c.addEventListener('touchstart',e=>{
-    if(e.touches.length===1){_cropDrag={sx:e.touches[0].clientX-_cropX,sy:e.touches[0].clientY-_cropY};}
-    else if(e.touches.length===2){
+    e.preventDefault();
+    if(e.touches.length===1){
+      const off=getCanvasOffset();
+      _cropDrag={
+        sx:(e.touches[0].clientX-off.left)*off.ratio-_cropX,
+        sy:(e.touches[0].clientY-off.top)*off.ratio-_cropY
+      };
+    }else if(e.touches.length===2){
       const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
       _cropPinch={dist:d,scale:_cropScale};
+      _cropDrag=null;
     }
-    e.preventDefault();
   },{passive:false});
   c.addEventListener('touchmove',e=>{
+    e.preventDefault();
     if(e.touches.length===1&&_cropDrag){
-      _cropX=e.touches[0].clientX-_cropDrag.sx;
-      _cropY=e.touches[0].clientY-_cropDrag.sy;
+      const off=getCanvasOffset();
+      _cropX=(e.touches[0].clientX-off.left)*off.ratio-_cropDrag.sx;
+      _cropY=(e.touches[0].clientY-off.top)*off.ratio-_cropDrag.sy;
       clampCrop();drawCrop();
     }else if(e.touches.length===2&&_cropPinch){
       const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-      _cropScale=Math.max(0.5,Math.min(3,_cropPinch.scale*(d/_cropPinch.dist)));
-      const range=document.getElementById('avCropRange');if(range)range.value=_cropScale;
+      const newScale=Math.max(_cropScaleMin,Math.min(4,_cropPinch.scale*(d/_cropPinch.dist)));
+      // Zoom anclado al centro entre los dos dedos
+      const midX=((e.touches[0].clientX+e.touches[1].clientX)/2);
+      const midY=((e.touches[0].clientY+e.touches[1].clientY)/2);
+      const off=getCanvasOffset();
+      const px=(midX-off.left)*off.ratio, py=(midY-off.top)*off.ratio;
+      const imgPx=(px-_cropX)/_cropScale, imgPy=(py-_cropY)/_cropScale;
+      _cropX=px-imgPx*newScale; _cropY=py-imgPy*newScale;
+      _cropScale=newScale;
+      // Sincronizar slider
+      const pct=Math.round((_cropScale-_cropScaleMin)/(Math.min(4,_cropScaleMin*4)-_cropScaleMin)*100);
+      const range=document.getElementById('avCropRange');if(range)range.value=Math.max(0,Math.min(100,pct));
       clampCrop();drawCrop();
     }
-    e.preventDefault();
   },{passive:false});
   c.addEventListener('touchend',()=>{_cropDrag=null;_cropPinch=null;});
   // Mouse
-  c.addEventListener('mousedown',e=>{_cropDrag={sx:e.clientX-_cropX,sy:e.clientY-_cropY};e.preventDefault();});
-  c.addEventListener('mousemove',e=>{if(!_cropDrag)return;_cropX=e.clientX-_cropDrag.sx;_cropY=e.clientY-_cropDrag.sy;clampCrop();drawCrop();});
+  c.addEventListener('mousedown',e=>{
+    const off=getCanvasOffset();
+    _cropDrag={sx:(e.clientX-off.left)*off.ratio-_cropX,sy:(e.clientY-off.top)*off.ratio-_cropY};
+    e.preventDefault();
+  });
+  c.addEventListener('mousemove',e=>{
+    if(!_cropDrag)return;
+    const off=getCanvasOffset();
+    _cropX=(e.clientX-off.left)*off.ratio-_cropDrag.sx;
+    _cropY=(e.clientY-off.top)*off.ratio-_cropDrag.sy;
+    clampCrop();drawCrop();
+  });
   c.addEventListener('mouseup',()=>{_cropDrag=null;});
   c.addEventListener('mouseleave',()=>{_cropDrag=null;});
   // Scroll para zoom en desktop
   c.addEventListener('wheel',e=>{
-    const delta=e.deltaY>0?-0.08:0.08;
-    _cropScale=Math.max(0.5,Math.min(3,_cropScale+delta));
-    const range=document.getElementById('avCropRange');if(range)range.value=_cropScale;
-    clampCrop();drawCrop();e.preventDefault();
+    e.preventDefault();
+    const delta=e.deltaY>0?-2:2; // en % del slider
+    const range=document.getElementById('avCropRange');
+    if(!range)return;
+    const newPct=Math.max(0,Math.min(100,parseFloat(range.value)+delta));
+    range.value=newPct;
+    onCropZoom(newPct);
   },{passive:false});
 }
 
 function confirmCrop(){
   const c=document.getElementById('avCropCanvas');if(!c)return;
-  // Exportar el canvas recortado en 200×200
   const out=document.createElement('canvas');out.width=200;out.height=200;
-  const x=out.getContext('2d');
-  // Escala del canvas CSS vs real (el canvas tiene 240px pero puede estar escalado por CSS)
-  const rect=c.getBoundingClientRect();
-  const ratio=240/rect.width;
-  x.drawImage(c,0,0,240,240,0,0,200,200);
+  out.getContext('2d').drawImage(c,0,0,CROP_SIZE,CROP_SIZE,0,0,200,200);
   const data=out.toDataURL('image/jpeg',.82);
   editAv={...editAv,photo:data};
-  // Restaurar el body del modal de avatar
   openEditAvatar();
 }
 
