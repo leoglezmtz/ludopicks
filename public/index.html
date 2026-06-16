@@ -273,16 +273,6 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .rl-hchip.none{background:rgba(255,255,255,.06);color:var(--rl-muted)}
 .rl-htime{font-size:10.5px;color:var(--rl-muted2);white-space:nowrap}
 
-/* Candado */
-.rl-lock{display:none;flex-direction:column;align-items:center;text-align:center;padding:30px 10px 16px}
-.rl-lock-ico{font-size:54px;filter:drop-shadow(0 4px 12px rgba(245,194,75,.4))}
-.rl-lock h3{font-size:19px;font-weight:800;margin-top:14px;background:linear-gradient(92deg,var(--rl-mint),var(--rl-gold));-webkit-background-clip:text;background-clip:text;color:transparent}
-.rl-lock p{font-size:13.5px;color:var(--rl-muted);line-height:1.6;margin-top:12px;max-width:300px}
-.rl-lock p b{color:var(--rl-ink)}
-.rl-lock-bar{width:100%;max-width:300px;height:8px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:20px;overflow:hidden}
-.rl-lock-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--rl-mint),var(--rl-gold))}
-.rl-lock-lbl{font-size:11px;color:var(--rl-muted2);margin-top:8px}
-
 /* Resultado */
 .rl-result{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(4,9,20,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity .3s}
 .rl-result.show{display:flex;opacity:1}
@@ -799,14 +789,6 @@ select option{background:#161c30;color:#fff}
     <div class="rl-body">
       <div class="rl-jackpot"><span class="rl-jp-ico">💰</span><div><div class="rl-jp-lbl">Jackpot acumulado</div><div class="rl-jp-amt" id="ruletaJpVal">$30,000</div></div></div>
 
-      <div class="rl-lock" id="ruletaLock">
-        <div class="rl-lock-ico">🔒</div>
-        <h3>La ruleta es para rescate</h3>
-        <p>Esto es para sacar de apuros a quien va corto de feria. Tienes <b id="ruletaLockBal">$0</b>. 💪<br>Vuelve cuando bajes de <b>$10,000</b> y te damos tus tiradas.</p>
-        <div class="rl-lock-bar"><i id="ruletaLockBar" style="width:100%"></i></div>
-        <div class="rl-lock-lbl" id="ruletaLockLbl">por encima del límite</div>
-      </div>
-
       <div id="ruletaGame">
         <div class="rl-tabs">
           <button class="rl-tab on" data-rltab="ruleta" onclick="setRuletaTab('ruleta')">🎰 Ruleta</button>
@@ -825,7 +807,7 @@ select option{background:#161c30;color:#fff}
           <div class="rl-spin-row">
             <div class="rl-tickets"><span class="rl-tkpill">🎟️ <span id="ruletaTixN">0</span></span><span>tickets · <span class="rl-tk-free">2 gratis / día</span></span></div>
             <button class="rl-spin-btn" id="ruletaSpin" onclick="spinRuleta()"><span class="rl-shine"></span><span id="ruletaSpinLbl">GIRAR — 1 ticket</span></button>
-            <div class="rl-miss">Cada giro suma <b>+$100</b> al jackpot acumulado.</div>
+            <div class="rl-miss" id="ruletaMiss">Cada giro suma <b>+$100</b> al jackpot acumulado.</div>
           </div>
           <div class="rl-legend">
             <div><i style="background:#1b9e6e"></i> Feria $1k–$6k</div>
@@ -1033,7 +1015,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.17.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.17.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2741,19 +2723,26 @@ function renderRuletaTickets(){
   const j=state.jugadores[me];const tix=j?(j.tickets||0):0;
   document.getElementById('ruletaTixN').textContent=tix;
   const btn=document.getElementById('ruletaSpin');const lbl=document.getElementById('ruletaSpinLbl');
-  if(tix<=0){btn.disabled=true;lbl.textContent='Sin tiradas · vuelve mañana';}
-  else{btn.disabled=false;lbl.textContent='GIRAR — 1 ticket';}
-}
-function renderRuletaGate(){
-  const locked=ruletaIsLocked();
-  document.getElementById('ruletaGame').style.display=locked?'none':'block';
-  const lockEl=document.getElementById('ruletaLock');lockEl.style.display=locked?'flex':'none';
-  if(locked){
-    const total=ruletaTotalParaCandado();const limit=ruletaLockLimit();
-    document.getElementById('ruletaLockBal').textContent=fmtFeria(total);
-    document.getElementById('ruletaLockLbl').textContent=fmtFeria(total-limit)+' por encima del límite';
+  const miss=document.getElementById('ruletaMiss');
+  // Prioridad de estados del botón: candado → sin tickets → normal
+  if(ruletaIsLocked()){
+    btn.disabled=true;
+    const sobras=ruletaTotalParaCandado()-ruletaLockLimit();
+    lbl.innerHTML=`🔒 La ruleta es para rescate · vas sobrado ${fmtFeria(sobras)}`;
+    if(miss)miss.innerHTML=`Cuando bajes de <b>${fmtFeria(ruletaLockLimit())}</b> podrás girar. Mientras tanto checa el historial 👀`;
+  }else if(tix<=0){
+    btn.disabled=true;
+    lbl.textContent='Sin tiradas · vuelve mañana';
+    if(miss)miss.innerHTML=`Cada giro suma <b>+$100</b> al jackpot acumulado.`;
+  }else{
+    btn.disabled=false;
+    lbl.textContent='GIRAR — 1 ticket';
+    if(miss)miss.innerHTML=`Cada giro suma <b>+$100</b> al jackpot acumulado.`;
   }
 }
+// El "candado visual" desapareció: la ruleta siempre se ve, el aviso vive en el botón.
+// Esta función queda como no-op para compatibilidad con llamadas existentes.
+function renderRuletaGate(){renderRuletaTickets();}
 function setRuletaTab(t){
   document.querySelectorAll('.rl-tab').forEach(x=>x.classList.toggle('on',x.dataset.rltab===t));
   document.getElementById('ruletaTabR').hidden=(t!=='ruleta');
