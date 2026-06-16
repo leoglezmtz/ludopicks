@@ -1033,7 +1033,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.17.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.17.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1560,9 +1560,40 @@ function slipMomioTotal(){return betslip.reduce((a,s)=>a*s.momio,1);}
 function toggleSlip(pid,pick,linea,momio){
   const market=marketOf(pick);
   const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick&&(market==='ou'?s.linea===linea:true));
-  if(i>=0)betslip.splice(i,1);
-  else{const j=betslip.findIndex(s=>s.partidoId===pid&&s.market===market);if(j>=0)betslip.splice(j,1);betslip.push({partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio});}
+  if(i>=0){betslip.splice(i,1);}
+  else{
+    // Antes de agregar la pata, verificar incongruencia con las existentes (del mismo partido)
+    const j=betslip.findIndex(s=>s.partidoId===pid&&s.market===market);
+    const tentativo=[...betslip.filter((_,k)=>k!==j),{partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio}];
+    const err=validarIncongruenciasSlip(tentativo);
+    if(err){toast(err);return;}
+    if(j>=0)betslip.splice(j,1);
+    betslip.push({partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio});
+  }
   renderSlipBar();renderCard(pid);
+}
+// Detecta incongruencias matemáticas entre patas del mismo partido (espejo del backend).
+function validarIncongruenciasSlip(legs){
+  const byMatch={};
+  for(const l of legs){if(!byMatch[l.partidoId])byMatch[l.partidoId]=[];byMatch[l.partidoId].push(l);}
+  for(const [pid,plegs] of Object.entries(byMatch)){
+    if(plegs.length<2)continue;
+    const p=byId(+pid);if(!p)continue;
+    const matchName=`${p.local} vs ${p.visita}`;
+    const r1x2=plegs.find(l=>['local','empate','visita'].includes(l.pick));
+    const ou=plegs.find(l=>l.pick==='over'||l.pick==='under');
+    const btts=plegs.find(l=>l.pick==='si'||l.pick==='no');
+    const ouLinea=ou?Number(ou.linea):null;
+    if(btts&&btts.pick==='si'&&ou&&ou.pick==='under'&&ouLinea<=1.5)
+      return `❌ ${matchName}: "Ambos anotan: Sí" + Under ${ouLinea} es imposible (mínimo 2 goles vs máximo ${ouLinea})`;
+    if(ou&&ou.pick==='under'&&ouLinea<1){
+      if(r1x2&&r1x2.pick!=='empate')return `❌ ${matchName}: Under ${ouLinea} implica 0-0, no puede ganar nadie`;
+      if(btts&&btts.pick==='si')return `❌ ${matchName}: Under ${ouLinea} implica 0-0, "Ambos anotan: Sí" es imposible`;
+    }
+    if(r1x2&&r1x2.pick==='empate'&&btts&&btts.pick==='no'&&ou&&ou.pick==='over')
+      return `❌ ${matchName}: Empate + "Ambos anotan: No" obliga a 0-0, Over ${ouLinea} es imposible`;
+  }
+  return null;
 }
 function removeSlip(pid,pick,linea){
   betslip=betslip.filter(s=>!(s.partidoId===pid&&s.pick===pick&&(esOU(pick)?s.linea===linea:true)));
@@ -1610,6 +1641,8 @@ async function confirmSlip(){
   const min=state.apuesta_min||100;
   if(!monto||monto<min)return toast('Mínimo $'+min);
   const isParlay=betslip.length>1;const tot=slipMomioTotal();
+  // Doble candado: revalida incongruencias también al confirmar
+  if(isParlay){const incEr=validarIncongruenciasSlip(betslip);if(incEr)return toast(incEr);}
   const view=slipToView(monto);  // captura antes de limpiar el cupón
   let r;
   try{
