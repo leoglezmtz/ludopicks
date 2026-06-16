@@ -701,7 +701,7 @@ export default async function handler(req, res) {
 
     // Bloquear parlays con incongruencias matemáticas (ej. Under 1.5 + Ambos anotan: Sí)
     const incongruencia = validarIncongruenciasParlay(cleanLegs);
-    if (incongruencia) return res.status(400).json({ error: incongruencia });
+    if (incongruencia) return res.status(400).json({ error: incongruencia, incongruencia: true });
 
     j.saldo -= mInt;
     const id = "p" + Date.now() + Math.random().toString(36).slice(2, 6);
