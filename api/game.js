@@ -1,5 +1,5 @@
 import { kv } from "@vercel/kv";
-import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT, CAMPEON, CAMPEON_CIERRA, ESPECIAL, ESPECIALES_SEED } from "../lib/data.js";
+import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT, CAMPEON, CAMPEON_CIERRA, ESPECIAL, ESPECIALES_SEED, RULETA } from "../lib/data.js";
 import { webcrypto } from "crypto";
 import crypto from "crypto";
 
@@ -81,7 +81,7 @@ const PICKS_1X2 = ["local", "empate", "visita"];
 function publicJugadores(jugadores) {
   const out = {};
   for (const [nombre, j] of Object.entries(jugadores)) {
-    out[nombre] = { nombre: j.nombre, saldo: j.saldo, creado: j.creado, avatar: j.avatar || null };
+    out[nombre] = { nombre: j.nombre, saldo: j.saldo, creado: j.creado, avatar: j.avatar || null, tickets: j.tickets || 0, doble: !!j.doble };
   }
   return out;
 }
@@ -160,6 +160,44 @@ function slug(s) {
   return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "").slice(0, 16) || "op";
 }
 
+// ── RULETA: helpers ─────────────────────────────────────────────
+// Día actual en horario Tijuana (UTC-7), formato YYYY-MM-DD.
+function todayTJ() {
+  const d = new Date();
+  const local = new Date(d.getTime() - 7 * 3600 * 1000);
+  return local.toISOString().slice(0, 10);
+}
+// Asegura que el jugador tenga sus tickets del día (mutar in-place). Retorna true si se dieron.
+function grantTicketsIfNew(j) {
+  if (!j) return false;
+  if (j.tickets == null) j.tickets = 0;
+  const hoy = todayTJ();
+  if (j.lastTicketDay !== hoy) {
+    j.tickets = Math.min((RULETA.ticketsMax || 4), (j.tickets || 0) + (RULETA.ticketsDia || 2));
+    j.lastTicketDay = hoy;
+    return true;
+  }
+  return false;
+}
+// Concede tickets a TODOS si no los tienen del día. Usado al cargar.
+async function grantTicketsAllIfNeeded() {
+  const jugadores = (await kv.get("jugadores")) || {};
+  let changed = false;
+  for (const j of Object.values(jugadores)) if (grantTicketsIfNew(j)) changed = true;
+  if (changed) await kv.set("jugadores", jugadores);
+  return jugadores;
+}
+// Elige un segmento de la ruleta según las probabilidades (suma debe ser 1).
+function pickSegmento() {
+  const r = Math.random();
+  let acc = 0;
+  for (let i = 0; i < RULETA.segmentos.length; i++) {
+    acc += RULETA.segmentos[i].prob;
+    if (r <= acc) return i;
+  }
+  return RULETA.segmentos.length - 1;
+}
+
 // Evalúa una pata/apuesta de partido considerando resultado parcial (solo PA aplicado en vivo).
 // Devuelve 'won' | 'lost' | 'pending'.
 function legStatus(partidoId, r, pick, linea) {
@@ -221,18 +259,21 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method === "GET") {
-    const jugadores  = (await kv.get("jugadores"))  || {};
+    const jugadores  = await grantTicketsAllIfNeeded(); // concede tickets diarios automáticamente
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
     const rankPrev   = (await kv.get("rankPrev"))   || {};
     const campeon    = (await kv.get("campeon"))    || null;
     const especiales = await loadEspeciales();
+    const jackpot    = (await kv.get("jackpot")) ?? RULETA.jackpotSemilla;
+    const ruletaHist = (await kv.get("ruletaHist")) || [];
     return res.json({
       jugadores: publicJugadores(jugadores), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
       lineas_ou: LINEAS_OU, linea_default: LINEA_DEFAULT,
       campeon_odds: CAMPEON, campeon_cierra: CAMPEON_CIERRA, campeon,
       especiales,
+      ruleta: RULETA, jackpot, ruletaHist,
       now: Date.now(),
     });
   }
@@ -486,6 +527,100 @@ export default async function handler(req, res) {
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas, especiales });
+  }
+
+  // ── RULETA: girar (descuenta 1 ticket, devuelve premio) ────────────
+  if (action === "girarRuleta") {
+    const { nombre } = payload;
+    const jugadores = (await kv.get("jugadores")) || {};
+    const apuestasAll = (await kv.get("apuestas")) || {};
+    const j = jugadores[nombre];
+    if (!j) return res.status(400).json({ error: "Jugador no existe" });
+    grantTicketsIfNew(j);
+    if ((j.tickets || 0) <= 0) return res.status(400).json({ error: "No tienes tickets. ¡Vuelve mañana!" });
+    // Candado de rescate: saldo + apuestas activas (pendientes) deben ser < lockLimit
+    const enJuego = Object.values(apuestasAll)
+      .filter(b => b.nombre === nombre && (b.status || "pending") === "pending")
+      .reduce((a, b) => a + (b.monto || 0), 0);
+    const totalParaCandado = (j.saldo || 0) + enJuego;
+    if (totalParaCandado >= RULETA.lockLimit) {
+      return res.status(403).json({ error: `La ruleta es para rescate · gira cuando bajes de $${RULETA.lockLimit.toLocaleString()}`, locked: true, totalParaCandado });
+    }
+    j.tickets -= 1;
+    let jackpot = Number((await kv.get("jackpot")) ?? RULETA.jackpotSemilla);
+    jackpot += RULETA.jackpotAporte;
+    const segIdx = pickSegmento();
+    const seg = RULETA.segmentos[segIdx];
+    let premio = { tipo: seg.tipo, label: seg.label, emoji: seg.emoji || '', ganancia: 0, mensaje: '' };
+    let extra = {};
+    if (seg.tipo === "money") {
+      j.saldo += seg.valor;
+      premio.ganancia = seg.valor;
+      premio.mensaje = `¡Te ganaste $${seg.valor.toLocaleString()} de feria!`;
+    } else if (seg.tipo === "jackpot") {
+      j.saldo += jackpot;
+      premio.ganancia = jackpot;
+      premio.mensaje = `🎰 ¡JACKPOT! Te llevaste $${jackpot.toLocaleString()}. Leyenda del grupo.`;
+      extra.jackpotGanado = jackpot;
+      jackpot = RULETA.jackpotSemilla;
+    } else if (seg.tipo === "social") {
+      // Quitar feria al líder de la tabla (no a sí mismo)
+      const orden = Object.values(jugadores).filter(x => x.nombre !== nombre).sort((a, b) => b.saldo - a.saldo);
+      const lider = orden[0];
+      const robo = lider ? Math.min(seg.valor, Math.max(0, lider.saldo)) : 0;
+      if (lider && robo > 0) {
+        lider.saldo -= robo;
+        premio.ganancia = 0; // el "premio social" no le da feria al girador, sólo al líder se la quita
+        premio.mensaje = `😈 Le bajaste $${robo.toLocaleString()} a ${lider.nombre}. El chat va a arder 🔥`;
+        extra.victimaRobo = lider.nombre;
+        extra.robo = robo;
+        extra.liderNombre = lider.nombre;
+      } else {
+        premio.mensaje = `😈 Premio social, pero no había a quién bajarle (todos en cero).`;
+      }
+    } else if (seg.tipo === "nada") {
+      premio.mensaje = `😅 La ruleta no te quiso. ¡Inventa Romario!`;
+    }
+    await kv.set("jackpot", jackpot);
+    await kv.set("jugadores", jugadores);
+    // Registrar tirada en historial (últimas 60)
+    const hist = (await kv.get("ruletaHist")) || [];
+    hist.unshift({
+      who: nombre, type: seg.tipo, value: seg.tipo === "jackpot" ? extra.jackpotGanado : (seg.valor || 0),
+      victima: extra.liderNombre || null, t: Date.now(),
+    });
+    if (hist.length > 60) hist.length = 60;
+    await kv.set("ruletaHist", hist);
+    // Push al líder cuando le bajan feria
+    if (extra.victimaRobo) {
+      const subs = (await kv.get("pushSubs")) || {};
+      if (subs[extra.victimaRobo]) {
+        try { await sendPush(subs[extra.victimaRobo], { title: '😈 ¡Te bajaron feria en la ruleta!', body: `${nombre} te quitó $${extra.robo.toLocaleString()} con un giro de suerte`, tag: 'robo-' + Date.now(), url: '/' }); } catch (e) {}
+      }
+    }
+    return res.json({ ok: true, jugadores: publicJugadores(jugadores), jackpot, segIdx, premio, extra, ruletaHist: hist });
+  }
+
+  // ── ADMIN: dar tickets de ruleta ───────────────────────────────────
+  if (action === "darTickets") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { nombre, cantidad, mensaje } = payload;
+    const cant = Math.max(1, Math.min(20, Math.floor(Number(cantidad) || 1)));
+    const jugadores = (await kv.get("jugadores")) || {};
+    if (nombre) {
+      if (!jugadores[nombre]) return res.status(400).json({ error: "Jugador no existe" });
+      jugadores[nombre].tickets = (jugadores[nombre].tickets || 0) + cant;
+    } else {
+      for (const j of Object.values(jugadores)) j.tickets = (j.tickets || 0) + cant;
+    }
+    await kv.set("jugadores", jugadores);
+    if (mensaje && mensaje.trim()) {
+      const subs = (await kv.get("pushSubs")) || {};
+      const body = mensaje.trim();
+      if (nombre && subs[nombre]) { try { await sendPush(subs[nombre], { title: '🎰 LudoPicks', body, tag: 'tix-' + Date.now(), url: '/' }); } catch (e) {} }
+      else if (!nombre) { try { await broadcastPush(subs, { title: '🎰 LudoPicks', body, tag: 'tix-' + Date.now(), url: '/' }); } catch (e) {} }
+    }
+    return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
 
   // ── APOSTAR PARLAY (permite 1X2 + O/U del mismo partido) ───────────
