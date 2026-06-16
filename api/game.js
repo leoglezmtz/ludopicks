@@ -491,7 +491,7 @@ export default async function handler(req, res) {
   // ── ADMIN: editar una apuesta especial existente ──────────────────
   if (action === "editarEspecial") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { especialId, titulo, emoji, pregunta, nota, cierra, opciones, img, tint, activo } = payload;
+    const { especialId, titulo, emoji, pregunta, nota, cierra, opciones, img, tint, activo, archivada } = payload;
     const especiales = await loadEspeciales();
     const sp = especiales[especialId];
     if (!sp) return res.status(400).json({ error: "Especial no existe" });
@@ -503,6 +503,7 @@ export default async function handler(req, res) {
     if (img !== undefined) sp.img = (img && /^https?:\/\//i.test(String(img).trim())) ? String(img).trim() : "";
     if (Array.isArray(tint) && tint.length === 2) sp.tint = tint;
     if (typeof activo === "boolean") sp.activo = activo;
+    if (typeof archivada === "boolean") sp.archivada = archivada;
     if (Array.isArray(opciones) && opciones.length >= 2) {
       const usedKeys = {};
       sp.opciones = opciones.map((o, i) => {
@@ -660,6 +661,32 @@ export default async function handler(req, res) {
       const body = mensaje.trim();
       if (nombre && subs[nombre]) { try { await sendPush(subs[nombre], { title: '🎰 LudoPicks', body, tag: 'tix-' + Date.now(), url: '/' }); } catch (e) {} }
       else if (!nombre) { try { await broadcastPush(subs, { title: '🎰 LudoPicks', body, tag: 'tix-' + Date.now(), url: '/' }); } catch (e) {} }
+    }
+    return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
+  }
+
+  // ── ADMIN: regalo unificado (tickets O feria) a grupo de jugadores ──
+  if (action === "regaloUnif") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { kind, cantidad, destinatarios, titulo, descripcion } = payload;
+    if (!["tickets","feria"].includes(kind)) return res.status(400).json({ error: "kind inválido" });
+    const cant = Math.max(1, Math.min(99999, Math.floor(Number(cantidad) || 1)));
+    if (!Array.isArray(destinatarios) || !destinatarios.length) return res.status(400).json({ error: "Sin destinatarios" });
+    const jugadores = (await kv.get("jugadores")) || {};
+    for (const nom of destinatarios) {
+      const j = jugadores[nom]; if (!j) continue;
+      if (kind === "tickets") j.tickets = (j.tickets || 0) + cant;
+      else j.saldo += cant;
+    }
+    await kv.set("jugadores", jugadores);
+    // Push si hay título o descripción
+    if ((titulo || descripcion) && (titulo || "").trim() + (descripcion || "").trim()) {
+      const subs = (await kv.get("pushSubs")) || {};
+      const pushTitle = (titulo || "🎁 LudoPicks").trim();
+      const pushBody = (descripcion || (kind === "tickets" ? `🎟️ +${cant} ticket${cant !== 1 ? "s" : ""} de ruleta` : `💵 +$${cant.toLocaleString()} de feria`)).trim();
+      for (const nom of destinatarios) {
+        if (subs[nom]) { try { await sendPush(subs[nom], { title: pushTitle, body: pushBody, tag: "regalo-" + Date.now(), url: "/" }); } catch (e) {} }
+      }
     }
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
