@@ -316,6 +316,19 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .cas-warn{background:rgba(239,159,39,.08);border:1px solid rgba(239,159,39,.3);border-radius:14px;padding:13px 14px;margin-bottom:16px}
 .cas-list{display:flex;flex-direction:column;gap:7px}
 .cas-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px}
+/* ── MODAL: APUESTA INVÁLIDA (combinación imposible) ── */
+.bet-err{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(4,4,8,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity .25s}
+.bet-err.show{display:flex;opacity:1}
+.be-card{width:100%;max-width:340px;text-align:center;padding:28px 22px 20px;border-radius:22px;background:linear-gradient(165deg,#1a1407 0%,#0a0a0a 55%,#1a1407 100%);border:1.5px solid rgba(255,219,0,.45);box-shadow:0 30px 80px -20px rgba(0,0,0,.9),0 0 60px -20px rgba(255,219,0,.35);transform:scale(.88) translateY(8px);opacity:0;transition:transform .35s cubic-bezier(.2,1.2,.3,1),opacity .25s;color:#fff}
+.bet-err.show .be-card{transform:scale(1) translateY(0);opacity:1}
+.be-ico{font-size:54px;line-height:1;filter:drop-shadow(0 4px 14px rgba(255,219,0,.4));animation:beBounce .6s cubic-bezier(.2,1.4,.4,1)}
+@keyframes beBounce{0%{transform:scale(0) rotate(-12deg)}70%{transform:scale(1.15) rotate(4deg)}100%{transform:scale(1) rotate(0)}}
+.be-title{font-size:20px;font-weight:900;margin-top:12px;background:linear-gradient(180deg,#FFF7D6,#FFDB00 65%,#E0A400);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-.3px}
+.be-msg{font-size:14px;color:rgba(255,255,255,.88);margin-top:12px;line-height:1.5;padding:0 4px}
+.be-foot{font-size:11.5px;color:rgba(255,255,255,.5);margin-top:10px;line-height:1.4}
+.be-btn{margin-top:18px;width:100%;padding:13px;border:none;border-radius:13px;cursor:pointer;font-size:14.5px;font-weight:800;background:linear-gradient(135deg,#FFE34D,#FFDB00 45%,#E0A400);color:#1a1400;box-shadow:0 8px 24px -10px rgba(255,219,0,.6);letter-spacing:.02em}
+.be-btn:active{transform:scale(.97)}
+
 /* ── PESTAÑA ESPECIALES ── */
 .esp-card{position:relative;overflow:hidden;background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:18px;padding:15px;margin-bottom:12px;box-shadow:var(--shadow-sm)}
 .esp-card.abierto{border-color:rgba(255,219,0,.4);box-shadow:0 0 0 1px rgba(255,219,0,.15),var(--shadow-sm)}
@@ -924,6 +937,16 @@ select option{background:#161c30;color:#fff}
 
 <div class="toast" id="toast"></div>
 
+<div class="bet-err" id="betErr">
+  <div class="be-card">
+    <div class="be-ico">🧮</div>
+    <div class="be-title">Combinación imposible</div>
+    <div class="be-msg" id="betErrMsg"></div>
+    <div class="be-foot">Ajusta tu ticket y vuelve a intentarlo.</div>
+    <button class="be-btn" onclick="closeBetErr()">Entendido</button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.2/confetti.browser.min.js"></script>
 <script>
 const splashStart=Date.now();
@@ -1015,7 +1038,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.17.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.17.3';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1548,12 +1571,19 @@ function toggleSlip(pid,pick,linea,momio){
     const j=betslip.findIndex(s=>s.partidoId===pid&&s.market===market);
     const tentativo=[...betslip.filter((_,k)=>k!==j),{partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio}];
     const err=validarIncongruenciasSlip(tentativo);
-    if(err){toast(err);return;}
+    if(err){showBetError(err);return;}
     if(j>=0)betslip.splice(j,1);
     betslip.push({partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio});
   }
   renderSlipBar();renderCard(pid);
 }
+function showBetError(msg){
+  // Limpia el prefijo "❌ " si viene de mensajes anteriores para no duplicar
+  const clean=String(msg||'').replace(/^❌\s*/,'').trim();
+  document.getElementById('betErrMsg').textContent=clean;
+  document.getElementById('betErr').classList.add('show');
+}
+function closeBetErr(){document.getElementById('betErr').classList.remove('show');}
 // Detecta incongruencias matemáticas entre patas del mismo partido (espejo del backend).
 function validarIncongruenciasSlip(legs){
   const byMatch={};
@@ -1567,13 +1597,13 @@ function validarIncongruenciasSlip(legs){
     const btts=plegs.find(l=>l.pick==='si'||l.pick==='no');
     const ouLinea=ou?Number(ou.linea):null;
     if(btts&&btts.pick==='si'&&ou&&ou.pick==='under'&&ouLinea<=1.5)
-      return `❌ ${matchName}: "Ambos anotan: Sí" + Under ${ouLinea} es imposible (mínimo 2 goles vs máximo ${ouLinea})`;
+      return `En ${matchName}: "Ambos anotan: Sí" exige al menos 2 goles, pero "Under ${ouLinea}" tope ${ouLinea} goles. No pueden cumplirse a la vez.`;
     if(ou&&ou.pick==='under'&&ouLinea<1){
-      if(r1x2&&r1x2.pick!=='empate')return `❌ ${matchName}: Under ${ouLinea} implica 0-0, no puede ganar nadie`;
-      if(btts&&btts.pick==='si')return `❌ ${matchName}: Under ${ouLinea} implica 0-0, "Ambos anotan: Sí" es imposible`;
+      if(r1x2&&r1x2.pick!=='empate')return `En ${matchName}: "Under ${ouLinea}" obliga al 0-0, no puede haber ganador (${r1x2.pick==='local'?p.local:p.visita}).`;
+      if(btts&&btts.pick==='si')return `En ${matchName}: "Under ${ouLinea}" obliga al 0-0, "Ambos anotan: Sí" es imposible.`;
     }
     if(r1x2&&r1x2.pick==='empate'&&btts&&btts.pick==='no'&&ou&&ou.pick==='over')
-      return `❌ ${matchName}: Empate + "Ambos anotan: No" obliga a 0-0, Over ${ouLinea} es imposible`;
+      return `En ${matchName}: Empate + "Ambos anotan: No" obliga al 0-0, "Over ${ouLinea}" exige goles.`;
   }
   return null;
 }
@@ -1624,14 +1654,19 @@ async function confirmSlip(){
   if(!monto||monto<min)return toast('Mínimo $'+min);
   const isParlay=betslip.length>1;const tot=slipMomioTotal();
   // Doble candado: revalida incongruencias también al confirmar
-  if(isParlay){const incEr=validarIncongruenciasSlip(betslip);if(incEr)return toast(incEr);}
+  if(isParlay){const incEr=validarIncongruenciasSlip(betslip);if(incEr)return showBetError(incEr);}
   const view=slipToView(monto);  // captura antes de limpiar el cupón
   let r;
   try{
     if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea})),monto}});
     else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,monto}});}
   }catch(e){return toast('Error de conexión, intenta de nuevo');}
-  if(!r||r.error)return toast((r&&r.error)||'No se pudo registrar la apuesta');
+  if(!r||r.error){
+    const e=(r&&r.error)||'No se pudo registrar la apuesta';
+    // Si el backend rechazó por incongruencia (red de seguridad), usar el modal en vez del toast
+    if(r&&r.incongruencia)return showBetError(e);
+    return toast(e);
+  }
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;
   window._lastBetView=view;
   clearSlip();
