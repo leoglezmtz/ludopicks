@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -827,6 +828,46 @@ select option{background:#161c30;color:#fff}
 
 /* SHARE */
 .share-btn{background:rgba(37,211,102,.14);color:#5fe08a;border:1.5px solid rgba(37,211,102,.3);border-radius:10px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+
+/* ── DESKTOP (≥900px) ── */
+@media(min-width:900px){
+  body{max-width:1100px;font-size:15px}
+
+  /* Nav horizontal más cómoda */
+  .nav{justify-content:center;gap:4px;padding:0 24px}
+  .nav button{flex:0 0 auto;padding:12px 20px;font-size:12.5px;flex-direction:row;gap:6px;border-bottom:none;border-radius:0;border-top:2.5px solid transparent;border-bottom:2.5px solid transparent}
+  .nav button.on{border-bottom-color:var(--gold);border-top-color:transparent}
+  .nav button i{font-size:16px}
+
+  /* Hero más amplio */
+  .hero{padding:22px 32px 20px}
+
+  /* Body con más respiración */
+  .body{padding:20px 32px 40px}
+
+  /* Admin: sidebar de tabs a la izquierda + contenido a la derecha */
+  #tabc-admin{display:flex;gap:20px;align-items:flex-start}
+  .admin-tabs{flex-direction:column;overflow:visible;mask-image:none;-webkit-mask-image:none;margin:0;padding:0;gap:4px;min-width:160px;flex-shrink:0;position:sticky;top:60px}
+  .admin-tabs .fbtn{width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:12px;white-space:nowrap}
+  #admin-resultados,#admin-saldos,#admin-especiales,#admin-usuarios,#admin-notif,#admin-casino{flex:1;min-width:0}
+
+  /* Cards de partido en 2 columnas en tab Partidos */
+  #listaPartidos,#listaAdmin{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+  #listaPartidos .adm-section,#listaAdmin .adm-section,
+  #listaPartidos .adm-section-live,#listaAdmin .adm-section-live,
+  #listaPartidos .adm-section-pending,#listaAdmin .adm-section-pending,
+  #listaPartidos .adm-section-done,#listaAdmin .adm-section-done{grid-column:1/-1}
+
+  /* Mis picks en 2 columnas */
+  #listaMis{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+
+  /* Ranking más ancho */
+  #listaRanking{max-width:600px;margin:0 auto}
+
+  /* Modales centrados en pantalla */
+  .overlay{align-items:center}
+  .sheet{border-radius:20px;max-width:520px;padding:24px 24px 28px}
+}
 </style>
 </head>
 <body>
@@ -1328,7 +1369,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.24.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.24.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
