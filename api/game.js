@@ -254,10 +254,30 @@ function pickSegmento() {
   return RULETA.segmentos.length - 1;
 }
 
-// Evalúa una pata/apuesta de partido considerando resultado parcial (PA o liquidación por mercado).
-function legStatus(partidoId, r, pick, linea, mercado) {
+// ── INSTA-PAGABLE EN VIVO ────────────────────────────────────
+// Algunos mercados son irrevocables una vez cumplidos: los pagamos al instante.
+//   - BTTS "Sí": ambos anotaron → ya no se deshace.
+//   - Over X (goles/córners/tarjetas): contador no puede bajar.
+// Los demás (1X2 sin PA, Under, BTTS No) esperan al final.
+function pickInstaWonLive(pick, linea, mercado, liveScore) {
+  if (!liveScore) return false;
+  if (pick === "si") return (liveScore.gl || 0) > 0 && (liveScore.gv || 0) > 0;
+  if (pick === "over") {
+    let total;
+    if (mercado === "corners") total = liveScore.corners;
+    else if (mercado === "tarjetas") total = liveScore.tarjetas;
+    else total = (liveScore.gl != null) ? (liveScore.gl || 0) + (liveScore.gv || 0) : null;
+    if (total == null) return false;
+    return total > linea;
+  }
+  return false;
+}
+
+// Evalúa una pata/apuesta de partido considerando: resultado final, parcial PA, o liveScore.
+function legStatus(partidoId, r, pick, linea, mercado, liveScore) {
+  // Si el liveScore ya tiene la pata DEFINITIVAMENTE cumplida (insta-pagable), 'won'
+  if (liveScore && pickInstaWonLive(pick, linea, mercado, liveScore)) return "won";
   if (!r) return "pending";
-  // Para mercados de córners/tarjetas: solo se resuelven si su contador específico está presente
   if (mercado === "corners") {
     if (r.corners == null) return "pending";
     return pickWins(partidoId, r, pick, linea, "corners") ? "won" : "lost";
@@ -266,7 +286,6 @@ function legStatus(partidoId, r, pick, linea, mercado) {
     if (r.tarjetas == null) return "pending";
     return pickWins(partidoId, r, pick, linea, "tarjetas") ? "won" : "lost";
   }
-  // Mercado de goles (default): requiere gl/gv
   if (r.gl == null || r.gv == null) {
     const m = BY_ID[partidoId];
     if (m && m.pa && r.pa && ((pick === "local" && r.pa.l) || (pick === "visita" && r.pa.v))) return "won";
@@ -275,8 +294,9 @@ function legStatus(partidoId, r, pick, linea, mercado) {
   return pickWins(partidoId, r, pick, linea, mercado) ? "won" : "lost";
 }
 
-function settleAll(jugadores, apuestas, resultados, campeon, especiales) {
+function settleAll(jugadores, apuestas, resultados, campeon, especiales, liveScores) {
   especiales = especiales || {};
+  liveScores = liveScores || {};
   for (const b of Object.values(apuestas)) {
     let ns;
     if (b.tipo === "campeon") {
@@ -286,10 +306,10 @@ function settleAll(jugadores, apuestas, resultados, campeon, especiales) {
       const r = sp ? sp.res : null;
       ns = !r ? "pending" : (b.opcion === r ? "won" : "lost");
     } else if (b.tipo === "parlay") {
-      const sts = b.legs.map(l => legStatus(l.partidoId, resultados[l.partidoId], l.pick, l.linea, l.mercado));
+      const sts = b.legs.map(l => legStatus(l.partidoId, resultados[l.partidoId], l.pick, l.linea, l.mercado, liveScores[l.partidoId]));
       ns = sts.includes("lost") ? "lost" : sts.every(s => s === "won") ? "won" : "pending";
     } else {
-      ns = legStatus(b.partidoId, resultados[b.partidoId], b.pick, b.linea, b.mercado);
+      ns = legStatus(b.partidoId, resultados[b.partidoId], b.pick, b.linea, b.mercado, liveScores[b.partidoId]);
     }
     const old = b.status || "pending";
     const j = jugadores[b.nombre];
@@ -470,9 +490,10 @@ export default async function handler(req, res) {
     const jugadores  = (await kv.get("jugadores"))  || {};
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
+    const liveScoresC = (await kv.get("liveScores")) || {};
     await kv.set("rankPrev", rankingSnapshot(jugadores, null));
-    await kv.set("campeon", equipo || null); // equipo vacío = revertir (vuelve a pending)
-    settleAll(jugadores, apuestas, resultados, equipo || null, await loadEspeciales());
+    await kv.set("campeon", equipo || null);
+    settleAll(jugadores, apuestas, resultados, equipo || null, await loadEspeciales(), liveScoresC);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas, campeon: equipo || null });
@@ -561,7 +582,7 @@ export default async function handler(req, res) {
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
     const campeon    = (await kv.get("campeon"))    || null;
-    settleAll(jugadores, apuestas, resultados, campeon, especiales);
+    settleAll(jugadores, apuestas, resultados, campeon, especiales, (await kv.get("liveScores")) || {});
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, especiales, jugadores: publicJugadores(jugadores), apuestas });
@@ -582,7 +603,7 @@ export default async function handler(req, res) {
     await kv.set("rankPrev", rankingSnapshot(jugadores, null));
     sp.res = opcion || null;
     await kv.set("especiales", especiales);
-    settleAll(jugadores, apuestas, resultados, campeon, especiales);
+    settleAll(jugadores, apuestas, resultados, campeon, especiales, (await kv.get("liveScores")) || {});
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas, especiales });
@@ -852,7 +873,42 @@ export default async function handler(req, res) {
     if (Object.keys(entry).length === 1) delete live[partidoId];
     else live[partidoId] = entry;
     await kv.set("liveScores", live);
-    return res.json({ ok: true, liveScores: live });
+
+    // ── INSTA-LIQUIDACIÓN: pagar apuestas con mercados irrevocables ya cumplidos ──
+    const jugadoresLs = (await kv.get("jugadores")) || {};
+    const apuestasLs = (await kv.get("apuestas")) || {};
+    const campeonLs = (await kv.get("campeon")) || null;
+    const especialesLs = await loadEspeciales();
+    const statusBefore = {};
+    Object.values(apuestasLs).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
+    settleAll(jugadoresLs, apuestasLs, resultados, campeonLs, especialesLs, live);
+    // Sólo guardamos si algo cambió a 'won' (no liquidamos 'lost' en vivo)
+    const ganadores = {}; // {nombre: monto ganado nuevo}
+    Object.values(apuestasLs).forEach(b => {
+      const wasPending = (statusBefore[b.id] || "pending") === "pending";
+      if (wasPending && b.status === "won" && b.payout) {
+        ganadores[b.nombre] = (ganadores[b.nombre] || 0) + b.payout;
+      }
+      // Si alguna pasó a 'lost' por liveScore (no debería con nuestra lógica conservadora), revertir
+      if (wasPending && b.status === "lost") b.status = "pending";
+    });
+    if (Object.keys(ganadores).length) {
+      await kv.set("jugadores", jugadoresLs);
+      await kv.set("apuestas", apuestasLs);
+      // Push a ganadores
+      const subs = (await kv.get("pushSubs")) || {};
+      for (const [nombre, monto] of Object.entries(ganadores)) {
+        if (!subs[nombre]) continue;
+        try {
+          await sendPush(subs[nombre], {
+            title: `✓ ¡Apuesta cobrada en ${m.local} vs ${m.visita}!`,
+            body: `Una de tus apuestas ya quedó confirmada · +$${monto.toLocaleString()} a tu saldo`,
+            tag: "live-" + partidoId, url: "/"
+          });
+        } catch (e) {}
+      }
+    }
+    return res.json({ ok: true, liveScores: live, jugadores: publicJugadores(jugadoresLs), apuestas: apuestasLs });
   }
 
   if (action === "aplicarPA") {
@@ -874,7 +930,7 @@ export default async function handler(req, res) {
     Object.values(apuestas).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
     await kv.set("rankPrev", rankingSnapshot(jugadores, partidoId));
     resultados[partidoId] = { pa: { l: !!pa.l, v: !!pa.v }, parcial: true };
-    settleAll(jugadores, apuestas, resultados, campeon, especialesMap);
+    settleAll(jugadores, apuestas, resultados, campeon, especialesMap, (await kv.get("liveScores")) || {});
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
@@ -941,7 +997,7 @@ export default async function handler(req, res) {
       rEntry.pa = { l: paL, v: paV };
     }
     resultados[partidoId] = rEntry;
-    settleAll(jugadores, apuestas, resultados, campeon, especialesMap);
+    settleAll(jugadores, apuestas, resultados, campeon, especialesMap, (await kv.get("liveScores")) || {});
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
@@ -992,7 +1048,7 @@ export default async function handler(req, res) {
     if (!resultados[partidoId]) return res.status(400).json({ error: "Ese partido no tiene resultado" });
     delete resultados[partidoId];
     const campeon = (await kv.get("campeon")) || null;
-    settleAll(jugadores, apuestas, resultados, campeon, await loadEspeciales());
+    settleAll(jugadores, apuestas, resultados, campeon, await loadEspeciales(), (await kv.get("liveScores")) || {});
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
