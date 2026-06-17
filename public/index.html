@@ -747,6 +747,17 @@ select option{background:#161c30;color:#fff}
 
 /* ADMIN */
 .admin-banner{background:linear-gradient(135deg,rgba(239,159,39,.2),rgba(133,79,11,.15));border:1px solid rgba(239,159,39,.3);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--al)}
+/* ── ADMIN: gift panel header + acordeones secundarios ── */
+.gift-panel-h{font-size:14px;font-weight:900;color:#fff;padding:0 0 12px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:14px;letter-spacing:.01em}
+.adm-fold{background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px;margin-top:10px;overflow:hidden}
+.adm-fold[open]{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))}
+.adm-fold-h{padding:13px 14px;cursor:pointer;font-size:13px;font-weight:800;color:#fff;display:flex;align-items:center;gap:8px;list-style:none;user-select:none;transition:.15s}
+.adm-fold-h::-webkit-details-marker{display:none}
+.adm-fold-h::before{content:'▸';color:var(--muted2);font-size:11px;transition:transform .2s;flex-shrink:0}
+.adm-fold[open] .adm-fold-h::before{transform:rotate(90deg)}
+.adm-fold-h:hover{background:rgba(255,255,255,.03)}
+.adm-fold-hint{font-size:10.5px;font-weight:700;color:var(--muted2);background:rgba(255,255,255,.05);padding:2px 8px;border-radius:6px;margin-left:auto;text-transform:uppercase;letter-spacing:.04em}
+.adm-fold-body{padding:0 14px 14px}
 .admin-match{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:8px;flex-wrap:wrap}
 .admin-match:last-child{border-bottom:none}
 .rbtns{display:flex;gap:5px;flex-wrap:wrap}
@@ -948,19 +959,19 @@ select option{background:#161c30;color:#fff}
     <div id="tabc-elim" class="tabc"><div id="listaElim"></div></div>
     <div id="tabc-especiales" class="tabc"><div id="listaEspeciales"></div></div>
     <div id="tabc-admin" class="tabc">
-      <div class="admin-banner"><strong>Modo administrador</strong> — Registra resultados y gestiona jugadores.</div>
       <div id="adminTabs" class="admin-tabs">
-        <button class="fbtn on" id="atab-resultados" onclick="setAdminTab('resultados',this)">Resultados</button>
-        <button class="fbtn" id="atab-saldos" onclick="setAdminTab('saldos',this)">Saldos</button>
-        <button class="fbtn" id="atab-usuarios" onclick="setAdminTab('usuarios',this)">Usuarios</button>
-        <button class="fbtn" id="atab-casino" onclick="setAdminTab('casino',this)">💰 Casino</button>
+        <button class="fbtn on" id="atab-resultados" onclick="setAdminTab('resultados',this)">⚽ Resultados</button>
+        <button class="fbtn" id="atab-saldos" onclick="setAdminTab('saldos',this)">🎁 Regalar</button>
         <button class="fbtn" id="atab-especiales" onclick="setAdminTab('especiales',this)">✨ Especiales</button>
+        <button class="fbtn" id="atab-usuarios" onclick="setAdminTab('usuarios',this)">👥 Jugadores</button>
         <button class="fbtn" id="atab-notif" onclick="setAdminTab('notif',this)">📣 Push</button>
+        <button class="fbtn" id="atab-casino" onclick="setAdminTab('casino',this)">🎰 Casino</button>
       </div>
       <div id="admin-resultados"><div class="filters" id="adminFilters"></div><div id="listaAdmin"></div></div>
       <div id="admin-saldos" style="display:none">
-        <div class="sec-title">🎁 Regalar + Avisar</div>
+        <!-- Panel principal: regalar feria/tickets con push -->
         <div class="gift-panel">
+          <div class="gift-panel-h">🎁 Regalar feria o tickets</div>
           <div class="gp-label">1 · ¿Qué regalas?</div>
           <div class="gp-switch">
             <button class="gp-sw on" id="gpKindTix" onclick="setGiftKind('tickets')">🎟️ Tickets</button>
@@ -995,29 +1006,37 @@ select option{background:#161c30;color:#fff}
           <div id="gpDestInfo" style="font-size:11px;color:var(--muted2);margin-top:8px;text-align:center"></div>
         </div>
 
-        <div class="sec-title">Ajuste individual <small style="color:var(--muted2);font-weight:600;text-transform:none;letter-spacing:0">(quitar feria o corregir)</small></div>
-        <div class="info-card">
-          <div class="field" style="margin-bottom:10px">
-            <select id="adjJugador"></select>
+        <!-- Acciones secundarias colapsadas -->
+        <details class="adm-fold">
+          <summary class="adm-fold-h">✏️ Ajuste manual a un jugador <span class="adm-fold-hint">para correcciones</span></summary>
+          <div class="adm-fold-body">
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px">Suma o resta dinero de un jugador específico. Útil si quieres corregir un error manualmente.</div>
+            <select id="adjJugador" style="width:100%;margin-bottom:8px"></select>
+            <div style="display:flex;gap:8px">
+              <input id="adjMonto" type="tel" inputmode="numeric" placeholder="Monto" style="flex:1">
+              <button class="btn btn-sm" style="background:var(--green);color:#04231a" onclick="doAjuste(1)">+ Agregar</button>
+              <button class="btn btn-sm btn-danger" onclick="doAjuste(-1)">− Quitar</button>
+            </div>
+            <input id="adjMsg" type="text" placeholder="💬 Mensaje push (opcional)" style="width:100%;margin-top:8px">
           </div>
-          <div style="display:flex;gap:8px">
-            <input id="adjMonto" type="tel" inputmode="numeric" placeholder="Monto" style="flex:1">
-            <button class="btn btn-sm" style="background:var(--green);color:#04231a" onclick="doAjuste(1)">+ Agregar</button>
-            <button class="btn btn-sm btn-danger" onclick="doAjuste(-1)">− Quitar</button>
+        </details>
+
+        <details class="adm-fold">
+          <summary class="adm-fold-h">🔄 Recotizar apuestas pendientes <span class="adm-fold-hint">avanzado</span></summary>
+          <div class="adm-fold-body">
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Actualiza el momio de las apuestas <b>pendientes</b> a los momios actuales del catálogo. Las ya liquidadas no se tocan. No cambia saldos — solo afecta cuánto pagarán al liquidarse.</div>
+            <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doRecotizar()">🔄 Recotizar pendientes con momios actuales</button>
           </div>
-          <input id="adjMsg" type="text" placeholder="💬 Mensaje push (opcional)" style="width:100%;margin-top:8px">
-        </div>
-        <div class="sec-title">Recotizar apuestas</div>
-        <div class="info-card">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Actualiza el momio de las apuestas <b>pendientes</b> a los momios actuales del catálogo. Las ya liquidadas no se tocan. No cambia saldos — solo afecta cuánto pagarán al liquidarse.</div>
-          <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doRecotizar()">🔄 Recotizar pendientes con momios actuales</button>
-        </div>
-        <div class="sec-title">🏆 Declarar campeón del Mundial</div>
-        <div class="info-card">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Liquida todas las apuestas de campeón. Úsalo solo al terminar el Mundial. Puedes corregirlo o dejarlo en blanco para revertir.</div>
-          <div class="field" style="margin-bottom:10px"><select id="campSel"></select></div>
-          <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doSetCampeon()">🏆 Declarar campeón</button>
-        </div>
+        </details>
+
+        <details class="adm-fold">
+          <summary class="adm-fold-h">🏆 Declarar campeón del Mundial <span class="adm-fold-hint">final del torneo</span></summary>
+          <div class="adm-fold-body">
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Liquida todas las apuestas de campeón. Úsalo solo al terminar el Mundial. Puedes corregirlo o dejarlo en blanco para revertir.</div>
+            <select id="campSel" style="width:100%;margin-bottom:10px"></select>
+            <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doSetCampeon()">🏆 Declarar campeón</button>
+          </div>
+        </details>
       </div>
       <div id="admin-usuarios" style="display:none"><div id="listaUsuariosAdmin"></div></div>
       <div id="admin-notif" style="display:none">
@@ -1312,7 +1331,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.23.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.24.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1727,6 +1746,8 @@ function enterApp(){
   document.getElementById('app').style.display='block';
   document.getElementById('tab-admin').style.display=isAdmin?'flex':'none';
   document.getElementById('saldoCard').style.display=isAdmin?'none':'flex';
+  // Cuando es admin, oculta las pestañas de jugador irrelevantes (Mis picks, Récords, Liguilla, Especiales-vista-jugador)
+  ['tab-mis','tab-records','tab-elim','tab-especiales'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isAdmin?'none':'flex';});
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
   refreshHero();renderSlipBar();
@@ -2677,19 +2698,7 @@ function renderRanking(){
   pod+='</div>';
   pod+=`<div style="text-align:center;margin-bottom:12px"><button class="share-btn" onclick="shareRanking()">📲 Compartir ranking</button></div>`;
   let list='<div class="sec-title">Tabla completa</div>';
-  // Encabezado contextual: explica respecto a qué partido es el delta
-  if(refValida){
-    const res=state.resultados[refPartidoId];
-    const marcador=res.gl!=null?`${res.gl}-${res.gv}`:'⚡ PA';
-    list+=`<div class="rank-ref-card">
-      <div class="rank-ref-label">📊 Cambios desde el último partido liquidado</div>
-      <div class="rank-ref-match">${flagImg(refPartido.local,14)} <b>${refPartido.local}</b> <span style="color:var(--gold);font-weight:900">${marcador}</span> <b>${refPartido.visita}</b> ${flagImg(refPartido.visita,14)}</div>
-    </div>`;
-  }else if(partidosLiq>0){
-    list+=`<div class="rank-ref-card"><div class="rank-ref-label">📊 Cambios desde el último ajuste</div><div class="rank-ref-match" style="color:var(--muted)">Snapshot histórico</div></div>`;
-  }else{
-    list+=`<div class="rank-ref-card"><div class="rank-ref-label" style="color:var(--muted2)">Aún no hay partidos liquidados</div></div>`;
-  }
+  // (Tarjeta "Cambios desde..." eliminada por preferencia del admin)
   list+='<div class="rank-list">';
   js.forEach((p,i)=>{
     const pos=posByName[p.nombre];
