@@ -345,8 +345,20 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .rec-val{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;margin-top:2px;line-height:1}
 .rec-sub{font-size:12px;color:var(--muted);margin-top:3px}
 .rec-av{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,255,255,.15)}
-/* Destaca el mejor record */
-.rec-card:has(.rec-ico:contains("⚡")){border-color:rgba(255,219,0,.3);box-shadow:0 0 0 1px rgba(255,219,0,.1)}
+.rec-expandable .rec-body{min-width:0}
+.rec-toggle{background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:11px;font-weight:700;padding:4px 9px;border-radius:8px;cursor:pointer;margin-top:7px;transition:.15s}
+.rec-toggle:hover{color:#fff;border-color:rgba(255,255,255,.3)}
+.rec-detail{margin-top:8px}
+.rec-breakdown{background:rgba(0,0,0,.28);border-radius:12px;padding:10px 12px;font-size:12.5px}
+.rec-bd-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;color:rgba(255,255,255,.75)}
+.rec-bd-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.06)}
+.rec-bd-total{font-size:13.5px;font-weight:900;padding-top:8px;margin-top:4px;border-top:1px solid rgba(255,255,255,.15)!important}
+.rec-bd-legs{padding:6px 0 2px}
+.rec-leg{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);gap:8px}
+.rec-leg:last-child{border-bottom:none}
+.rec-leg-teams{font-size:11px;color:var(--muted);flex-shrink:0}
+.rec-leg-pick{font-size:12px;font-weight:700;color:#fff;flex:1;text-align:center}
+.rec-leg-momio{font-size:12px;font-weight:800;color:var(--gold);flex-shrink:0}
 
 /* ── MODO CASINO ── */
 .cas-hero{text-align:center;padding:22px 16px;background:linear-gradient(160deg,rgba(15,110,86,.3),rgba(12,68,124,.25));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:20px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
@@ -1138,7 +1150,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.19.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.19.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2301,23 +2313,16 @@ function renderRecords(){
     return;
   }
 
-  // ── Cálculos ─────────────────────────────────────────────────
-  const MILLON=1000000;
   const ganadas=apList.filter(b=>b.status==='won');
   const perdidas=apList.filter(b=>b.status==='lost');
 
-  // Mayor multiplicador ganado
+  // Cálculos
   const mejorMul=ganadas.reduce((best,b)=>{const m=b.tipo==='parlay'?b.momioTotal:b.momio;return m>best.mul?{mul:m,b}:best;},{mul:0,b:null});
-  // Mayor ganancia absoluta en una apuesta
   const mayorGan=ganadas.reduce((best,b)=>{const g=Math.round(b.monto*(b.tipo==='parlay'?b.momioTotal:b.momio));return g>best.g?{g,b}:best;},{g:0,b:null});
-  // Mayor pérdida
   const mayorPerd=perdidas.reduce((best,b)=>b.monto>best.m?{m:b.monto,b}:best,{m:0,b:null});
-  // Más apuestas hechas
   const conteo={};apList.forEach(b=>{conteo[b.nombre]=(conteo[b.nombre]||0)+1;});
   const masApuestas=Object.entries(conteo).sort((a,b)=>b[1]-a[1])[0];
-  // Mayor parlay ganado
   const mejorParlay=ganadas.filter(b=>b.tipo==='parlay').reduce((best,b)=>b.momioTotal>best.mul?{mul:b.momioTotal,b}:best,{mul:0,b:null});
-  // Racha ganadora máxima (por jugador)
   const rachas={};
   apList.filter(b=>b.status==='won'||b.status==='lost').sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(b=>{
     if(!rachas[b.nombre])rachas[b.nombre]={cur:0,max:0};
@@ -2325,22 +2330,52 @@ function renderRecords(){
     else rachas[b.nombre].cur=0;
   });
   const mejorRacha=Object.entries(rachas).sort((a,b)=>b[1].max-a[1].max)[0];
-  // Mayor saldo actual
-  const lider=jugList.sort((a,b)=>b.saldo-a.saldo)[0];
-  // Jugador más cerca del millón
-  const cercaMillon=jugList.reduce((best,j)=>j.saldo>best.saldo&&j.saldo<MILLON?j:best,{saldo:-1,nombre:'—'});
-  // Total apostado en el torneo
+  const lider=[...jugList].sort((a,b)=>b.saldo-a.saldo)[0];
   const totalTorneo=apList.reduce((s,b)=>s+b.monto,0);
 
-  function rec(emoji,titulo,valor,sub,winner,empty){
+  // ── Helper: genera HTML del desglose de una apuesta ─────────
+  function betBreakdown(b,stColor){
+    if(!b)return '';
+    const ganancia=Math.round(b.monto*(b.tipo==='parlay'?b.momioTotal:b.momio));
+    const neta=ganancia-b.monto;
+    if(b.tipo==='parlay'){
+      const legs=b.legs.map(l=>{
+        const p=byId(l.partidoId);if(!p)return '';
+        return `<div class="rec-leg"><span class="rec-leg-teams">${flagImg(p.local,11)} ${p.local} vs ${p.visita} ${flagImg(p.visita,11)}</span><span class="rec-leg-pick">${pickLabel(p,l.pick,l.linea)}</span><span class="rec-leg-momio">${l.momio}x</span></div>`;
+      }).join('');
+      return `<div class="rec-breakdown">
+        <div class="rec-bd-row"><span>Apostado</span><span>$${b.monto.toLocaleString()}</span></div>
+        <div class="rec-bd-row"><span>Parlay ${b.legs.length} patas</span><span style="font-weight:800">${b.momioTotal.toFixed(2)}x</span></div>
+        <div class="rec-bd-legs">${legs}</div>
+        <div class="rec-bd-row rec-bd-total"><span>${b.status==='won'?'Cobrado':'Perdido'}</span><span style="color:${stColor}">${b.status==='won'?'+$'+neta.toLocaleString():'−$'+b.monto.toLocaleString()}</span></div>
+      </div>`;
+    }else{
+      const p=byId(b.partidoId);
+      const matchStr=p?`${flagImg(p.local,11)} ${p.local} vs ${p.visita} ${flagImg(p.visita,11)}`:'';
+      const pickStr=p?pickLabel(p,b.pick,b.linea):b.pick;
+      return `<div class="rec-breakdown">
+        <div class="rec-bd-row"><span>${matchStr}</span></div>
+        <div class="rec-bd-row"><span>Pick: <b>${pickStr}</b></span><span>${b.momio}x</span></div>
+        <div class="rec-bd-row"><span>Apostado</span><span>$${b.monto.toLocaleString()}</span></div>
+        <div class="rec-bd-row rec-bd-total"><span>${b.status==='won'?'Cobrado':'Perdido'}</span><span style="color:${stColor}">${b.status==='won'?'+$'+neta.toLocaleString():'−$'+b.monto.toLocaleString()}</span></div>
+      </div>`;
+    }
+  }
+
+  // ── Helper: genera la tarjeta con desglose opcional ─────────
+  function rec(emoji,titulo,valor,sub,winner,empty,betObj,stColor){
     if(empty)return `<div class="rec-card rec-empty"><div class="rec-ico">🔒</div><div class="rec-body"><div class="rec-title">${titulo}</div><div class="rec-val" style="font-size:14px;color:var(--muted2)">Pendiente</div></div></div>`;
     const av=winner?jugList.find(j=>j.nombre===winner):null;
-    return `<div class="rec-card">
+    const bd=betObj?betBreakdown(betObj,stColor||'var(--green)'):'';
+    const hasDetail=!!bd;
+    const uid='rec'+Math.random().toString(36).slice(2,7);
+    return `<div class="rec-card${hasDetail?' rec-expandable':''}">
       <div class="rec-ico">${emoji}</div>
       <div class="rec-body">
         <div class="rec-title">${titulo}</div>
         <div class="rec-val">${valor}</div>
         ${sub?`<div class="rec-sub">${sub}</div>`:''}
+        ${hasDetail?`<button class="rec-toggle" onclick="recToggle('${uid}')">Ver apuesta ▾</button><div class="rec-detail" id="${uid}" hidden>${bd}</div>`:''}
       </div>
       ${av?`<div class="rec-av" title="${winner}">${buildAvSvg(av.avatar,32)}</div>`:''}
     </div>`;
@@ -2350,16 +2385,23 @@ function renderRecords(){
     <div class="rec-section-title">🏆 Hitos del torneo</div>
     ${rec('💰','Primero en llegar al millón','$1,000,000','¿Quién llegará?',null,true)}
     <div class="rec-section-title">💪 Apuestas</div>
-    ${rec('⚡','Mejor multiplicador ganado',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?`$${Math.round(mejorMul.b.monto*mejorMul.mul).toLocaleString()} en ${mejorMul.b.tipo==='parlay'?'Parlay':'apuesta simple'}`:null,mejorMul.b?.nombre,!mejorMul.b)}
-    ${rec('💸','Mayor ganancia en una apuesta',mayorGan.b?`+$${mayorGan.g.toLocaleString()}`:'—',mayorGan.b?`${mayorGan.b.nombre} · ${mayorGan.b.tipo==='parlay'?`Parlay ${mayorGan.b.momioTotal.toFixed(2)}x`:`${mayorGan.b.momio}x`}`:null,mayorGan.b?.nombre,!mayorGan.b)}
-    ${rec('😱','Mayor pérdida en una apuesta',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',mayorPerd.b?`${mayorPerd.b.nombre}`:null,mayorPerd.b?.nombre,!mayorPerd.b)}
-    ${rec('🎰','Mejor parlay ganado',mejorParlay.b?mejorParlay.mul.toFixed(2)+'x':'—',mejorParlay.b?`$${Math.round(mejorParlay.b.monto*mejorParlay.mul).toLocaleString()} ganado`:null,mejorParlay.b?.nombre,!mejorParlay.b)}
-    ${rec('🔥','Mayor racha ganadora',mejorRacha?`${mejorRacha[1].max} seguidas`:'—',mejorRacha?mejorRacha[0]:null,mejorRacha?.[0],!mejorRacha)}
-    ${rec('🃏','Jugador más activo',masApuestas?`${masApuestas[1]} apuestas`:'—',masApuestas?masApuestas[0]:null,masApuestas?.[0],!masApuestas)}
+    ${rec('⚡','Mejor multiplicador ganado',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?mejorMul.b.nombre:null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)')}
+    ${rec('💸','Mayor ganancia en una apuesta',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:' —',mayorGan.b?mayorGan.b.nombre:null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)')}
+    ${rec('😱','Mayor pérdida en una apuesta',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',mayorPerd.b?mayorPerd.b.nombre:null,mayorPerd.b?.nombre,!mayorPerd.b,mayorPerd.b,'var(--rl)')}
+    ${rec('🎰','Mejor parlay ganado',mejorParlay.b?mejorParlay.mul.toFixed(2)+'x':'—',mejorParlay.b?mejorParlay.b.nombre:null,mejorParlay.b?.nombre,!mejorParlay.b,mejorParlay.b,'var(--green)')}
+    ${rec('🔥','Mayor racha ganadora',mejorRacha?`${mejorRacha[1].max} seguidas`:'—',mejorRacha?mejorRacha[0]:null,mejorRacha?.[0],!mejorRacha,null)}
+    ${rec('🃏','Jugador más activo',masApuestas?`${masApuestas[1]} apuestas`:'—',masApuestas?masApuestas[0]:null,masApuestas?.[0],!masApuestas,null)}
     <div class="rec-section-title">📊 Globales</div>
-    ${rec('🏦','Mayor saldo actual',lider?`$${Math.round(lider.saldo).toLocaleString()}`:'—',null,lider?.nombre,!lider)}
-    ${rec('🎯','Total apostado en el torneo',`$${totalTorneo.toLocaleString()}`,`entre ${jugList.length} jugadores`,null,!totalTorneo)}
+    ${rec('🏦','Mayor saldo actual',lider?`$${Math.round(lider.saldo).toLocaleString()}`:'—',null,lider?.nombre,!lider,null)}
+    ${rec('🎯','Total apostado en el torneo',`$${totalTorneo.toLocaleString()}`,`entre ${jugList.length} jugadores`,null,!totalTorneo,null)}
   `;
+}
+function recToggle(id){
+  const el=document.getElementById(id);if(!el)return;
+  const btn=el.previousElementSibling;
+  const hidden=el.hidden;
+  el.hidden=!hidden;
+  if(btn)btn.textContent=hidden?'Ocultar ▴':'Ver apuesta ▾';
 }
 function renderElim(){
   const odds=state.campeon_odds||{};
