@@ -546,10 +546,37 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .pbar-vs{font-size:18px;color:var(--muted2);font-weight:700}
 .pbar-1x2 .pbar-top,.pbar-btts .pbar-top{margin-bottom:0;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
 .pbar-1x2 .pbar-status,.pbar-btts .pbar-status{margin-top:9px}
-/* Indicadores de pata en vivo dentro de un parlay */
-.leg-live{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:7px;flex-shrink:0;font-variant-numeric:tabular-nums}
-.leg-live.on{background:rgba(31,196,58,.16);color:var(--green)}
-.leg-live.off{background:rgba(255,255,255,.06);color:var(--muted2)}
+/* ── PATA DE PARLAY con mini-barra estilo Draftea ── */
+.parlay-leg{padding:8px 0;border-bottom:1px solid var(--line)}
+.parlay-leg:last-child{border-bottom:none}
+.parlay-leg-top{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}
+.parlay-leg-info{flex:1;min-width:0;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.parlay-leg-teams{display:inline-flex;align-items:center;gap:4px;flex-shrink:0}
+.parlay-vs{color:var(--muted2);font-size:11px}
+.parlay-leg-pick{color:#fff;font-weight:600}
+.parlay-leg-momio{font-weight:800;flex-shrink:0;font-size:11.5px}
+/* Mini-barra de progreso (Over/Under) */
+.lbar{margin-top:7px;padding:0 4px}
+.lbar-track{position:relative;height:5px;background:rgba(255,255,255,.07);border-radius:99px;margin:14px 0 4px}
+.lbar-fill{position:absolute;left:0;top:0;height:100%;border-radius:99px;transition:width .55s cubic-bezier(.34,1.15,.5,1)}
+.lbar-ok .lbar-fill{background:linear-gradient(90deg,#1FC43A,#42e85b);box-shadow:0 0 8px rgba(31,196,58,.4)}
+.lbar-wait .lbar-fill{background:linear-gradient(90deg,#9b9b9b,#bdbdbd)}
+.lbar-ko .lbar-fill{background:linear-gradient(90deg,#ef4444,#f87171);box-shadow:0 0 8px rgba(239,68,68,.4)}
+.lbar-line{position:absolute;top:-3px;bottom:-3px;width:2px;background:rgba(255,255,255,.4);border-radius:1px;transform:translateX(-1px)}
+.lbar-line::before{content:'';position:absolute;top:-2px;left:-2px;right:-2px;height:5px;background:rgba(255,255,255,.7);border-radius:1.5px}
+.lbar-bubble{position:absolute;top:-22px;transform:translateX(-50%);background:#fff;color:#000;font-size:10.5px;font-weight:900;padding:3px 8px;border-radius:99px;font-variant-numeric:tabular-nums;box-shadow:0 2px 6px rgba(0,0,0,.4);min-width:22px;text-align:center;transition:left .55s cubic-bezier(.34,1.15,.5,1)}
+.lbar-bubble::after{content:'';position:absolute;left:50%;bottom:-3px;transform:translateX(-50%) rotate(45deg);width:6px;height:6px;background:#fff}
+.lbar-ok .lbar-bubble{background:var(--green);color:#04231a}
+.lbar-ok .lbar-bubble::after{background:var(--green)}
+.lbar-ko .lbar-bubble{background:#ef4444;color:#fff}
+.lbar-ko .lbar-bubble::after{background:#ef4444}
+/* Variante 1X2 / BTTS: marcador con tag */
+.lbar-1x2{margin-top:7px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-radius:8px;font-size:11.5px;font-weight:700}
+.lbar-1x2-ok{background:rgba(31,196,58,.12);color:var(--green)}
+.lbar-1x2-wait{background:rgba(255,255,255,.04);color:var(--muted)}
+.lbar-1x2-score{font-weight:900;font-size:13px;font-variant-numeric:tabular-nums;color:#fff}
+.lbar-1x2-ok .lbar-1x2-score{color:var(--green)}
+.lbar-1x2-tag{font-size:10.5px;font-weight:800;letter-spacing:.02em}
 
 /* ── MODAL ADMIN RESULTADO REDISEÑADO ── */
 .adm-banner{padding:10px 12px;border-radius:11px;font-size:12.5px;line-height:1.45;margin-bottom:12px}
@@ -1281,7 +1308,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.22.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.22.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2397,6 +2424,53 @@ function partidoLive(pid){
   return null;
 }
 
+// Mini-barra de progreso para una pata de parlay (estilo Draftea)
+function legMiniBar(l,p,live,subM){
+  // OVER / UNDER con barra y marcador
+  if(l.pick==='over'||l.pick==='under'){
+    let actual;
+    if(subM==='corners')actual=live.corners;
+    else if(subM==='tarjetas')actual=live.tarjetas;
+    else actual=(live.gl??null)!==null?(live.gl??0)+(live.gv??0):null;
+    if(actual==null)return ''; // sin data live aún
+    const meta=Number(l.linea);
+    const esOver=l.pick==='over';
+    const cumplido=esOver?actual>meta:actual<meta;
+    const sobrepasado=!esOver&&actual>=Math.ceil(meta);
+    const escala=Math.max(Math.ceil(meta)+2,actual+1);
+    const pctActual=Math.max(2,Math.min(98,(actual/escala)*100));
+    const pctLinea=Math.min(98,(meta/escala)*100);
+    const cls=cumplido?'ok':sobrepasado?'ko':'wait';
+    return `<div class="lbar lbar-${cls}">
+      <div class="lbar-track">
+        <div class="lbar-fill" style="width:${pctActual}%"></div>
+        <div class="lbar-line" style="left:${pctLinea}%"></div>
+        <div class="lbar-bubble" style="left:${pctActual}%">${actual}</div>
+      </div>
+    </div>`;
+  }
+  // 1X2 o BTTS: marcador simple con highlight
+  if(['local','empate','visita'].includes(l.pick)&&live.gl!=null){
+    const winning=l.pick==='local'?live.gl>live.gv:l.pick==='visita'?live.gv>live.gl:live.gl===live.gv;
+    const paGanado=live.pa&&((l.pick==='local'&&live.pa.l)||(l.pick==='visita'&&live.pa.v));
+    const cls=paGanado||winning?'ok':'wait';
+    return `<div class="lbar-1x2 lbar-1x2-${cls}">
+      <span class="lbar-1x2-score">${live.gl} − ${live.gv}</span>
+      ${paGanado?'<span class="lbar-1x2-tag">⚡ PA</span>':winning?'<span class="lbar-1x2-tag">✓ ganando</span>':'<span class="lbar-1x2-tag">en juego</span>'}
+    </div>`;
+  }
+  if((l.pick==='si'||l.pick==='no')&&live.gl!=null){
+    const ambos=live.gl>0&&live.gv>0;
+    const winning=l.pick==='si'?ambos:!ambos;
+    const cls=winning?'ok':'wait';
+    return `<div class="lbar-1x2 lbar-1x2-${cls}">
+      <span class="lbar-1x2-score">${live.gl} − ${live.gv}</span>
+      <span class="lbar-1x2-tag">${winning?'✓ '+(l.pick==='si'?'ambos':'aún no'):'en juego'}</span>
+    </div>`;
+  }
+  return '';
+}
+
 // Genera barra de progreso para una apuesta pendiente con estado en vivo
 function progressBar(b){
   const pid=b.partidoId;if(!pid)return '';
@@ -2515,31 +2589,22 @@ function betCard(b){
     body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${b.especialTitulo||'Apuesta especial'} · ${b.momio}x</div>`;
   }else if(isP){
     head=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span>`;
-    // Calcular estado vivo de cada pata para mostrar tracker compacto
     const pendiente=st==='pending';
     body=b.legs.map(l=>{
       const p=byId(l.partidoId);const[ic,col]=legResIcon(l);
       const subM=l.mercado==='corners'?'corners':l.mercado==='tarjetas'?'tarjetas':'goles';
-      // Indicador en vivo si está pendiente
-      let liveBadge='';
-      if(pendiente){
-        const live=partidoLive(l.partidoId);
-        if(live){
-          let actual,meta,winning;
-          if(l.pick==='over'||l.pick==='under'){
-            actual=subM==='corners'?live.corners:subM==='tarjetas'?live.tarjetas:(live.gl??0)+(live.gv??0);
-            if(actual!=null){meta=Number(l.linea);winning=l.pick==='over'?actual>meta:actual<meta;liveBadge=`<span class="leg-live ${winning?'on':'off'}">${actual}/${meta}</span>`;}
-          }else if(['local','empate','visita'].includes(l.pick)&&live.gl!=null){
-            winning=l.pick==='local'?live.gl>live.gv:l.pick==='visita'?live.gv>live.gl:live.gl===live.gv;
-            const paGanado=live.pa&&((l.pick==='local'&&live.pa.l)||(l.pick==='visita'&&live.pa.v));
-            liveBadge=`<span class="leg-live ${winning||paGanado?'on':'off'}">${live.gl}-${live.gv}${paGanado?' ⚡':''}</span>`;
-          }else if((l.pick==='si'||l.pick==='no')&&live.gl!=null){
-            const ambos=live.gl>0&&live.gv>0;winning=l.pick==='si'?ambos:!ambos;
-            liveBadge=`<span class="leg-live ${winning?'on':'off'}">${live.gl}-${live.gv}</span>`;
-          }
-        }
-      }
-      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-bottom:1px solid var(--line);gap:6px"><span style="color:var(--muted);flex:1;min-width:0">${teamFlag(p.local,12)} v ${teamFlag(p.visita,12)} · ${pickLabel(p,l.pick,l.linea,subM)}</span>${liveBadge}<span style="color:${col};font-weight:700;flex-shrink:0">${ic} ${l.momio}x</span></div>`;
+      const live=pendiente?partidoLive(l.partidoId):null;
+      const miniBar=live?legMiniBar(l,p,live,subM):'';
+      return `<div class="parlay-leg">
+        <div class="parlay-leg-top">
+          <div class="parlay-leg-info">
+            <span class="parlay-leg-teams">${teamFlag(p.local,12)} <span class="parlay-vs">v</span> ${teamFlag(p.visita,12)}</span>
+            <span class="parlay-leg-pick">${pickLabel(p,l.pick,l.linea,subM)}</span>
+          </div>
+          <span class="parlay-leg-momio" style="color:${col}">${ic} ${l.momio}x</span>
+        </div>
+        ${miniBar}
+      </div>`;
     }).join('');
   }else{
     const p=byId(b.partidoId);
