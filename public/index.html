@@ -512,19 +512,40 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .pod.p3 .bar{height:28px;background:linear-gradient(180deg,#c87f4a,#6b3f1f)}
 
 .rank-list{display:flex;flex-direction:column;gap:6px}
-/* ── BARRA DE PROGRESO "EN VIVO" para apuestas (Draftea-style) ── */
-.prog-wrap{margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:11px}
-.prog-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
-.prog-now{font-size:18px;font-weight:900;color:#fff;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
-.prog-meta{font-size:11px;color:var(--muted2);font-weight:700;text-align:right;flex-shrink:0}
-.prog-bar{position:relative;height:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin:4px 0}
-.prog-fill{height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,.8,.4,1)}
-.prog-fill.winning{background:linear-gradient(90deg,#1FC43A,#26d847)}
-.prog-fill.losing{background:linear-gradient(90deg,#7a7a7a,#9a9a9a)}
-.prog-marker{position:absolute;top:-2px;width:2px;height:12px;background:var(--gold);border-radius:1px;box-shadow:0 0 6px rgba(255,219,0,.6)}
-.prog-status{font-size:11.5px;font-weight:800;margin-top:4px;letter-spacing:.02em}
-.prog-status.win{color:var(--green)}
-.prog-status.lose{color:var(--muted)}
+/* ── BARRA DE PROGRESO MODERNA (Draftea-style) ── */
+.pbar{margin-top:11px;padding:12px 14px;background:linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.09);border-radius:14px;backdrop-filter:blur(4px)}
+.pbar-top{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:10px}
+.pbar-actual{font-size:32px;font-weight:900;color:#fff;letter-spacing:-.8px;line-height:1;display:flex;align-items:baseline;gap:5px;font-variant-numeric:tabular-nums}
+.pbar-unidad{font-size:13px;font-weight:700;color:var(--muted2);letter-spacing:0}
+.pbar-meta{font-size:12px;color:var(--muted);font-weight:700;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.pbar-meta b{color:#fff;font-weight:900;font-size:14px}
+.prog-live{font-size:9.5px;font-weight:900;color:#ef4444;background:rgba(239,68,68,.13);padding:2px 7px;border-radius:7px;letter-spacing:.05em;display:inline-flex;align-items:center;gap:4px}
+.prog-live-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;animation:livePulse 1.4s infinite}
+.pbar-track{position:relative;height:14px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden;margin:6px 0 10px;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)}
+.pbar-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.34,1.2,.5,1);position:relative}
+.pbar-fill-ok{background:linear-gradient(90deg,#1FC43A,#42e85b);box-shadow:0 0 12px rgba(31,196,58,.5)}
+.pbar-fill-wait{background:linear-gradient(90deg,#FFDB00,#ffe34d);box-shadow:0 0 10px rgba(255,219,0,.35)}
+.pbar-fill-ko{background:linear-gradient(90deg,#ef4444,#f87171);box-shadow:0 0 12px rgba(239,68,68,.45)}
+.pbar-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.25),transparent 50%,rgba(0,0,0,.15));border-radius:99px}
+.pbar-line{position:absolute;top:-3px;bottom:-3px;width:2px;background:linear-gradient(180deg,#FFDB00,#caa033);border-radius:1px;box-shadow:0 0 8px rgba(255,219,0,.7);transform:translateX(-1px)}
+.pbar-line::before{content:'';position:absolute;top:-2px;left:-3px;width:8px;height:5px;background:var(--gold);border-radius:2px}
+.pbar-line::after{content:'';position:absolute;bottom:-2px;left:-3px;width:8px;height:5px;background:var(--gold);border-radius:2px}
+.pbar-check{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:22px;height:22px;background:#fff;color:var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;box-shadow:0 0 0 2px var(--green),0 0 12px rgba(31,196,58,.6);animation:checkPop .4s cubic-bezier(.5,1.5,.5,1)}
+@keyframes checkPop{0%{transform:translateY(-50%) scale(0)}100%{transform:translateY(-50%) scale(1)}}
+.pbar-status{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;letter-spacing:.01em}
+.pbar-status-icon{font-size:14px}
+.pbar-status-ok{color:var(--green)}
+.pbar-status-wait{color:var(--gold)}
+.pbar-status-ko{color:#ef4444}
+/* Variantes 1X2 y BTTS */
+.pbar-1x2 .pbar-actual,.pbar-btts .pbar-actual{display:none}
+.pbar-score{display:flex;align-items:center;gap:10px;font-size:26px;font-weight:900;color:#fff;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.pbar-side{display:flex;align-items:center;gap:6px;padding:3px 9px;border-radius:9px;background:rgba(255,255,255,.04);border:1px solid transparent;transition:.18s}
+.pbar-side.me{background:rgba(31,196,58,.12);border-color:rgba(31,196,58,.3);color:#fff}
+.pbar-side.has{background:rgba(31,196,58,.1)}
+.pbar-vs{font-size:18px;color:var(--muted2);font-weight:700}
+.pbar-1x2 .pbar-top,.pbar-btts .pbar-top{margin-bottom:0;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06)}
+.pbar-1x2 .pbar-status,.pbar-btts .pbar-status{margin-top:9px}
 /* Indicadores de pata en vivo dentro de un parlay */
 .leg-live{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:7px;flex-shrink:0;font-variant-numeric:tabular-nums}
 .leg-live.on{background:rgba(31,196,58,.16);color:var(--green)}
@@ -567,6 +588,39 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .adm-btn-revert{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--line2);font-size:12.5px;font-weight:700}
 .adm-btn-revert:hover{background:rgba(255,255,255,.1);color:#fff}
 .adm-btn-sub{font-size:10.5px;font-weight:600;opacity:.75;letter-spacing:.02em}
+
+/* ── PA SIMPLIFICADO ── */
+.pa-quick{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.pa-quick-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;background:linear-gradient(135deg,rgba(255,219,0,.12),rgba(255,219,0,.04));border:1.5px solid rgba(255,219,0,.32);border-radius:12px;cursor:pointer;transition:.18s;text-align:left;color:#fff}
+.pa-quick-btn:hover{background:linear-gradient(135deg,rgba(255,219,0,.2),rgba(255,219,0,.08));border-color:rgba(255,219,0,.55);transform:translateY(-1px);box-shadow:0 4px 14px -4px rgba(255,219,0,.3)}
+.pa-quick-btn:active{transform:scale(.98)}
+.pa-quick-flag{flex-shrink:0;width:22px;display:flex;align-items:center}
+.pa-quick-team{font-weight:800;font-size:14px;flex:1}
+.pa-quick-action{font-size:11.5px;font-weight:800;color:var(--gold);background:rgba(255,219,0,.15);padding:5px 10px;border-radius:8px;letter-spacing:.02em;flex-shrink:0}
+.pa-status-card{display:flex;align-items:center;gap:12px;padding:11px 14px;background:linear-gradient(135deg,rgba(255,219,0,.18),rgba(255,219,0,.05));border:1.5px solid rgba(255,219,0,.45);border-radius:12px;margin-top:4px}
+.pa-status-icon{font-size:26px;filter:drop-shadow(0 0 8px rgba(255,219,0,.5))}
+.pa-status-text{flex:1}
+.pa-status-title{font-size:13px;font-weight:900;color:var(--gold);letter-spacing:.02em}
+.pa-status-sub{font-size:13px;font-weight:700;color:#fff;margin-top:2px}
+
+/* ── ADMIN: secciones organizadas por urgencia ── */
+.adm-section,.adm-section-live,.adm-section-pending,.adm-section-done{background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:10px;margin-bottom:10px}
+.adm-section-live{background:linear-gradient(135deg,rgba(239,68,68,.1),rgba(239,68,68,.03));border-color:rgba(239,68,68,.35);box-shadow:0 0 0 1px rgba(239,68,68,.08),0 4px 18px -8px rgba(239,68,68,.25)}
+.adm-section-pending{background:linear-gradient(135deg,rgba(255,219,0,.08),rgba(255,219,0,.02));border-color:rgba(255,219,0,.32)}
+.adm-section-done{opacity:.85}
+.adm-section-h{font-size:11.5px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:.07em;padding:4px 4px 10px;display:flex;align-items:center;gap:8px}
+.adm-section-live .adm-section-h{color:#ef4444}
+.adm-section-pending .adm-section-h{color:var(--gold)}
+.adm-section-count{font-size:10px;font-weight:800;background:rgba(255,255,255,.1);padding:2px 8px;border-radius:7px;color:#fff}
+.adm-section-body.collapsed{display:none}
+.adm-section-body.collapsed.open{display:block}
+.adm-show-more{width:100%;padding:9px;margin-top:6px;background:rgba(255,255,255,.04);border:1px dashed var(--line2);color:var(--muted);font-size:12px;font-weight:700;border-radius:9px;cursor:pointer}
+.adm-show-more:hover{background:rgba(255,255,255,.08);color:#fff}
+.admin-match-info{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.admin-match-teams{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden}
+.admin-match-meta{color:var(--muted2);font-size:10.5px;font-weight:600}
+.live-pulse{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.6);animation:livePulse 1.6s infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.6)}70%{box-shadow:0 0 0 8px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
 .rank-ref-card{background:linear-gradient(135deg,rgba(31,196,58,.08),rgba(255,219,0,.06));border:1px solid rgba(31,196,58,.22);border-radius:13px;padding:10px 13px;margin-bottom:10px}
 .rank-ref-label{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .rank-ref-match{font-size:13.5px;font-weight:700;color:#fff;margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
@@ -1227,7 +1281,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.21.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.22.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2343,45 +2397,100 @@ function partidoLive(pid){
   return null;
 }
 
-// Genera barra de progreso para una apuesta pendiente con estado parcial
+// Genera barra de progreso para una apuesta pendiente con estado en vivo
 function progressBar(b){
   const pid=b.partidoId;if(!pid)return '';
   const live=partidoLive(pid);if(!live)return '';
   const p=byId(pid);if(!p)return '';
   const subM=b.mercado==='corners'?'corners':b.mercado==='tarjetas'?'tarjetas':'goles';
-  // Determinar valor actual y meta
-  let actual,meta,label,winning;
+  const enVivo=live.live||(!live.final&&!!live);
+  const liveBadge=live.live?'<span class="prog-live-dot"></span> EN VIVO':live.final?'':'⚡ PA';
+
+  // ── OVER / UNDER ──────────────────────────────────────────────
   if(b.pick==='over'||b.pick==='under'){
-    if(subM==='corners'){actual=live.corners;label='córners';}
-    else if(subM==='tarjetas'){actual=live.tarjetas;label='tarjetas';}
-    else{actual=(live.gl??0)+(live.gv??0);label='goles';}
-    if(actual==null)return ''; // sin data aún
-    meta=Number(b.linea);
-    winning=b.pick==='over'?actual>meta:actual<meta;
-    const pct=Math.min(100,Math.round((actual/(meta+1))*100));
-    const flecha=b.pick==='over'?`necesita ≥ ${Math.ceil(meta)}`:`tope ${Math.floor(meta)}`;
-    return `<div class="prog-wrap">
-      <div class="prog-head"><span class="prog-now">${actual} ${label}</span><span class="prog-meta">${b.pick==='over'?'Over':'Under'} ${meta} · ${flecha}</span></div>
-      <div class="prog-bar"><div class="prog-fill ${winning?'winning':'losing'}" style="width:${pct}%"></div><div class="prog-marker" style="left:${Math.min(95,(meta/(meta+1))*100)}%"></div></div>
-      <div class="prog-status ${winning?'win':'lose'}">${winning?'✓ vas ganando':'⏳ vas perdiendo'}${live.live?' · 🔴 EN VIVO':''}</div>
+    let actual,unidad;
+    if(subM==='corners'){actual=live.corners;unidad='córners';}
+    else if(subM==='tarjetas'){actual=live.tarjetas;unidad='tarjetas';}
+    else{actual=(live.gl??0)+(live.gv??0);unidad='goles';}
+    if(actual==null)return '';
+    const meta=Number(b.linea);
+    const esOver=b.pick==='over';
+    // Cumplido: Over=actual>meta · Under=actual<meta (actual no llegó a sobrepasar la línea)
+    const cumplido=esOver?actual>meta:actual<meta;
+    // Para Under: si ya se sobrepasó, está perdida
+    const sobrepasado=!esOver&&actual>=Math.ceil(meta);
+    // Escala visual: máx en la barra = línea + 1 unidad de "colchón" (o el actual si lo excede)
+    const escala=Math.max(Math.ceil(meta)+1,actual+1);
+    const pctActual=Math.min(100,(actual/escala)*100);
+    const pctLinea=Math.min(100,(meta/escala)*100);
+    // Para Under: la zona "buena" es desde 0 hasta la línea. La barra del marcador NO debe pasar la línea cuando va bien.
+    let estadoTxt,estadoIcon,estadoClass;
+    if(esOver){
+      if(cumplido){estadoTxt='Cumplido';estadoIcon='✓';estadoClass='ok';}
+      else{const faltan=Math.ceil(meta)-actual;estadoTxt=`Faltan ${faltan} para cumplir`;estadoIcon='⏳';estadoClass='wait';}
+    }else{
+      if(sobrepasado){estadoTxt='Sobrepasado';estadoIcon='✗';estadoClass='ko';}
+      else if(cumplido){estadoTxt='Cumpliéndose · va bien';estadoIcon='✓';estadoClass='ok';}
+      else{estadoTxt='Empate con la línea · necesita parar';estadoIcon='⏳';estadoClass='wait';}
+    }
+    return `<div class="pbar">
+      <div class="pbar-top">
+        <div class="pbar-actual">${actual}<span class="pbar-unidad">${unidad}</span></div>
+        <div class="pbar-meta">${esOver?'Over':'Under'} <b>${meta}</b>${liveBadge?`<span class="prog-live">${liveBadge}</span>`:''}</div>
+      </div>
+      <div class="pbar-track">
+        <div class="pbar-fill pbar-fill-${estadoClass}" style="width:${pctActual}%"></div>
+        <div class="pbar-line" style="left:${pctLinea}%" title="Línea: ${meta}"></div>
+        ${cumplido?'<div class="pbar-check">✓</div>':''}
+      </div>
+      <div class="pbar-status pbar-status-${estadoClass}"><span class="pbar-status-icon">${estadoIcon}</span> ${estadoTxt}</div>
     </div>`;
   }
+
+  // ── 1X2 ──────────────────────────────────────────────────────
   if(b.pick==='local'||b.pick==='visita'||b.pick==='empate'){
     if(live.gl==null||live.gv==null)return '';
     const winning=b.pick==='local'?live.gl>live.gv:b.pick==='visita'?live.gv>live.gl:live.gl===live.gv;
     const paGanado=live.pa&&((b.pick==='local'&&live.pa.l)||(b.pick==='visita'&&live.pa.v));
-    return `<div class="prog-wrap">
-      <div class="prog-head"><span class="prog-now">${live.gl} − ${live.gv}</span><span class="prog-meta">${pickLabel(p,b.pick,null)}</span></div>
-      <div class="prog-status ${winning||paGanado?'win':'lose'}">${paGanado?'⚡ Cobrado por PA':winning?'✓ vas ganando':'⏳ vas perdiendo'}${live.live?' · 🔴 EN VIVO':''}</div>
+    const cls=paGanado?'ok':winning?'ok':'wait';
+    const icon=paGanado?'⚡':winning?'✓':'⏳';
+    const txt=paGanado?'Cobrado por PA':winning?'Cumpliéndose · vas ganando':'Aún no se cumple';
+    return `<div class="pbar pbar-1x2">
+      <div class="pbar-top">
+        <div class="pbar-score">
+          <div class="pbar-side ${b.pick==='local'?'me':''}">${flagImg(p.local,14)} ${live.gl}</div>
+          <span class="pbar-vs">−</span>
+          <div class="pbar-side ${b.pick==='visita'?'me':''}">${live.gv} ${flagImg(p.visita,14)}</div>
+        </div>
+        <div class="pbar-meta">${pickLabel(p,b.pick,null)}${liveBadge?`<span class="prog-live">${liveBadge}</span>`:''}</div>
+      </div>
+      <div class="pbar-status pbar-status-${cls}"><span class="pbar-status-icon">${icon}</span> ${txt}</div>
     </div>`;
   }
+
+  // ── BTTS ─────────────────────────────────────────────────────
   if(b.pick==='si'||b.pick==='no'){
     if(live.gl==null||live.gv==null)return '';
     const ambos=live.gl>0&&live.gv>0;
-    const winning=b.pick==='si'?ambos:!ambos;
-    return `<div class="prog-wrap">
-      <div class="prog-head"><span class="prog-now">${p.local} ${live.gl} · ${p.visita} ${live.gv}</span><span class="prog-meta">Ambos anotan: ${b.pick==='si'?'Sí':'No'}</span></div>
-      <div class="prog-status ${winning?'win':'lose'}">${ambos?'✓ ambos anotaron':b.pick==='no'?'✓ aún no anotan ambos':'⏳ falta que ambos anoten'}${live.live?' · 🔴 EN VIVO':''}</div>
+    const cumplido=b.pick==='si'?ambos:!ambos;
+    const cls=cumplido?'ok':'wait';
+    const icon=cumplido?'✓':'⏳';
+    let txt;
+    if(b.pick==='si'){
+      txt=ambos?'Cumplido · ambos anotaron':`Falta que anote ${live.gl===0?p.local:p.visita}`;
+    }else{
+      txt=!ambos?'Cumpliéndose · uno aún no anota':'Sobrepasado · ambos anotaron';
+    }
+    return `<div class="pbar pbar-btts">
+      <div class="pbar-top">
+        <div class="pbar-score">
+          <div class="pbar-side ${live.gl>0?'has':''}">${flagImg(p.local,14)} ${live.gl}</div>
+          <span class="pbar-vs">·</span>
+          <div class="pbar-side ${live.gv>0?'has':''}">${live.gv} ${flagImg(p.visita,14)}</div>
+        </div>
+        <div class="pbar-meta">${b.pick==='si'?'Ambos anotan':'No anotan ambos'}${liveBadge?`<span class="prog-live">${liveBadge}</span>`:''}</div>
+      </div>
+      <div class="pbar-status pbar-status-${cls}"><span class="pbar-status-icon">${icon}</span> ${txt}</div>
     </div>`;
   }
   return '';
@@ -3132,29 +3241,81 @@ function renderCasino(){
 function renderAdmin(){
   renderFilters('adminFilters',adminF,'setAdminF');
   const ps=adminF==='Todos'?state.partidos:state.partidos.filter(p=>'Gr.'+p.grupo===adminF);
-  let html='<div class="info-card">',lastF='';
+  const now=eNow();
+  // Clasificar partidos por urgencia para el admin
+  const enVivo=[],porIniciar=[],pendLiq=[],liquidados=[];
   ps.forEach(p=>{
-    if(p.fecha!==lastF){html+=`<div style="font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;padding:8px 0 4px">${p.fecha}</div>`;lastF=p.fecha;}
     const res=state.resultados[p.id];
-    const hasFinal=res&&res.gl!=null;
-    const paParcial=res&&res.gl==null&&res.pa;
-    html+=`<div class="admin-match"><div><span style="font-weight:700;font-size:14px">${teamFlag(p.local,14)} vs ${teamFlag(p.visita,14)}</span> <span style="color:var(--muted2);font-size:11px">Gr.${p.grupo} · ${p.hora}</span></div><div class="rbtns">`;
-    if(hasFinal){
-      html+=`<span class="rb rb-info">${res.gl} - ${res.gv}</span>
-        <button class="rbtn local" onclick="openScore(${p.id})">✏️ Corregir</button>
-        <button class="rbtn visita" onclick="revertir(${p.id})">↩</button>
-        <button class="rbtn" onclick="verApuestas(${p.id})">👁</button>`;
-    }else if(paParcial){
-      html+=`<span class="rb" style="background:rgba(255,219,0,.16);color:var(--gold)">⚡ PA</span>
-        <button class="rbtn local" onclick="openScore(${p.id})">⚽ Marcador final</button>
-        <button class="rbtn" onclick="verApuestas(${p.id})">👁</button>`;
-    }else{
-      html+=`<button class="rbtn local" onclick="openScore(${p.id})">⚽ Marcador${p.pa?' / PA':''}</button>
-        <button class="rbtn" onclick="verApuestas(${p.id})">👁</button>`;
-    }
-    html+=`</div></div>`;
+    const live=state.liveScores&&state.liveScores[p.id];
+    const hasFinal=res&&res.gl!=null&&!res.parcial;
+    if(hasFinal){liquidados.push(p);return;}
+    // Estimación de fin del partido: kickoff + 2h30
+    const finEst=p.kickoff+150*60*1000;
+    if(now>=p.kickoff&&now<=finEst){enVivo.push(p);return;}
+    if(now<p.kickoff){porIniciar.push(p);return;}
+    pendLiq.push(p); // ya pasó la hora estimada y no hay marcador final
   });
-  html+='</div>';
+  // Ordenar en vivo y pendientes por kickoff descendente (más reciente arriba)
+  enVivo.sort((a,b)=>b.kickoff-a.kickoff);
+  pendLiq.sort((a,b)=>b.kickoff-a.kickoff);
+  porIniciar.sort((a,b)=>a.kickoff-b.kickoff); // próximos primero
+  liquidados.sort((a,b)=>b.kickoff-a.kickoff);
+
+  function matchRow(p){
+    const res=state.resultados[p.id];
+    const live=state.liveScores&&state.liveScores[p.id];
+    const hasFinal=res&&res.gl!=null&&!res.parcial;
+    const paParcial=res&&res.gl==null&&res.pa;
+    let badge='';
+    if(hasFinal)badge=`<span class="rb rb-info">${res.gl}−${res.gv}</span>`;
+    else if(paParcial)badge=`<span class="rb" style="background:rgba(255,219,0,.16);color:var(--gold);border-color:rgba(255,219,0,.3)">⚡ PA</span>`;
+    else if(live)badge=`<span class="rb" style="background:rgba(239,68,68,.16);color:#ef4444;border-color:rgba(239,68,68,.3)">${live.gl??'?'}−${live.gv??'?'}</span>`;
+    const btnLabel=hasFinal?'✏️ Corregir':paParcial?'⚽ Marcador final':live?'🔴 Actualizar':'⚽ Resultado';
+    return `<div class="admin-match">
+      <div class="admin-match-info">
+        <span class="admin-match-teams">${teamFlag(p.local,14)} <span style="color:var(--muted2);font-size:11px">vs</span> ${teamFlag(p.visita,14)}</span>
+        <span class="admin-match-meta">Gr.${p.grupo} · ${p.fecha.split(',')[0]} ${p.hora}</span>
+      </div>
+      <div class="rbtns">${badge}
+        <button class="rbtn local" onclick="openScore(${p.id})">${btnLabel}</button>
+        ${hasFinal?`<button class="rbtn visita" onclick="revertir(${p.id})" title="Revertir">↩</button>`:''}
+        <button class="rbtn" onclick="verApuestas(${p.id})" title="Ver apuestas">👁</button>
+      </div>
+    </div>`;
+  }
+
+  let html='';
+  if(enVivo.length){
+    html+=`<div class="adm-section-live">
+      <div class="adm-section-h"><span class="live-pulse"></span> EN VIVO AHORA <span class="adm-section-count">${enVivo.length}</span></div>
+      ${enVivo.map(matchRow).join('')}
+    </div>`;
+  }
+  if(pendLiq.length){
+    html+=`<div class="adm-section-pending">
+      <div class="adm-section-h">⏰ PENDIENTES DE LIQUIDAR <span class="adm-section-count">${pendLiq.length}</span></div>
+      ${pendLiq.map(matchRow).join('')}
+    </div>`;
+  }
+  if(porIniciar.length){
+    html+=`<div class="adm-section">
+      <div class="adm-section-h">📅 PRÓXIMOS A INICIAR <span class="adm-section-count">${porIniciar.length}</span></div>
+      <div class="adm-section-body" id="admSecProx">
+        ${porIniciar.slice(0,6).map(matchRow).join('')}
+        ${porIniciar.length>6?`<button class="adm-show-more" onclick="this.parentElement.innerHTML=window._admProxAll" id="admMoreProx">Ver ${porIniciar.length-6} más ▾</button>`:''}
+      </div>
+    </div>`;
+    window._admProxAll=porIniciar.map(matchRow).join('');
+  }
+  if(liquidados.length){
+    html+=`<div class="adm-section-done">
+      <div class="adm-section-h" onclick="document.getElementById('admSecDone').classList.toggle('open')" style="cursor:pointer">✅ COMPLETADOS <span class="adm-section-count">${liquidados.length}</span> <span style="margin-left:auto;color:var(--muted2);font-size:11px">toca para expandir ▾</span></div>
+      <div class="adm-section-body collapsed" id="admSecDone">
+        ${liquidados.map(matchRow).join('')}
+      </div>
+    </div>`;
+  }
+  if(!html)html='<div class="empty">No hay partidos en este grupo.</div>';
   document.getElementById('listaAdmin').innerHTML=html;
 }
 function openScore(pid){
@@ -3214,15 +3375,34 @@ function openScore(pid){
       </div>
     </div>
 
-    ${p.pa?`<!-- ── SECCIÓN 3: PA ─── -->
+    ${p.pa?`<!-- ── SECCIÓN PA SIMPLIFICADA ─── -->
     <div class="adm-sect">
       <div class="adm-sect-h">⚡ Pago Anticipado (2 Up)</div>
-      <div class="adm-sect-note">Marca cuando un equipo llegue a +2 de ventaja. Se paga aunque el marcador final cambie. Se auto-marca si el marcador ya muestra +2.</div>
-      <div class="adm-pa-grid">
-        <label class="adm-pa-chip"><input type="checkbox" id="paL"> ${flagImg(p.local,15)} <b>${p.local}</b> llegó a +2</label>
-        <label class="adm-pa-chip"><input type="checkbox" id="paV"> ${flagImg(p.visita,15)} <b>${p.visita}</b> llegó a +2</label>
-      </div>
-      ${!hasFinal?`<button class="adm-pa-btn" onclick="aplicarPALive(${pid})">⚡ Aplicar PA ahora (pagar simples al instante)</button>`:''}
+      <div class="adm-sect-note">Si un equipo llega a +2 de ventaja, toca su botón para pagar al instante. Las apuestas a ese ganador se cobran ya y los parlays donde solo faltaba esta pata también.</div>
+      ${(res&&res.pa)?`
+        <div class="pa-status-card">
+          <div class="pa-status-icon">⚡</div>
+          <div class="pa-status-text">
+            <div class="pa-status-title">PA aplicado</div>
+            <div class="pa-status-sub">${res.pa.l?`<b>${p.local}</b>`:''}${res.pa.l&&res.pa.v?' y ':''}${res.pa.v?`<b>${p.visita}</b>`:''}</div>
+          </div>
+        </div>
+      `:`
+        <div class="pa-quick">
+          <button class="pa-quick-btn" onclick="aplicarPaQuick(${p.id},'l')">
+            <span class="pa-quick-flag">${flagImg(p.local,22)}</span>
+            <span class="pa-quick-team">${p.local}</span>
+            <span class="pa-quick-action">⚡ Aplicar PA</span>
+          </button>
+          <button class="pa-quick-btn" onclick="aplicarPaQuick(${p.id},'v')">
+            <span class="pa-quick-flag">${flagImg(p.visita,22)}</span>
+            <span class="pa-quick-team">${p.visita}</span>
+            <span class="pa-quick-action">⚡ Aplicar PA</span>
+          </button>
+        </div>
+      `}
+      <input type="hidden" id="paL">
+      <input type="hidden" id="paV">
     </div>`:''}
 
     <!-- ── BOTONES DE ACCIÓN ─── -->
@@ -3234,10 +3414,10 @@ function openScore(pid){
     </div>`;
   document.getElementById('overlay').style.display='flex';
   if(p.pa){
-    const paL=res&&res.pa?res.pa.l:(hasFinal?(res.gl-res.gv>=2):false);
-    const paV=res&&res.pa?res.pa.v:(hasFinal?(res.gv-res.gl>=2):false);
-    document.getElementById('paL').checked=paL;
-    document.getElementById('paV').checked=paV;
+    // Hidden inputs reflejan el estado actual del PA (para saveScore)
+    const elL=document.getElementById('paL'),elV=document.getElementById('paV');
+    if(elL)elL.value=res&&res.pa&&res.pa.l?'1':'';
+    if(elV)elV.value=res&&res.pa&&res.pa.v?'1':'';
   }
   scorePreview(pid);
 }
@@ -3268,9 +3448,26 @@ async function clearLiveScore(pid){
   toast('Marcador en vivo eliminado');
   closeModal();renderAdmin();
 }
+async function aplicarPaQuick(pid,equipo){
+  const p=byId(pid);
+  const team=equipo==='l'?p.local:p.visita;
+  if(!confirm(`¿Aplicar Pago Anticipado a ${team}?\n\n• Las apuestas simples a ${team} se pagan al instante.\n• Los parlays donde solo faltaba esta pata también se cobran.\n• Los demás parlays esperan al marcador final.`))return;
+  // Mantener PA existente del otro equipo si ya está aplicado
+  const resActual=state.resultados[pid];
+  const pa={l:equipo==='l'||(resActual&&resActual.pa&&resActual.pa.l)||false,v:equipo==='v'||(resActual&&resActual.pa&&resActual.pa.v)||false};
+  const r=await api({action:'aplicarPA',payload:{adminKey,partidoId:pid,pa}});
+  if(r.error)return toast(r.error);
+  state.resultados=r.resultados;state.jugadores=r.jugadores;state.apuestas=r.apuestas;
+  const pagadas=Object.values(r.apuestas).filter(b=>b.status==='won'&&((b.tipo!=='parlay'&&b.partidoId===pid)||(b.tipo==='parlay'&&b.legs.some(l=>l.partidoId===pid)))).length;
+  toast(`⚡ PA aplicado a ${team} · ${pagadas} apuesta${pagadas!==1?'s':''} cobrada${pagadas!==1?'s':''} ✓`);
+  // Reabrir el modal con el estado actualizado
+  openScore(pid);
+  try{refreshHero();}catch(e){}
+  renderAdmin();
+}
 async function aplicarPALive(pid){
   const cl=document.getElementById('paL'),cv=document.getElementById('paV');
-  const pa={l:!!(cl&&cl.checked),v:!!(cv&&cv.checked)};
+  const pa={l:!!(cl&&cl.value),v:!!(cv&&cv.value)};
   if(!pa.l&&!pa.v)return toast('Marca qué equipo llegó a +2');
   const p=byId(pid);
   const quien=`${pa.l?p.local:''}${pa.l&&pa.v?' y ':''}${pa.v?p.visita:''}`;
@@ -3295,18 +3492,22 @@ function scorePreview(pid){
   const gl=parseInt(document.getElementById('scoreL').value),gv=parseInt(document.getElementById('scoreV').value);
   const el=document.getElementById('scoreDerived');
   if(isNaN(gl)||isNaN(gv)){el.innerHTML='Ingresa el marcador para ver qué se liquida.';return;}
-  // Pago Anticipado: si el marcador final ya es +2, ese lado queda fijo (no se puede desmarcar)
+  // Pago Anticipado: si el marcador final ya es +2, auto-marcar el hidden input (no se puede 'desmarcar' aquí)
   if(p.pa){
     const cl=document.getElementById('paL'),cv=document.getElementById('paV');
     if(cl&&cv){
-      if(gl-gv>=2){cl.checked=true;cl.disabled=true;}else{cl.disabled=false;}
-      if(gv-gl>=2){cv.checked=true;cv.disabled=true;}else{cv.disabled=false;}
+      if(gl-gv>=2)cl.value='1';
+      if(gv-gl>=2)cv.value='1';
     }
   }
   const r1=gl>gv?p.local+' gana':gl<gv?p.visita+' gana':'Empate';
   const btts=(gl>0&&gv>0)?'Sí':'No';
   let paTxt='';
-  if(p.pa){const cl=document.getElementById('paL'),cv=document.getElementById('paV');if((cl&&cl.checked)||(cv&&cv.checked))paTxt=` &nbsp;·&nbsp; ⚡PA: <b>${cl&&cl.checked?p.local:''}${cl&&cl.checked&&cv&&cv.checked?' y ':''}${cv&&cv.checked?p.visita:''}</b>`;}
+  if(p.pa){
+    const cl=document.getElementById('paL'),cv=document.getElementById('paV');
+    const cln=!!(cl&&cl.value),cvn=!!(cv&&cv.value);
+    if(cln||cvn)paTxt=` &nbsp;·&nbsp; ⚡PA: <b>${cln?p.local:''}${cln&&cvn?' y ':''}${cvn?p.visita:''}</b>`;
+  }
   el.innerHTML=`Se liquidará → <b>${r1}</b> &nbsp;·&nbsp; total <b>${gl+gv} goles</b> &nbsp;·&nbsp; ambos anotan: <b>${btts}</b>${paTxt}`;
 }
 async function saveScore(pid){
@@ -3314,7 +3515,7 @@ async function saveScore(pid){
   const gl=parseInt(document.getElementById('scoreL').value),gv=parseInt(document.getElementById('scoreV').value);
   if(isNaN(gl)||isNaN(gv)||gl<0||gv<0)return toast('Marcador inválido');
   let pa;
-  if(p.pa){const cl=document.getElementById('paL'),cv=document.getElementById('paV');pa={l:!!(cl&&cl.checked),v:!!(cv&&cv.checked)};}
+  if(p.pa){const cl=document.getElementById('paL'),cv=document.getElementById('paV');pa={l:!!(cl&&cl.value),v:!!(cv&&cv.value)};}
   const corners=document.getElementById('cornersIn').value.trim();
   const tarjetas=document.getElementById('tarjetasIn').value.trim();
   if(state.resultados[pid]){
