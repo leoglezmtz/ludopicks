@@ -81,7 +81,7 @@ const PICKS_1X2 = ["local", "empate", "visita"];
 function publicJugadores(jugadores) {
   const out = {};
   for (const [nombre, j] of Object.entries(jugadores)) {
-    out[nombre] = { nombre: j.nombre, saldo: j.saldo, creado: j.creado, avatar: j.avatar || null, tickets: j.tickets || 0, doble: !!j.doble };
+    out[nombre] = { nombre: j.nombre, saldo: j.saldo, creado: j.creado, avatar: j.avatar || null, tickets: j.tickets || 0, doble: !!j.doble, saldoDia: j.saldoDia != null ? j.saldoDia : j.saldo };
   }
   return out;
 }
@@ -216,6 +216,7 @@ function grantTicketsIfNew(j) {
   if (j.lastTicketDay !== hoy) {
     j.tickets = Math.min((RULETA.ticketsMax || 4), (j.tickets || 0) + (RULETA.ticketsDia || 2));
     j.lastTicketDay = hoy;
+    j.saldoDia = j.saldo; // snapshot del saldo al inicio del día
     return true;
   }
   return false;
