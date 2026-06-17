@@ -1,5 +1,5 @@
 import { kv } from "@vercel/kv";
-import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT, CAMPEON, CAMPEON_CIERRA, ESPECIAL, ESPECIALES_SEED, RULETA } from "../lib/data.js";
+import { PARTIDOS, SALDO_INICIAL, APUESTA_MIN, LINEAS_OU, LINEA_DEFAULT, LINEAS_CORNERS, LINEA_CORNERS_DEFAULT, MOMIOS_CORNERS, LINEAS_TARJETAS, LINEA_TARJETAS_DEFAULT, MOMIOS_TARJETAS, CAMPEON, CAMPEON_CIERRA, ESPECIAL, ESPECIALES_SEED, RULETA } from "../lib/data.js";
 import { webcrypto } from "crypto";
 import crypto from "crypto";
 
@@ -87,11 +87,9 @@ function publicJugadores(jugadores) {
 }
 
 // ¿Gana este pick dado el marcador? Para over/under usa la línea de la apuesta.
-function pickWins(partidoId, r, pick, linea) {
+function pickWins(partidoId, r, pick, linea, mercado) {
   const m = BY_ID[partidoId];
   if (!m) return false;
-  // Pago Anticipado (2 Up): si el partido tiene PA y el equipo del pick llegó a +2,
-  // la apuesta a ganador se considera GANADA aunque el marcador final cambie.
   if (m.pa && r.pa) {
     if (pick === "local" && r.pa.l) return true;
     if (pick === "visita" && r.pa.v) return true;
@@ -99,20 +97,27 @@ function pickWins(partidoId, r, pick, linea) {
   if (pick === "local") return r.gl > r.gv;
   if (pick === "empate") return r.gl === r.gv;
   if (pick === "visita") return r.gl < r.gv;
-  const total = r.gl + r.gv;
-  if (pick === "over") return total > linea;
-  if (pick === "under") return total < linea;
-  if (pick === "si") return r.gl > 0 && r.gv > 0;          // ambos anotan
+  if (pick === "over" || pick === "under") {
+    let total;
+    if (mercado === "corners") total = r.corners;
+    else if (mercado === "tarjetas") total = r.tarjetas;
+    else total = r.gl + r.gv;
+    if (total == null) return false; // mercado aún sin liquidar
+    return pick === "over" ? total > linea : total < linea;
+  }
+  if (pick === "si") return r.gl > 0 && r.gv > 0;
   if (pick === "no") return !(r.gl > 0 && r.gv > 0);
   return false;
 }
 
 // Momio real desde el catálogo (nunca confiar en el cliente).
-function momioPick(partidoId, pick, linea) {
+function momioPick(partidoId, pick, linea, mercado) {
   const m = BY_ID[partidoId];
   if (!m) return null;
   if (PICKS_1X2.includes(pick)) return m.momios[pick];
   if (pick === "over" || pick === "under") {
+    if (mercado === "corners") return MOMIOS_CORNERS[linea] ? MOMIOS_CORNERS[linea][pick] : null;
+    if (mercado === "tarjetas") return MOMIOS_TARJETAS[linea] ? MOMIOS_TARJETAS[linea][pick] : null;
     const row = m.ou[String(linea)];
     return row ? row[pick] : null;
   }
@@ -122,6 +127,20 @@ function momioPick(partidoId, pick, linea) {
 function esMercadoOU(pick) { return pick === "over" || pick === "under"; }
 function esBtts(pick) { return pick === "si" || pick === "no"; }
 function mercadoDe(pick) { return esMercadoOU(pick) ? "ou" : esBtts(pick) ? "btts" : "1x2"; }
+
+// Sub-mercado de una apuesta O/U: 'goles' (default, legacy), 'corners', 'tarjetas'.
+// Las apuestas viejas no tienen este campo o tienen 'goles' implícito.
+function ouSub(b) {
+  const m = b && b.mercado;
+  return (m === 'corners' || m === 'tarjetas') ? m : 'goles';
+}
+// Key compuesta para evitar dos apuestas pendientes al mismo mercado en el mismo partido.
+function mercadoKey(pick, subMercado) {
+  if (esMercadoOU(pick)) return 'ou-' + (subMercado || 'goles');
+  if (esBtts(pick)) return 'btts';
+  return '1x2';
+}
+const SUB_VALIDOS = new Set(['goles', 'corners', 'tarjetas']);
 
 // Detecta incongruencias entre patas de un MISMO partido en un parlay.
 // Retorna un string con el error, o null si todo cuadra. Mensajes amigables.
@@ -136,17 +155,14 @@ function validarIncongruenciasParlay(legs) {
     const m = BY_ID[pid]; if (!m) continue;
     const matchName = `${m.local} vs ${m.visita}`;
     const r1x2 = plegs.find(l => PICKS_1X2.includes(l.pick));
-    const ou   = plegs.find(l => esMercadoOU(l.pick));
+    // Solo O/U de goles entra en estas reglas (córners/tarjetas son mercados independientes)
+    const ou   = plegs.find(l => esMercadoOU(l.pick) && (!l.mercado || l.mercado === 'goles'));
     const btts = plegs.find(l => esBtts(l.pick));
     const ouLinea = ou ? Number(ou.linea) : null;
 
-    // 1) BTTS Sí + Under N (N ≤ 1.5): imposible — BTTS Sí ≥ 2 goles, Under ≤ N implica menos
     if (btts && btts.pick === "si" && ou && ou.pick === "under" && ouLinea <= 1.5) {
       return `Imposible en ${matchName}: "Ambos anotan: Sí" requiere al menos 2 goles, pero "Under ${ouLinea}" requiere máximo 1.`;
     }
-    // 2) BTTS No + Over N (N ≥ 1.5) cuando el partido SOLO podría cumplir ambos con goleada de un lado:
-    //    BTTS No con Over 2.5 sí es posible (3-0). NO bloqueamos. Pero BTTS Sí + Over X siempre OK.
-    // 3) Under N (N < 1) implica 0-0 → empate forzoso, no admite Local ni Visita
     if (ou && ou.pick === "under" && ouLinea < 1) {
       if (r1x2 && r1x2.pick !== "empate") {
         return `Imposible en ${matchName}: "Under ${ouLinea}" implica 0-0, pero elegiste a ${r1x2.pick === "local" ? m.local : m.visita} ganador.`;
@@ -155,8 +171,6 @@ function validarIncongruenciasParlay(legs) {
         return `Imposible en ${matchName}: "Under ${ouLinea}" implica 0-0, pero "Ambos anotan: Sí" requiere que ambos anoten.`;
       }
     }
-    // 4) Empate + BTTS No con Under bajo: imposible (Empate + BTTS No = 0-0, Under 0.5 OK; pero Empate + BTTS No + Over X requiere
-    //    empate con ambos sin anotar... contradicción con Over). Lo cubrimos:
     if (r1x2 && r1x2.pick === "empate" && btts && btts.pick === "no" && ou && ou.pick === "over") {
       return `Imposible en ${matchName}: "Empate + Ambos anotan: No" obliga a 0-0, pero "Over ${ouLinea}" requiere goles.`;
     }
@@ -240,17 +254,25 @@ function pickSegmento() {
   return RULETA.segmentos.length - 1;
 }
 
-// Evalúa una pata/apuesta de partido considerando resultado parcial (solo PA aplicado en vivo).
-// Devuelve 'won' | 'lost' | 'pending'.
-function legStatus(partidoId, r, pick, linea) {
+// Evalúa una pata/apuesta de partido considerando resultado parcial (PA o liquidación por mercado).
+function legStatus(partidoId, r, pick, linea, mercado) {
   if (!r) return "pending";
+  // Para mercados de córners/tarjetas: solo se resuelven si su contador específico está presente
+  if (mercado === "corners") {
+    if (r.corners == null) return "pending";
+    return pickWins(partidoId, r, pick, linea, "corners") ? "won" : "lost";
+  }
+  if (mercado === "tarjetas") {
+    if (r.tarjetas == null) return "pending";
+    return pickWins(partidoId, r, pick, linea, "tarjetas") ? "won" : "lost";
+  }
+  // Mercado de goles (default): requiere gl/gv
   if (r.gl == null || r.gv == null) {
-    // Resultado parcial: solo PA aplicado, sin marcador final
     const m = BY_ID[partidoId];
     if (m && m.pa && r.pa && ((pick === "local" && r.pa.l) || (pick === "visita" && r.pa.v))) return "won";
-    return "pending"; // los demás mercados/lado esperan al marcador final
+    return "pending";
   }
-  return pickWins(partidoId, r, pick, linea) ? "won" : "lost";
+  return pickWins(partidoId, r, pick, linea, mercado) ? "won" : "lost";
 }
 
 function settleAll(jugadores, apuestas, resultados, campeon, especiales) {
@@ -264,10 +286,10 @@ function settleAll(jugadores, apuestas, resultados, campeon, especiales) {
       const r = sp ? sp.res : null;
       ns = !r ? "pending" : (b.opcion === r ? "won" : "lost");
     } else if (b.tipo === "parlay") {
-      const sts = b.legs.map(l => legStatus(l.partidoId, resultados[l.partidoId], l.pick, l.linea));
+      const sts = b.legs.map(l => legStatus(l.partidoId, resultados[l.partidoId], l.pick, l.linea, l.mercado));
       ns = sts.includes("lost") ? "lost" : sts.every(s => s === "won") ? "won" : "pending";
     } else {
-      ns = legStatus(b.partidoId, resultados[b.partidoId], b.pick, b.linea);
+      ns = legStatus(b.partidoId, resultados[b.partidoId], b.pick, b.linea, b.mercado);
     }
     const old = b.status || "pending";
     const j = jugadores[b.nombre];
@@ -313,6 +335,8 @@ export default async function handler(req, res) {
       jugadores: publicJugadores(jugadores), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
       lineas_ou: LINEAS_OU, linea_default: LINEA_DEFAULT,
+      lineas_corners: LINEAS_CORNERS, linea_corners_default: LINEA_CORNERS_DEFAULT, momios_corners: MOMIOS_CORNERS,
+      lineas_tarjetas: LINEAS_TARJETAS, linea_tarjetas_default: LINEA_TARJETAS_DEFAULT, momios_tarjetas: MOMIOS_TARJETAS,
       campeon_odds: CAMPEON, campeon_cierra: CAMPEON_CIERRA, campeon,
       especiales,
       ruleta: RULETA, jackpot, ruletaHist,
@@ -359,7 +383,7 @@ export default async function handler(req, res) {
 
   // ── APOSTAR (simple: 1X2 u over/under con línea) ───────────────────
   if (action === "apostar") {
-    const { nombre, partidoId, pick, monto, linea } = payload;
+    const { nombre, partidoId, pick, monto, linea, mercado: subMkt } = payload;
     const jugadores  = (await kv.get("jugadores"))  || {};
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
@@ -369,20 +393,34 @@ export default async function handler(req, res) {
     if (!m) return res.status(400).json({ error: "Partido no existe" });
     const esOU = esMercadoOU(pick);
     if (!PICKS_1X2.includes(pick) && !esOU && !esBtts(pick)) return res.status(400).json({ error: "Pick inválido" });
+    const subMercado = (esOU && SUB_VALIDOS.has(subMkt)) ? subMkt : 'goles';
     const lineaUsada = esOU ? Number(linea) : null;
-    const momio = momioPick(partidoId, pick, lineaUsada);
+    // Validar línea según sub-mercado
+    if (esOU) {
+      if (subMercado === 'corners' && !LINEAS_CORNERS.includes(lineaUsada)) return res.status(400).json({ error: "Línea de córners inválida" });
+      if (subMercado === 'tarjetas' && !LINEAS_TARJETAS.includes(lineaUsada)) return res.status(400).json({ error: "Línea de tarjetas inválida" });
+      if (subMercado === 'goles' && !LINEAS_OU.includes(lineaUsada)) return res.status(400).json({ error: "Línea de goles inválida" });
+    }
+    const momio = momioPick(partidoId, pick, lineaUsada, subMercado);
     if (momio == null) return res.status(400).json({ error: "Línea o pick inválido" });
-    if (resultados[partidoId]) return res.status(400).json({ error: "El partido ya tiene resultado" });
+    // Permitir apuestas a córners/tarjetas aunque ya haya marcador final, mientras no esté ya liquidado ese sub-mercado
+    const r = resultados[partidoId];
+    if (r) {
+      if (subMercado === 'goles' && r.gl != null) return res.status(400).json({ error: "El partido ya tiene resultado" });
+      if (subMercado === 'corners' && r.corners != null) return res.status(400).json({ error: "Los córners ya se liquidaron" });
+      if (subMercado === 'tarjetas' && r.tarjetas != null) return res.status(400).json({ error: "Las tarjetas ya se liquidaron" });
+    }
     if (Date.now() >= m.kickoff) return res.status(400).json({ error: "El partido ya empezó, apuestas cerradas" });
     const mInt = Math.floor(Number(monto));
     if (!mInt || mInt < APUESTA_MIN) return res.status(400).json({ error: `Mínimo $${APUESTA_MIN}` });
 
-    const mercado = mercadoDe(pick);
+    const mktKey = mercadoKey(pick, subMercado);
     // Reemplaza apuesta simple previa pendiente del mismo partido+mercado (devuelve su stake)
     let saldoDisp = j.saldo, prevKey = null;
     for (const [k, b] of Object.entries(apuestas)) {
-      if (b.tipo !== "parlay" && b.nombre === nombre && b.partidoId === partidoId && b.mercado === mercado && (b.status || "pending") === "pending") {
-        saldoDisp += b.monto; prevKey = k; break;
+      if (b.tipo !== "parlay" && b.nombre === nombre && b.partidoId === partidoId && (b.status || "pending") === "pending") {
+        const bKey = mercadoKey(b.pick, ouSub(b));
+        if (bKey === mktKey) { saldoDisp += b.monto; prevKey = k; break; }
       }
     }
     if (mInt > saldoDisp) return res.status(400).json({ error: "Saldo insuficiente" });
@@ -390,7 +428,7 @@ export default async function handler(req, res) {
 
     j.saldo = saldoDisp - mInt;
     const id = "b" + Date.now() + Math.random().toString(36).slice(2, 6);
-    apuestas[id] = { id, tipo: "simple", mercado, nombre, partidoId, pick, linea: lineaUsada, monto: mInt, momio, status: "pending", payout: 0, ts: Date.now() };
+    apuestas[id] = { id, tipo: "simple", mercado: esOU ? subMercado : (esBtts(pick) ? 'btts' : '1x2'), nombre, partidoId, pick, linea: lineaUsada, monto: mInt, momio, status: "pending", payout: 0, ts: Date.now() };
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas });
@@ -705,7 +743,7 @@ export default async function handler(req, res) {
     if (!mInt || mInt < APUESTA_MIN) return res.status(400).json({ error: `Mínimo $${APUESTA_MIN}` });
     if (mInt > j.saldo) return res.status(400).json({ error: "Saldo insuficiente" });
 
-    const vistos = new Set();        // clave: partidoId + mercado (evita 2 picks del mismo mercado/partido)
+    const vistos = new Set();
     let momioTotal = 1;
     const cleanLegs = [];
     for (const l of legs) {
@@ -713,17 +751,29 @@ export default async function handler(req, res) {
       if (!m) return res.status(400).json({ error: "Partido inválido en el parlay" });
       const esOU = esMercadoOU(l.pick);
       if (!PICKS_1X2.includes(l.pick) && !esOU && !esBtts(l.pick)) return res.status(400).json({ error: "Pick inválido en el parlay" });
-      const mercado = mercadoDe(l.pick);
-      const clave = l.partidoId + "_" + mercado;
+      const subMercado = (esOU && SUB_VALIDOS.has(l.mercado)) ? l.mercado : 'goles';
+      const mktKey = mercadoKey(l.pick, subMercado);
+      const clave = l.partidoId + "_" + mktKey;
       if (vistos.has(clave)) return res.status(400).json({ error: "No puedes repetir el mismo mercado de un partido" });
       vistos.add(clave);
-      if (resultados[l.partidoId]) return res.status(400).json({ error: `${m.local} vs ${m.visita} ya tiene resultado` });
+      // Solo bloquear si ese sub-mercado ya está liquidado
+      const r = resultados[l.partidoId];
+      if (r) {
+        if (subMercado === 'goles' && r.gl != null) return res.status(400).json({ error: `${m.local} vs ${m.visita} ya tiene resultado` });
+        if (subMercado === 'corners' && r.corners != null) return res.status(400).json({ error: `Córners de ${m.local} vs ${m.visita} ya liquidados` });
+        if (subMercado === 'tarjetas' && r.tarjetas != null) return res.status(400).json({ error: `Tarjetas de ${m.local} vs ${m.visita} ya liquidadas` });
+      }
       if (Date.now() >= m.kickoff) return res.status(400).json({ error: `${m.local} vs ${m.visita} ya empezó` });
       const lineaUsada = esOU ? Number(l.linea) : null;
-      const mo = momioPick(l.partidoId, l.pick, lineaUsada);
+      if (esOU) {
+        if (subMercado === 'corners' && !LINEAS_CORNERS.includes(lineaUsada)) return res.status(400).json({ error: "Línea de córners inválida en el parlay" });
+        if (subMercado === 'tarjetas' && !LINEAS_TARJETAS.includes(lineaUsada)) return res.status(400).json({ error: "Línea de tarjetas inválida en el parlay" });
+        if (subMercado === 'goles' && !LINEAS_OU.includes(lineaUsada)) return res.status(400).json({ error: "Línea de goles inválida en el parlay" });
+      }
+      const mo = momioPick(l.partidoId, l.pick, lineaUsada, subMercado);
       if (mo == null) return res.status(400).json({ error: "Línea o pick inválido en el parlay" });
       momioTotal *= mo;
-      cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, linea: lineaUsada, mercado, momio: mo });
+      cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, linea: lineaUsada, mercado: esOU ? subMercado : (esBtts(l.pick) ? 'btts' : '1x2'), momio: mo });
     }
     momioTotal = Math.round(momioTotal * 100) / 100;
 
@@ -803,22 +853,36 @@ export default async function handler(req, res) {
 
   if (action === "resultado") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { partidoId, gl, gv, pa } = payload;
-    if (partidoId === -1) return res.json({ ok: true }); // ping de validación de clave
+    const { partidoId, gl, gv, pa, corners, tarjetas } = payload;
+    if (partidoId === -1) return res.json({ ok: true });
     const m = BY_ID[partidoId];
     if (!m) return res.status(400).json({ error: "Partido no existe" });
     const golL = Math.floor(Number(gl)), golV = Math.floor(Number(gv));
     if (isNaN(golL) || isNaN(golV) || golL < 0 || golV < 0 || golL > 30 || golV > 30)
       return res.status(400).json({ error: "Marcador inválido" });
+    // Validar córners/tarjetas si vienen (opcionales)
+    let cornersVal = null, tarjetasVal = null;
+    if (corners != null && corners !== '') {
+      cornersVal = Math.floor(Number(corners));
+      if (isNaN(cornersVal) || cornersVal < 0 || cornersVal > 50) return res.status(400).json({ error: "Córners inválidos (0-50)" });
+    }
+    if (tarjetas != null && tarjetas !== '') {
+      tarjetasVal = Math.floor(Number(tarjetas));
+      if (isNaN(tarjetasVal) || tarjetasVal < 0 || tarjetasVal > 30) return res.status(400).json({ error: "Tarjetas inválidas (0-30)" });
+    }
     const jugadores  = (await kv.get("jugadores"))  || {};
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
     const campeon    = (await kv.get("campeon"))    || null;
     const especialesMap = await loadEspeciales();
     await kv.set("rankPrev", rankingSnapshot(jugadores));
+    // Mantener corners/tarjetas previos si ya estaban registrados (parcial)
+    const prevR = resultados[partidoId] || {};
     const rEntry = { gl: golL, gv: golV };
-    // Pago Anticipado: flags de qué equipo llegó a +2 (solo en partidos con PA).
-    // Si el admin no los manda pero el marcador FINAL ya es +2, se infieren.
+    if (cornersVal != null) rEntry.corners = cornersVal;
+    else if (prevR.corners != null) rEntry.corners = prevR.corners;
+    if (tarjetasVal != null) rEntry.tarjetas = tarjetasVal;
+    else if (prevR.tarjetas != null) rEntry.tarjetas = prevR.tarjetas;
     if (m.pa) {
       const paL = pa && typeof pa.l === "boolean" ? pa.l : (golL - golV >= 2);
       const paV = pa && typeof pa.v === "boolean" ? pa.v : (golV - golL >= 2);
