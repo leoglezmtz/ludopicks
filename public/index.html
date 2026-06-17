@@ -166,6 +166,13 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .pa-chip{font-size:9px;font-weight:900;color:#1a1400;background:linear-gradient(135deg,#FFE34D,var(--gold));padding:2px 6px;border-radius:6px;letter-spacing:.03em;box-shadow:0 0 10px rgba(255,219,0,.4)}
 .pa-hint{font-size:11.5px;color:var(--al);background:rgba(255,219,0,.08);border:1px solid rgba(255,219,0,.22);border-radius:10px;padding:8px 10px;margin-bottom:10px;line-height:1.4}
 .pa-box{background:rgba(255,219,0,.07);border:1px solid rgba(255,219,0,.28);border-radius:14px;padding:12px;margin-top:12px}
+.extra-mkt-box{background:rgba(31,196,58,.05);border:1px solid rgba(31,196,58,.22);border-radius:14px;padding:12px;margin-top:12px}
+.extra-mkt-h{font-size:13px;font-weight:800;color:#fff;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.extra-mkt-tag{font-size:9.5px;font-weight:800;color:var(--muted2);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.05em}
+.extra-mkt-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin-bottom:10px}
+.extra-mkt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.extra-mkt-label{display:block;font-size:11px;color:var(--muted2);font-weight:700;margin-bottom:5px}
+.extra-mkt-box .score-in{font-size:22px;width:100%;height:50px}
 .pa-h{font-size:13px;font-weight:900;color:var(--gold)}
 .pa-note{font-size:11px;color:var(--muted);margin:4px 0 9px;line-height:1.4}
 .pa-chk{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#fff;padding:7px 0;cursor:pointer}
@@ -1150,7 +1157,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.19.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.20.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1397,30 +1404,61 @@ function flagImg(code,h){const u=flagUrl(code);if(!u)return '';return `<img src=
 function teamFlag(code,h){const f=flagImg(code,h);return f?`<span style="display:inline-flex;align-items:center;gap:5px">${f}${code}</span>`:code;}
 function isLocked(p){return eNow()>=p.kickoff;}
 function lineas(){return state.lineas_ou||[0.5,1.5,2.5,3.5,4.5,5.5];}
+function lineasMercado(m){
+  if(m==='corners')return state.lineas_corners||[6.5,7.5,8.5,9.5,10.5,11.5];
+  if(m==='tarjetas')return state.lineas_tarjetas||[2.5,3.5,4.5,5.5];
+  return lineas();
+}
+function momiosMercado(p,m){
+  if(m==='corners')return state.momios_corners||{};
+  if(m==='tarjetas')return state.momios_tarjetas||{};
+  return p.ou||{};
+}
+function lineaDefaultMercado(m){
+  if(m==='corners')return state.linea_corners_default||9.5;
+  if(m==='tarjetas')return state.linea_tarjetas_default||3.5;
+  return state.linea_default||2.5;
+}
+function getLinea(pid,mercado='goles'){
+  const key=mercado==='goles'?pid:(pid+':'+mercado);
+  if(lineSel[key]!=null)return lineSel[key];
+  const b=Object.values(state.apuestas).find(x=>x.tipo!=='parlay'&&x.nombre===me&&x.partidoId===pid&&(x.pick==='over'||x.pick==='under')&&(x.mercado||'goles')===mercado&&(x.status||'pending')==='pending');
+  if(b)return b.linea;
+  const s=betslip.find(x=>x.partidoId===pid&&x.market==='ou'&&(x.mercado||'goles')===mercado);
+  if(s)return s.linea;
+  return lineaDefaultMercado(mercado);
+}
+function setLinea(pid,l,mercado='goles'){
+  const key=mercado==='goles'?pid:(pid+':'+mercado);
+  lineSel[key]=l;renderCard(pid);
+}
+function slipSelected(pid,pick,linea,mercado){
+  const m=mercado||'goles';
+  return !!betslip.find(s=>s.partidoId===pid&&s.pick===pick&&(s.market==='ou'?(s.linea===linea&&(s.mercado||'goles')===m):true));
+}
 function esOU(pick){return pick==='over'||pick==='under';}
 function esBtts(pick){return pick==='si'||pick==='no';}
 function marketOf(pick){return esOU(pick)?'ou':esBtts(pick)?'btts':'1x2';}
-function pickLabel(p,pick,linea){
+function pickLabel(p,pick,linea,mercado){
   if(pick==='local')return p.local;if(pick==='empate')return 'Empate';if(pick==='visita')return p.visita;
-  if(pick==='over')return 'Over '+linea;if(pick==='under')return 'Under '+linea;
+  const sufijo=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':'';
+  if(pick==='over')return 'Over '+linea+sufijo;
+  if(pick==='under')return 'Under '+linea+sufijo;
   if(pick==='si')return 'Ambos anotan: Sí';if(pick==='no')return 'Ambos anotan: No';return pick;
 }
-function pickWinsClient(p,r,pick,linea){
+function pickWinsClient(p,r,pick,linea,mercado){
   if(p&&p.pa&&r.pa){if(pick==='local'&&r.pa.l)return true;if(pick==='visita'&&r.pa.v)return true;}
   if(pick==='local')return r.gl>r.gv;if(pick==='empate')return r.gl===r.gv;if(pick==='visita')return r.gl<r.gv;
-  const t=r.gl+r.gv;if(pick==='over')return t>linea;if(pick==='under')return t<linea;
+  if(pick==='over'||pick==='under'){
+    let t;
+    if(mercado==='corners')t=r.corners;
+    else if(mercado==='tarjetas')t=r.tarjetas;
+    else t=(r.gl||0)+(r.gv||0);
+    if(t==null)return false;
+    return pick==='over'?t>linea:t<linea;
+  }
   if(pick==='si')return r.gl>0&&r.gv>0;if(pick==='no')return !(r.gl>0&&r.gv>0);return false;
 }
-function getLinea(pid){
-  if(lineSel[pid]!=null)return lineSel[pid];
-  const b=Object.values(state.apuestas).find(x=>x.tipo!=='parlay'&&x.nombre===me&&x.partidoId===pid&&x.mercado==='ou'&&(x.status||'pending')==='pending');
-  if(b)return b.linea;
-  const s=betslip.find(x=>x.partidoId===pid&&x.market==='ou');
-  if(s)return s.linea;
-  return state.linea_default||2.5;
-}
-function setLinea(pid,l){lineSel[pid]=l;renderCard(pid);}
-
 // ── INIT ──────────────────────────────────────────────────────
 async function init(){
   const fEl=document.getElementById('appFooter');if(fEl)fEl.textContent='LudoPicks v'+APP_VERSION;
@@ -1908,16 +1946,39 @@ function renderPartidos(skipAnim){
 function verMasDias(){daysToShow+=3;renderPartidos(true);}
 function ouSection(p,done,locked){
   if(done){const r=state.resultados[p.id];return `<div class="ou-label">Total goles</div><div style="font-size:12px;color:var(--muted);padding:3px 0">Resultado: <strong style="color:#fff">${r.gl+r.gv} goles</strong></div>`;}
-  const L=getLinea(p.id);const row=p.ou[String(L)];
+  const L=getLinea(p.id,'goles');const row=p.ou[String(L)];
   if(!row)return '';
-  const chips=lineas().map(x=>`<button class="ouchip${x===L?' on':''}" ${locked?'':`onclick="setLinea(${p.id},${x})"`}>${x}</button>`).join('');
+  const chips=lineas().map(x=>`<button class="ouchip${x===L?' on':''}" ${locked?'':`onclick="setLinea(${p.id},${x},'goles')"`}>${x}</button>`).join('');
   const pk=(pick,momio,sel)=>{
-    let cls='pick';if(locked)cls+=' locked';else if(slipSelected(p.id,pick,L))cls+=' '+sel;
-    const onc=locked?'':` onclick="toggleSlip(${p.id},'${pick}',${L},${momio})"`;
+    let cls='pick';if(locked)cls+=' locked';else if(slipSelected(p.id,pick,L,'goles'))cls+=' '+sel;
+    const onc=locked?'':` onclick="toggleSlip(${p.id},'${pick}',${L},${momio},'goles')"`;
     return `<div class="${cls}"${onc}><div class="pt">${pick==='over'?'Over':'Under'} ${L}</div><div class="pm">${momio}x</div></div>`;
   };
-  return `<div class="ou-label">Total goles · elige línea</div><div class="ouchips">${chips}</div><div class="ou-row">${pk('over',row.over,'sel-over')}${pk('under',row.under,'sel-under')}</div>`;
+  return `<div class="ou-label">⚽ Total goles · elige línea</div><div class="ouchips">${chips}</div><div class="ou-row">${pk('over',row.over,'sel-over')}${pk('under',row.under,'sel-under')}</div>`;
 }
+// Sección O/U genérica para córners o tarjetas
+function ouMktSection(p,done,locked,mercado,label,unidad){
+  if(done){
+    const r=state.resultados[p.id];
+    const total=mercado==='corners'?r.corners:r.tarjetas;
+    if(total==null)return `<div class="ou-label">${label}</div><div style="font-size:12px;color:var(--muted);padding:3px 0">⏳ Pendiente de liquidación</div>`;
+    return `<div class="ou-label">${label}</div><div style="font-size:12px;color:var(--muted);padding:3px 0">Resultado: <strong style="color:#fff">${total} ${unidad}</strong></div>`;
+  }
+  const L=getLinea(p.id,mercado);
+  const momiosMap=mercado==='corners'?(state.momios_corners||{}):(state.momios_tarjetas||{});
+  const row=momiosMap[L]||momiosMap[String(L)];
+  if(!row)return '';
+  const ls=lineasMercado(mercado);
+  const chips=ls.map(x=>`<button class="ouchip${x===L?' on':''}" ${locked?'':`onclick="setLinea(${p.id},${x},'${mercado}')"`}>${x}</button>`).join('');
+  const pk=(pick,momio,sel)=>{
+    let cls='pick';if(locked)cls+=' locked';else if(slipSelected(p.id,pick,L,mercado))cls+=' '+sel;
+    const onc=locked?'':` onclick="toggleSlip(${p.id},'${pick}',${L},${momio},'${mercado}')"`;
+    return `<div class="${cls}"${onc}><div class="pt">${pick==='over'?'Over':'Under'} ${L}</div><div class="pm">${momio}x</div></div>`;
+  };
+  return `<div class="ou-label">${label} · elige línea</div><div class="ouchips">${chips}</div><div class="ou-row">${pk('over',row.over,'sel-over')}${pk('under',row.under,'sel-under')}</div>`;
+}
+function cornersSection(p,done,locked){return ouMktSection(p,done,locked,'corners','⚽ Tiros de esquina','córners');}
+function tarjetasSection(p,done,locked){return ouMktSection(p,done,locked,'tarjetas','🟨 Tarjetas (amarillas + rojas)','tarjetas');}
 function bttsSection(p,done,locked){
   if(done){const r=state.resultados[p.id];const both=r.gl>0&&r.gv>0;return `<div class="ou-label">Ambos anotan</div><div style="font-size:12px;color:var(--muted);padding:3px 0">${both?'Sí — ambos marcaron':'No'}</div>`;}
   if(!p.btts)return '';
@@ -1951,7 +2012,15 @@ function matchCard(p,res,i,skipAnim,animBody){
   </div>`;
   let body='';
   if(isOpen){
-    const mySimple={};myBets.forEach(b=>{mySimple[b.mercado]=b;});
+    const mySimple={};myBets.forEach(b=>{
+      // Para apuestas viejas con mercado='ou' lo tratamos como 'goles'
+      const mk=b.mercado==='ou'?'goles':(b.mercado||(b.pick==='over'||b.pick==='under'?'goles':null));
+      let key;
+      if(['local','empate','visita'].includes(b.pick))key='1x2';
+      else if(b.pick==='si'||b.pick==='no')key='btts';
+      else if(b.pick==='over'||b.pick==='under')key='ou-'+(mk||'goles');
+      if(key)mySimple[key]=b;
+    });
     const pk1=(pick,label,momio,selClass)=>{
       let cls='pick';
       if(done)cls+=pickWinsClient(p,res,pick,null)?' win':' lose';
@@ -1964,18 +2033,28 @@ function matchCard(p,res,i,skipAnim,animBody){
     const row1x2=`<div class="picks">${pk1('local',`${flagImg(p.local,13)} ${p.local}`,p.momios.local,'sel-local')}${pk1('empate','Empate',p.momios.empate,'sel-empate')}${pk1('visita',`${flagImg(p.visita,13)} ${p.visita}`,p.momios.visita,'sel-visita')}</div>`;
     const rowou=ouSection(p,done,locked||paParcial);
     const rowbtts=bttsSection(p,done,locked||paParcial);
+    const rowcorners=cornersSection(p,done,locked||paParcial);
+    const rowtarjetas=tarjetasSection(p,done,locked||paParcial);
     let hint='';
-    ['1x2','ou','btts'].forEach(mk=>{
+    ['1x2','ou-goles','btts','ou-corners','ou-tarjetas'].forEach(mk=>{
       const b=mySimple[mk];if(!b)return;
-      const lbl=pickLabel(p,b.pick,b.linea);
+      const subM=b.mercado==='corners'?'corners':b.mercado==='tarjetas'?'tarjetas':'goles';
+      const lbl=pickLabel(p,b.pick,b.linea,subM);
       if(done){
-        const win=b.status==='won';
-        hint+=`<div class="hint" style="color:${win?'var(--green)':'var(--rl)'}">${win?'✓ Ganaste':'✗ Perdiste'} $${b.monto.toLocaleString()} · ${lbl}${win?' → +$'+Math.round(b.monto*b.momio).toLocaleString():''}</div>`;
+        const r=state.resultados[p.id];
+        const total=subM==='corners'?r.corners:subM==='tarjetas'?r.tarjetas:null;
+        const pendiente=(subM!=='goles'&&total==null);
+        if(pendiente){
+          hint+=`<div class="hint" style="color:var(--muted)">⏳ Pendiente: ${lbl} · $${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momio).toLocaleString()}</div>`;
+        }else{
+          const win=b.status==='won';
+          hint+=`<div class="hint" style="color:${win?'var(--green)':'var(--rl)'}">${win?'✓ Ganaste':'✗ Perdiste'} $${b.monto.toLocaleString()} · ${lbl}${win?' → +$'+Math.round(b.monto*b.momio).toLocaleString():''}</div>`;
+        }
       }else{
         hint+=`<div class="hint bet">🎫 $${b.monto.toLocaleString()} a ${lbl} → $${Math.round(b.monto*b.momio).toLocaleString()}${locked?'':` <button class="cancel-btn" onclick="cancelBet('${b.id}')">cancelar</button>`}</div>`;
       }
     });
-    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowou}${rowbtts}${hint}</div>`;
+    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
   }
   return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}${isOpen?' open':''}" style="${animStyle}">${header}${body}</div>`;
 }
@@ -1993,20 +2072,22 @@ function renderCard(pid,animBody){
 }
 
 // ── BETSLIP (cupón) ───────────────────────────────────────────
-function slipSelected(pid,pick,linea){return betslip.some(s=>s.partidoId===pid&&s.pick===pick&&(esOU(pick)?s.linea===linea:true));}
 function slipMomioTotal(){return betslip.reduce((a,s)=>a*s.momio,1);}
-function toggleSlip(pid,pick,linea,momio){
+function toggleSlip(pid,pick,linea,momio,mercado){
   const market=marketOf(pick);
-  const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick&&(market==='ou'?s.linea===linea:true));
+  const mkt=mercado||'goles';
+  // Para identificar una pata: (partido, pick, [mercado], [linea])
+  const i=betslip.findIndex(s=>s.partidoId===pid&&s.pick===pick&&(market==='ou'?(s.linea===linea&&(s.mercado||'goles')===mkt):true));
   if(i>=0){betslip.splice(i,1);}
   else{
-    // Antes de agregar la pata, verificar incongruencia con las existentes (del mismo partido)
-    const j=betslip.findIndex(s=>s.partidoId===pid&&s.market===market);
-    const tentativo=[...betslip.filter((_,k)=>k!==j),{partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio}];
+    // Bloquear si ya hay otra del mismo (mercado, partido)
+    const j=betslip.findIndex(s=>s.partidoId===pid&&s.market===market&&(market==='ou'?(s.mercado||'goles')===mkt:true));
+    const newLeg={partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio,mercado:market==='ou'?mkt:undefined};
+    const tentativo=[...betslip.filter((_,k)=>k!==j),newLeg];
     const err=validarIncongruenciasSlip(tentativo);
     if(err){showBetError(err);return;}
     if(j>=0)betslip.splice(j,1);
-    betslip.push({partidoId:pid,market,pick,linea:market==='ou'?linea:null,momio});
+    betslip.push(newLeg);
   }
   renderSlipBar();renderCard(pid);
 }
@@ -2026,7 +2107,8 @@ function validarIncongruenciasSlip(legs){
     const p=byId(+pid);if(!p)continue;
     const matchName=`${p.local} vs ${p.visita}`;
     const r1x2=plegs.find(l=>['local','empate','visita'].includes(l.pick));
-    const ou=plegs.find(l=>l.pick==='over'||l.pick==='under');
+    // Solo O/U de goles cuenta para estas reglas. Córners/tarjetas son mercados independientes.
+    const ou=plegs.find(l=>(l.pick==='over'||l.pick==='under')&&(!l.mercado||l.mercado==='goles'));
     const btts=plegs.find(l=>l.pick==='si'||l.pick==='no');
     const ouLinea=ou?Number(ou.linea):null;
     if(btts&&btts.pick==='si'&&ou&&ou.pick==='under'&&ouLinea<=1.5)
@@ -2091,8 +2173,8 @@ async function confirmSlip(){
   const view=slipToView(monto);  // captura antes de limpiar el cupón
   let r;
   try{
-    if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea})),monto}});
-    else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,monto}});}
+    if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea,mercado:s.mercado||'goles'})),monto}});
+    else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,mercado:s.mercado||'goles',monto}});}
   }catch(e){return toast('Error de conexión, intenta de nuevo');}
   if(!r||r.error){
     const e=(r&&r.error)||'No se pudo registrar la apuesta';
@@ -2154,14 +2236,18 @@ function legResIcon(l){
   const r=state.resultados[l.partidoId];
   if(!r)return ['•','var(--muted2)'];
   const p=byId(l.partidoId);
-  // PA parcial: revisamos por el status real de la apuesta si lo tiene,
-  // o por la lógica del cliente
-  if(r.gl==null&&r.pa){
-    // resultado parcial (PA en vivo)
-    if((l.pick==='local'&&r.pa.l)||(l.pick==='visita'&&r.pa.v))return ['⚡','var(--gold)'];
+  const subM=l.mercado==='corners'?'corners':l.mercado==='tarjetas'?'tarjetas':'goles';
+  // Si es córners o tarjetas y aún no se han registrado, queda pendiente
+  if(subM==='corners'&&r.corners==null)return ['⏳','var(--muted2)'];
+  if(subM==='tarjetas'&&r.tarjetas==null)return ['⏳','var(--muted2)'];
+  // Goles: PA parcial (sin marcador final)
+  if(subM==='goles'&&r.gl==null){
+    if(r.pa){
+      if((l.pick==='local'&&r.pa.l)||(l.pick==='visita'&&r.pa.v))return ['⚡','var(--gold)'];
+    }
     return ['•','var(--muted2)'];
   }
-  return pickWinsClient(p,r,l.pick,l.linea)?['✓','var(--green)']:['✗','var(--rl)'];
+  return pickWinsClient(p,r,l.pick,l.linea,subM)?['✓','var(--green)']:['✗','var(--rl)'];
 }
 function betCanCancel(b){
   if((b.status||'pending')!=='pending')return false;
@@ -2190,12 +2276,13 @@ function betCard(b){
     body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${b.especialTitulo||'Apuesta especial'} · ${b.momio}x</div>`;
   }else if(isP){
     head=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span>`;
-    body=b.legs.map(l=>{const p=byId(l.partidoId);const[ic,col]=legResIcon(l);
-      return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${teamFlag(p.local,12)} v ${teamFlag(p.visita,12)} · ${pickLabel(p,l.pick,l.linea)}</span><span style="color:${col};font-weight:700">${ic} ${l.momio}x</span></div>`;}).join('');
+    body=b.legs.map(l=>{const p=byId(l.partidoId);const[ic,col]=legResIcon(l);const subM=l.mercado==='corners'?'corners':l.mercado==='tarjetas'?'tarjetas':'goles';
+      return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${teamFlag(p.local,12)} v ${teamFlag(p.visita,12)} · ${pickLabel(p,l.pick,l.linea,subM)}</span><span style="color:${col};font-weight:700">${ic} ${l.momio}x</span></div>`;}).join('');
   }else{
     const p=byId(b.partidoId);
+    const subM=b.mercado==='corners'?'corners':b.mercado==='tarjetas'?'tarjetas':'goles';
     head=`<span style="font-weight:700;font-size:14px">${teamFlag(p.local,15)} vs ${teamFlag(p.visita,15)}</span> <span style="color:var(--muted2);font-size:11px">${p.fecha}</span>`;
-    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x${esPaWon?' <span style="color:var(--gold);font-weight:800">· ⚡ Cobrado por PA</span>':''}</div>`;
+    body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea,subM)} · ${b.momio}x${esPaWon?' <span style="color:var(--gold);font-weight:800">· ⚡ Cobrado por PA</span>':''}</div>`;
   }
   let btns='';
   if(st==='pending')btns+=`<button class="share-btn" onclick="shareBetById('${b.id}')">📲 Compartir</button>`;
@@ -2888,6 +2975,20 @@ function openScore(pid){
       <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700;display:flex;align-items:center;gap:4px;justify-content:center">${flagImg(p.visita,14)} ${p.visita}</div><input class="score-in" id="scoreV" type="tel" inputmode="numeric" maxlength="2" value="${hasFinal?res.gv:''}" oninput="scorePreview(${pid})"></div>
     </div>
     <div class="derived" id="scoreDerived"></div>
+    <div class="extra-mkt-box">
+      <div class="extra-mkt-h">📊 Mercados secundarios <span class="extra-mkt-tag">opcional</span></div>
+      <div class="extra-mkt-note">Si los dejas vacíos, las apuestas a córners/tarjetas quedan <b>pendientes</b> y las puedes liquidar después corrigiendo el resultado.</div>
+      <div class="extra-mkt-grid">
+        <div>
+          <label class="extra-mkt-label">⚽ Tiros de esquina (total)</label>
+          <input class="score-in" id="cornersIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${res&&res.corners!=null?res.corners:''}">
+        </div>
+        <div>
+          <label class="extra-mkt-label">🟨 Tarjetas (amarillas + rojas)</label>
+          <input class="score-in" id="tarjetasIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${res&&res.tarjetas!=null?res.tarjetas:''}">
+        </div>
+      </div>
+    </div>
     ${p.pa?`<div class="pa-box">
       <div class="pa-h">⚡ Pago Anticipado (2 Up)</div>
       <div class="pa-note">Marca si el equipo llegó a ir <b>2 goles arriba</b> en algún momento (se paga como ganada aunque el marcador final cambie). Se auto-marca si el marcador final ya es +2.</div>
@@ -2954,15 +3055,22 @@ async function saveScore(pid){
   if(isNaN(gl)||isNaN(gv)||gl<0||gv<0)return toast('Marcador inválido');
   let pa;
   if(p.pa){const cl=document.getElementById('paL'),cv=document.getElementById('paV');pa={l:!!(cl&&cl.checked),v:!!(cv&&cv.checked)};}
+  const corners=document.getElementById('cornersIn').value.trim();
+  const tarjetas=document.getElementById('tarjetasIn').value.trim();
   if(state.resultados[pid]){
     const rv=await api({action:'revertirResultado',payload:{adminKey,partidoId:pid}});
     if(rv.error)return toast(rv.error);
     state.resultados=rv.resultados;state.jugadores=rv.jugadores;state.apuestas=rv.apuestas;
   }
-  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,gl,gv,pa}});
+  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,gl,gv,pa,corners:corners===''?null:corners,tarjetas:tarjetas===''?null:tarjetas}});
   if(r.error)return toast(r.error);
   state.resultados=r.resultados;state.jugadores=r.jugadores;state.apuestas=r.apuestas;
-  closeModal();toast('Resultado guardado ✓');renderAdmin();
+  closeModal();
+  let msg='Resultado guardado ✓';
+  if(corners!=='')msg+=` · ${corners} córners`;
+  if(tarjetas!=='')msg+=` · ${tarjetas} tarjetas`;
+  toast(msg);
+  renderAdmin();
 }
 async function revertir(pid){
   if(!confirm('¿Revertir el resultado? Se deshacen los pagos de ese partido y las apuestas vuelven a pendientes.'))return;
@@ -3206,12 +3314,13 @@ function shareText(text){
 }
 
 // ── GENERACIÓN DE IMÁGENES PARA COMPARTIR ─────────────────────
-function pickLabelLong(p,pick,linea){
+function pickLabelLong(p,pick,linea,mercado){
   if(pick==='local')return p.local+' gana';
   if(pick==='visita')return p.visita+' gana';
   if(pick==='empate')return 'Empate';
-  if(pick==='over')return 'Over '+linea+' goles';
-  if(pick==='under')return 'Under '+linea+' goles';
+  const sufijo=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
+  if(pick==='over')return 'Over '+linea+sufijo;
+  if(pick==='under')return 'Under '+linea+sufijo;
   if(pick==='si')return 'Ambos anotan: Sí';
   if(pick==='no')return 'Ambos anotan: No';
   return pick;
