@@ -500,6 +500,61 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .pod.p3 .bar{height:28px;background:linear-gradient(180deg,#c87f4a,#6b3f1f)}
 
 .rank-list{display:flex;flex-direction:column;gap:6px}
+/* ── BARRA DE PROGRESO "EN VIVO" para apuestas (Draftea-style) ── */
+.prog-wrap{margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:11px}
+.prog-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.prog-now{font-size:18px;font-weight:900;color:#fff;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+.prog-meta{font-size:11px;color:var(--muted2);font-weight:700;text-align:right;flex-shrink:0}
+.prog-bar{position:relative;height:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin:4px 0}
+.prog-fill{height:100%;border-radius:99px;transition:width .5s cubic-bezier(.4,.8,.4,1)}
+.prog-fill.winning{background:linear-gradient(90deg,#1FC43A,#26d847)}
+.prog-fill.losing{background:linear-gradient(90deg,#7a7a7a,#9a9a9a)}
+.prog-marker{position:absolute;top:-2px;width:2px;height:12px;background:var(--gold);border-radius:1px;box-shadow:0 0 6px rgba(255,219,0,.6)}
+.prog-status{font-size:11.5px;font-weight:800;margin-top:4px;letter-spacing:.02em}
+.prog-status.win{color:var(--green)}
+.prog-status.lose{color:var(--muted)}
+/* Indicadores de pata en vivo dentro de un parlay */
+.leg-live{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:7px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.leg-live.on{background:rgba(31,196,58,.16);color:var(--green)}
+.leg-live.off{background:rgba(255,255,255,.06);color:var(--muted2)}
+
+/* ── MODAL ADMIN RESULTADO REDISEÑADO ── */
+.adm-banner{padding:10px 12px;border-radius:11px;font-size:12.5px;line-height:1.45;margin-bottom:12px}
+.adm-banner-gold{background:linear-gradient(135deg,rgba(255,219,0,.14),rgba(255,219,0,.06));border:1px solid rgba(255,219,0,.35);color:#fff}
+.adm-banner-red{background:linear-gradient(135deg,rgba(239,68,68,.14),rgba(239,68,68,.06));border:1px solid rgba(239,68,68,.35);color:#fff}
+.adm-sect{background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:13px;margin-bottom:10px}
+.adm-sect-h{font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.adm-sect-tag{font-size:9.5px;font-weight:800;color:var(--muted2);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.05em}
+.adm-sect-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin-bottom:10px}
+.adm-score-card{display:flex;align-items:center;gap:8px;padding:8px 4px;margin-top:6px}
+.adm-team{flex:1;text-align:center}
+.adm-team-name{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:5px;justify-content:center}
+.adm-score-ctrl{display:flex;align-items:center;gap:4px;justify-content:center}
+.adm-bump{width:32px;height:42px;border:none;background:rgba(255,255,255,.06);color:#fff;font-size:20px;font-weight:800;border-radius:9px;cursor:pointer;transition:.15s;flex-shrink:0}
+.adm-bump:hover{background:rgba(255,255,255,.12)}
+.adm-bump:active{transform:scale(.92)}
+.adm-score-in{width:54px;height:54px;font-size:28px;font-weight:900;text-align:center;background:rgba(0,0,0,.4);border:2px solid rgba(255,255,255,.12);border-radius:11px;color:#fff;font-variant-numeric:tabular-nums}
+.adm-score-in:focus{outline:none;border-color:var(--green);background:rgba(31,196,58,.06)}
+.adm-score-in-sm{width:100%;height:44px;font-size:20px}
+.adm-dash{font-size:22px;color:var(--muted2);font-weight:900;padding:0 4px;margin-top:22px}
+.adm-mkt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.adm-mkt-cell label{display:block;font-size:11.5px;color:var(--muted2);font-weight:700;margin-bottom:5px}
+.adm-pa-grid{display:flex;flex-direction:column;gap:7px;margin:8px 0 10px}
+.adm-pa-chip{display:flex;align-items:center;gap:9px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:10px;cursor:pointer;font-size:13px;transition:.15s}
+.adm-pa-chip:hover{background:rgba(255,255,255,.06)}
+.adm-pa-chip:has(input:checked){background:rgba(255,219,0,.1);border-color:rgba(255,219,0,.45);color:#fff}
+.adm-pa-chip input{width:18px;height:18px;accent-color:var(--gold);cursor:pointer}
+.adm-pa-btn{width:100%;padding:11px 12px;background:linear-gradient(135deg,#FFE34D,var(--gold));color:#1a1400;font-weight:800;font-size:13px;border:none;border-radius:11px;cursor:pointer;transition:.15s;box-shadow:0 4px 14px -4px rgba(255,219,0,.5)}
+.adm-pa-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px -4px rgba(255,219,0,.6)}
+.adm-actions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.adm-btn-live,.adm-btn-final,.adm-btn-revert{width:100%;padding:13px 14px;border:none;border-radius:13px;cursor:pointer;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:2px;transition:.15s;font-size:14px}
+.adm-btn-live{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 4px 14px -4px rgba(239,68,68,.4)}
+.adm-btn-live:hover{transform:translateY(-1px);box-shadow:0 6px 18px -4px rgba(239,68,68,.5)}
+.adm-btn-final{background:linear-gradient(135deg,var(--green),#17a32f);color:#04231a;box-shadow:0 4px 14px -4px rgba(31,196,58,.5)}
+.adm-btn-final:hover{transform:translateY(-1px);box-shadow:0 6px 18px -4px rgba(31,196,58,.6)}
+.adm-btn-revert{background:rgba(255,255,255,.06);color:var(--muted);border:1px solid var(--line2);font-size:12.5px;font-weight:700}
+.adm-btn-revert:hover{background:rgba(255,255,255,.1);color:#fff}
+.adm-btn-sub{font-size:10.5px;font-weight:600;opacity:.75;letter-spacing:.02em}
 .rank-ref-card{background:linear-gradient(135deg,rgba(31,196,58,.08),rgba(255,219,0,.06));border:1px solid rgba(31,196,58,.22);border-radius:13px;padding:10px 13px;margin-bottom:10px}
 .rank-ref-label{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .rank-ref-match{font-size:13.5px;font-weight:700;color:#fff;margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
@@ -1160,7 +1215,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.20.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.21.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2237,20 +2292,21 @@ function betTicketText(b){
 }
 function legResIcon(l){
   const r=state.resultados[l.partidoId];
-  if(!r)return ['•','var(--muted2)'];
+  const live=partidoLive(l.partidoId);
   const p=byId(l.partidoId);
   const subM=l.mercado==='corners'?'corners':l.mercado==='tarjetas'?'tarjetas':'goles';
-  // Si es córners o tarjetas y aún no se han registrado, queda pendiente
-  if(subM==='corners'&&r.corners==null)return ['⏳','var(--muted2)'];
-  if(subM==='tarjetas'&&r.tarjetas==null)return ['⏳','var(--muted2)'];
-  // Goles: PA parcial (sin marcador final)
-  if(subM==='goles'&&r.gl==null){
-    if(r.pa){
-      if((l.pick==='local'&&r.pa.l)||(l.pick==='visita'&&r.pa.v))return ['⚡','var(--gold)'];
-    }
-    return ['•','var(--muted2)'];
+  // Si hay resultado final, evaluar definitivo
+  if(r&&r.gl!=null&&!r.parcial){
+    if(subM==='corners'&&r.corners==null)return ['⏳','var(--muted2)'];
+    if(subM==='tarjetas'&&r.tarjetas==null)return ['⏳','var(--muted2)'];
+    return pickWinsClient(p,r,l.pick,l.linea,subM)?['✓','var(--green)']:['✗','var(--rl)'];
   }
-  return pickWinsClient(p,r,l.pick,l.linea,subM)?['✓','var(--green)']:['✗','var(--rl)'];
+  // Resultado parcial con PA
+  if(r&&r.parcial&&subM==='goles'){
+    if(r.pa&&((l.pick==='local'&&r.pa.l)||(l.pick==='visita'&&r.pa.v)))return ['⚡','var(--gold)'];
+  }
+  // Sin resultado pero hay live score → mostrar estado provisional
+  return ['•','var(--muted2)'];
 }
 function betCanCancel(b){
   if((b.status||'pending')!=='pending')return false;
@@ -2259,18 +2315,77 @@ function betCanCancel(b){
   if(b.tipo==='parlay')return b.legs.every(l=>{const p=byId(l.partidoId);return p&&!isLocked(p);});
   const p=byId(b.partidoId);return p&&!isLocked(p);
 }
+// ── PROGRESO EN VIVO (Draftea-style) ──────────────────────────
+// Devuelve el estado actual del partido combinando resultado (parcial/final) y liveScore.
+function partidoLive(pid){
+  const r=state.resultados&&state.resultados[pid];
+  const ls=state.liveScores&&state.liveScores[pid];
+  // Si hay resultado FINAL, ese gana
+  if(r&&r.gl!=null&&!r.parcial)return{gl:r.gl,gv:r.gv,corners:r.corners,tarjetas:r.tarjetas,final:true,pa:r.pa};
+  // Si hay resultado PARCIAL (PA aplicado pero sin marcador final)
+  if(r&&r.parcial){
+    return{gl:ls&&ls.gl!=null?ls.gl:r.gl,gv:ls&&ls.gv!=null?ls.gv:r.gv,corners:(ls&&ls.corners)??r.corners,tarjetas:(ls&&ls.tarjetas)??r.tarjetas,final:false,pa:r.pa,live:!!ls};
+  }
+  // Solo live (sin PA ni resultado)
+  if(ls)return{gl:ls.gl,gv:ls.gv,corners:ls.corners,tarjetas:ls.tarjetas,final:false,live:true};
+  return null;
+}
+
+// Genera barra de progreso para una apuesta pendiente con estado parcial
+function progressBar(b){
+  const pid=b.partidoId;if(!pid)return '';
+  const live=partidoLive(pid);if(!live)return '';
+  const p=byId(pid);if(!p)return '';
+  const subM=b.mercado==='corners'?'corners':b.mercado==='tarjetas'?'tarjetas':'goles';
+  // Determinar valor actual y meta
+  let actual,meta,label,winning;
+  if(b.pick==='over'||b.pick==='under'){
+    if(subM==='corners'){actual=live.corners;label='córners';}
+    else if(subM==='tarjetas'){actual=live.tarjetas;label='tarjetas';}
+    else{actual=(live.gl??0)+(live.gv??0);label='goles';}
+    if(actual==null)return ''; // sin data aún
+    meta=Number(b.linea);
+    winning=b.pick==='over'?actual>meta:actual<meta;
+    const pct=Math.min(100,Math.round((actual/(meta+1))*100));
+    const flecha=b.pick==='over'?`necesita ≥ ${Math.ceil(meta)}`:`tope ${Math.floor(meta)}`;
+    return `<div class="prog-wrap">
+      <div class="prog-head"><span class="prog-now">${actual} ${label}</span><span class="prog-meta">${b.pick==='over'?'Over':'Under'} ${meta} · ${flecha}</span></div>
+      <div class="prog-bar"><div class="prog-fill ${winning?'winning':'losing'}" style="width:${pct}%"></div><div class="prog-marker" style="left:${Math.min(95,(meta/(meta+1))*100)}%"></div></div>
+      <div class="prog-status ${winning?'win':'lose'}">${winning?'✓ vas ganando':'⏳ vas perdiendo'}${live.live?' · 🔴 EN VIVO':''}</div>
+    </div>`;
+  }
+  if(b.pick==='local'||b.pick==='visita'||b.pick==='empate'){
+    if(live.gl==null||live.gv==null)return '';
+    const winning=b.pick==='local'?live.gl>live.gv:b.pick==='visita'?live.gv>live.gl:live.gl===live.gv;
+    const paGanado=live.pa&&((b.pick==='local'&&live.pa.l)||(b.pick==='visita'&&live.pa.v));
+    return `<div class="prog-wrap">
+      <div class="prog-head"><span class="prog-now">${live.gl} − ${live.gv}</span><span class="prog-meta">${pickLabel(p,b.pick,null)}</span></div>
+      <div class="prog-status ${winning||paGanado?'win':'lose'}">${paGanado?'⚡ Cobrado por PA':winning?'✓ vas ganando':'⏳ vas perdiendo'}${live.live?' · 🔴 EN VIVO':''}</div>
+    </div>`;
+  }
+  if(b.pick==='si'||b.pick==='no'){
+    if(live.gl==null||live.gv==null)return '';
+    const ambos=live.gl>0&&live.gv>0;
+    const winning=b.pick==='si'?ambos:!ambos;
+    return `<div class="prog-wrap">
+      <div class="prog-head"><span class="prog-now">${p.local} ${live.gl} · ${p.visita} ${live.gv}</span><span class="prog-meta">Ambos anotan: ${b.pick==='si'?'Sí':'No'}</span></div>
+      <div class="prog-status ${winning?'win':'lose'}">${ambos?'✓ ambos anotaron':b.pick==='no'?'✓ aún no anotan ambos':'⏳ falta que ambos anoten'}${live.live?' · 🔴 EN VIVO':''}</div>
+    </div>`;
+  }
+  return '';
+}
+
 function betCard(b){
   const st=b.status||'pending';
   const isP=b.tipo==='parlay';
   const factor=isP?b.momioTotal:b.momio;
-  // Detectar si el pago fue por PA (resultado parcial)
   const r=b.partidoId?state.resultados[b.partidoId]:null;
   const esPaWon=st==='won'&&r&&r.gl==null&&r.pa;
   const right=st==='won'
     ?`<div class="ap-g win">${esPaWon?'⚡ ':'+'}$${Math.round(b.monto*factor).toLocaleString()}</div>`
     :st==='lost'?`<div class="ap-g loss">−$${b.monto.toLocaleString()}</div>`
     :`<div class="ap-g pend">→ $${Math.round(b.monto*factor).toLocaleString()}</div>`;
-  let head,body='';
+  let head,body='',prog='';
   if(b.tipo==='campeon'){
     head=`<span style="font-weight:700;font-size:14px">${flagImg(b.equipo,15)} ${teamName(b.equipo)} 🏆</span> <span style="color:var(--muted2);font-size:11px">Campeón</span>`;
     body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">Campeón del Mundial · ${b.momio}x</div>`;
@@ -2279,18 +2394,44 @@ function betCard(b){
     body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${b.especialTitulo||'Apuesta especial'} · ${b.momio}x</div>`;
   }else if(isP){
     head=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span>`;
-    body=b.legs.map(l=>{const p=byId(l.partidoId);const[ic,col]=legResIcon(l);const subM=l.mercado==='corners'?'corners':l.mercado==='tarjetas'?'tarjetas':'goles';
-      return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--line)"><span style="color:var(--muted)">${teamFlag(p.local,12)} v ${teamFlag(p.visita,12)} · ${pickLabel(p,l.pick,l.linea,subM)}</span><span style="color:${col};font-weight:700">${ic} ${l.momio}x</span></div>`;}).join('');
+    // Calcular estado vivo de cada pata para mostrar tracker compacto
+    const pendiente=st==='pending';
+    body=b.legs.map(l=>{
+      const p=byId(l.partidoId);const[ic,col]=legResIcon(l);
+      const subM=l.mercado==='corners'?'corners':l.mercado==='tarjetas'?'tarjetas':'goles';
+      // Indicador en vivo si está pendiente
+      let liveBadge='';
+      if(pendiente){
+        const live=partidoLive(l.partidoId);
+        if(live){
+          let actual,meta,winning;
+          if(l.pick==='over'||l.pick==='under'){
+            actual=subM==='corners'?live.corners:subM==='tarjetas'?live.tarjetas:(live.gl??0)+(live.gv??0);
+            if(actual!=null){meta=Number(l.linea);winning=l.pick==='over'?actual>meta:actual<meta;liveBadge=`<span class="leg-live ${winning?'on':'off'}">${actual}/${meta}</span>`;}
+          }else if(['local','empate','visita'].includes(l.pick)&&live.gl!=null){
+            winning=l.pick==='local'?live.gl>live.gv:l.pick==='visita'?live.gv>live.gl:live.gl===live.gv;
+            const paGanado=live.pa&&((l.pick==='local'&&live.pa.l)||(l.pick==='visita'&&live.pa.v));
+            liveBadge=`<span class="leg-live ${winning||paGanado?'on':'off'}">${live.gl}-${live.gv}${paGanado?' ⚡':''}</span>`;
+          }else if((l.pick==='si'||l.pick==='no')&&live.gl!=null){
+            const ambos=live.gl>0&&live.gv>0;winning=l.pick==='si'?ambos:!ambos;
+            liveBadge=`<span class="leg-live ${winning?'on':'off'}">${live.gl}-${live.gv}</span>`;
+          }
+        }
+      }
+      return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:5px 0;border-bottom:1px solid var(--line);gap:6px"><span style="color:var(--muted);flex:1;min-width:0">${teamFlag(p.local,12)} v ${teamFlag(p.visita,12)} · ${pickLabel(p,l.pick,l.linea,subM)}</span>${liveBadge}<span style="color:${col};font-weight:700;flex-shrink:0">${ic} ${l.momio}x</span></div>`;
+    }).join('');
   }else{
     const p=byId(b.partidoId);
     const subM=b.mercado==='corners'?'corners':b.mercado==='tarjetas'?'tarjetas':'goles';
     head=`<span style="font-weight:700;font-size:14px">${teamFlag(p.local,15)} vs ${teamFlag(p.visita,15)}</span> <span style="color:var(--muted2);font-size:11px">${p.fecha}</span>`;
     body=`<div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea,subM)} · ${b.momio}x${esPaWon?' <span style="color:var(--gold);font-weight:800">· ⚡ Cobrado por PA</span>':''}</div>`;
+    // Barra de progreso en vivo (solo si la apuesta está pendiente)
+    if(st==='pending')prog=progressBar(b);
   }
   let btns='';
   if(st==='pending')btns+=`<button class="share-btn" onclick="shareBetById('${b.id}')">📲 Compartir</button>`;
   if(betCanCancel(b))btns+=`<button class="cancel-btn" style="margin-top:0" onclick="cancelBet('${b.id}')">Cancelar apuesta</button>`;
-  return `<div class="info-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="flex:1">${head}</div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div>${right}</div></div>${body}${btns?`<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${btns}</div>`:''}</div>`;
+  return `<div class="info-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="flex:1">${head}</div><div class="ap-r"><div class="ap-m">$${b.monto.toLocaleString()}</div>${right}</div></div>${body}${prog}${btns?`<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">${btns}</div>`:''}</div>`;
 }
 function setMisF(f){misF=f;renderMis();}
 function renderMis(){
@@ -3006,41 +3147,79 @@ function renderAdmin(){
 }
 function openScore(pid){
   const p=byId(pid);const res=state.resultados[pid];
-  const hasFinal=!!res&&res.gl!=null;
+  const live=state.liveScores&&state.liveScores[pid];
+  const hasFinal=!!res&&res.gl!=null&&!res.parcial;
   const paParcial=!!res&&res.gl==null&&!!res.pa;
-  document.getElementById('mTitle').innerHTML=`${teamFlag(p.local,16)} vs ${teamFlag(p.visita,16)}`;
+  // Valores iniciales: prioridad final > live > parcial
+  const initGl=hasFinal?res.gl:(live&&live.gl!=null?live.gl:'');
+  const initGv=hasFinal?res.gv:(live&&live.gv!=null?live.gv:'');
+  const initCorners=res&&res.corners!=null?res.corners:(live&&live.corners!=null?live.corners:'');
+  const initTarjetas=res&&res.tarjetas!=null?res.tarjetas:(live&&live.tarjetas!=null?live.tarjetas:'');
+
+  document.getElementById('mTitle').innerHTML=`${teamFlag(p.local,16)} <span style="font-size:13px;color:var(--muted2);font-weight:600;margin:0 6px">vs</span> ${teamFlag(p.visita,16)}${hasFinal?'<span class="rb rb-info" style="margin-left:10px">Liquidado</span>':paParcial?'<span class="locktag" style="background:rgba(255,219,0,.2);color:var(--gold);border-color:rgba(255,219,0,.4);margin-left:10px">⚡ PA</span>':live?'<span class="locktag" style="background:rgba(239,68,68,.16);color:#ef4444;border-color:rgba(239,68,68,.3);margin-left:10px">🔴 EN VIVO</span>':''}`;
   document.getElementById('mBody').innerHTML=`
-    ${paParcial?`<div class="pa-live-note">⚡ PA aplicado en vivo a: <b>${res.pa.l?p.local:''}${res.pa.l&&res.pa.v?' y ':''}${res.pa.v?p.visita:''}</b>. Mete el marcador final cuando termine el partido.</div>`:''}
-    <div class="score-entry">
-      <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700;display:flex;align-items:center;gap:4px;justify-content:center">${flagImg(p.local,14)} ${p.local}</div><input class="score-in" id="scoreL" type="tel" inputmode="numeric" maxlength="2" value="${hasFinal?res.gl:''}" oninput="scorePreview(${pid})"></div>
-      <span class="score-x">−</span>
-      <div style="text-align:center"><div style="font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:700;display:flex;align-items:center;gap:4px;justify-content:center">${flagImg(p.visita,14)} ${p.visita}</div><input class="score-in" id="scoreV" type="tel" inputmode="numeric" maxlength="2" value="${hasFinal?res.gv:''}" oninput="scorePreview(${pid})"></div>
-    </div>
-    <div class="derived" id="scoreDerived"></div>
-    <div class="extra-mkt-box">
-      <div class="extra-mkt-h">📊 Mercados secundarios <span class="extra-mkt-tag">opcional</span></div>
-      <div class="extra-mkt-note">Si los dejas vacíos, las apuestas a córners/tarjetas quedan <b>pendientes</b> y las puedes liquidar después corrigiendo el resultado.</div>
-      <div class="extra-mkt-grid">
-        <div>
-          <label class="extra-mkt-label">⚽ Tiros de esquina (total)</label>
-          <input class="score-in" id="cornersIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${res&&res.corners!=null?res.corners:''}">
+    ${paParcial?`<div class="adm-banner adm-banner-gold">⚡ <b>PA aplicado en vivo</b> a ${res.pa.l?`<b>${p.local}</b>`:''}${res.pa.l&&res.pa.v?' y ':''}${res.pa.v?`<b>${p.visita}</b>`:''}. Las apuestas simples ya se cobraron. Mete el marcador final cuando termine el partido.</div>`:''}
+    ${live&&!hasFinal&&!paParcial?`<div class="adm-banner adm-banner-red">🔴 <b>Marcador en vivo activo</b>: ${live.gl??'?'}-${live.gv??'?'}. Los jugadores ven su progreso en tiempo real.</div>`:''}
+
+    <!-- ── SECCIÓN 1: MARCADOR ─── -->
+    <div class="adm-sect">
+      <div class="adm-sect-h">⚽ Marcador</div>
+      <div class="adm-score-card">
+        <div class="adm-team">
+          <div class="adm-team-name">${flagImg(p.local,18)} ${p.local}</div>
+          <div class="adm-score-ctrl">
+            <button class="adm-bump" onclick="bumpScore('scoreL',-1)">−</button>
+            <input class="adm-score-in" id="scoreL" type="tel" inputmode="numeric" maxlength="2" value="${initGl}" oninput="scorePreview(${pid})">
+            <button class="adm-bump" onclick="bumpScore('scoreL',1)">+</button>
+          </div>
         </div>
-        <div>
-          <label class="extra-mkt-label">🟨 Tarjetas (amarillas + rojas)</label>
-          <input class="score-in" id="tarjetasIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${res&&res.tarjetas!=null?res.tarjetas:''}">
+        <div class="adm-dash">−</div>
+        <div class="adm-team">
+          <div class="adm-team-name">${flagImg(p.visita,18)} ${p.visita}</div>
+          <div class="adm-score-ctrl">
+            <button class="adm-bump" onclick="bumpScore('scoreV',-1)">−</button>
+            <input class="adm-score-in" id="scoreV" type="tel" inputmode="numeric" maxlength="2" value="${initGv}" oninput="scorePreview(${pid})">
+            <button class="adm-bump" onclick="bumpScore('scoreV',1)">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="derived" id="scoreDerived"></div>
+    </div>
+
+    <!-- ── SECCIÓN 2: MERCADOS SECUNDARIOS ─── -->
+    <div class="adm-sect">
+      <div class="adm-sect-h">📊 Córners y tarjetas <span class="adm-sect-tag">opcional</span></div>
+      <div class="adm-sect-note">Déjalos vacíos para que las apuestas a estos mercados queden pendientes y liquidarlas después.</div>
+      <div class="adm-mkt-grid">
+        <div class="adm-mkt-cell">
+          <label>⚽ Tiros de esquina</label>
+          <input class="adm-score-in adm-score-in-sm" id="cornersIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${initCorners}">
+        </div>
+        <div class="adm-mkt-cell">
+          <label>🟨 Tarjetas (amar+roj)</label>
+          <input class="adm-score-in adm-score-in-sm" id="tarjetasIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${initTarjetas}">
         </div>
       </div>
     </div>
-    ${p.pa?`<div class="pa-box">
-      <div class="pa-h">⚡ Pago Anticipado (2 Up)</div>
-      <div class="pa-note">Marca si el equipo llegó a ir <b>2 goles arriba</b> en algún momento (se paga como ganada aunque el marcador final cambie). Se auto-marca si el marcador final ya es +2.</div>
-      <label class="pa-chk"><input type="checkbox" id="paL"> ${flagImg(p.local,14)} ${p.local} llegó a +2</label>
-      <label class="pa-chk"><input type="checkbox" id="paV"> ${flagImg(p.visita,14)} ${p.visita} llegó a +2</label>
-      ${!hasFinal?`<button class="btn btn-sm" style="background:linear-gradient(135deg,#FFE34D,var(--gold));color:#1a1400;width:100%;margin-top:8px" onclick="aplicarPALive(${pid})">⚡ Aplicar PA en vivo (pagar simples ya)</button>
-      <div style="font-size:10.5px;color:var(--muted2);margin-top:6px;line-height:1.4">Paga de inmediato las apuestas <b>simples</b> al equipo marcado. Los parlays esperan a resolverse. Luego mete el marcador final normal.</div>`:''}
+
+    ${p.pa?`<!-- ── SECCIÓN 3: PA ─── -->
+    <div class="adm-sect">
+      <div class="adm-sect-h">⚡ Pago Anticipado (2 Up)</div>
+      <div class="adm-sect-note">Marca cuando un equipo llegue a +2 de ventaja. Se paga aunque el marcador final cambie. Se auto-marca si el marcador ya muestra +2.</div>
+      <div class="adm-pa-grid">
+        <label class="adm-pa-chip"><input type="checkbox" id="paL"> ${flagImg(p.local,15)} <b>${p.local}</b> llegó a +2</label>
+        <label class="adm-pa-chip"><input type="checkbox" id="paV"> ${flagImg(p.visita,15)} <b>${p.visita}</b> llegó a +2</label>
+      </div>
+      ${!hasFinal?`<button class="adm-pa-btn" onclick="aplicarPALive(${pid})">⚡ Aplicar PA ahora (pagar simples al instante)</button>`:''}
     </div>`:''}
-    <button class="btn btn-primary" style="margin-top:14px" onclick="saveScore(${pid})">${hasFinal?'Corregir resultado':'Guardar resultado final'}</button>
-    ${res?`<button class="btn btn-danger btn-sm" style="width:100%;margin-top:8px" onclick="revertir(${pid})">↩ Revertir${paParcial?' el PA':''} (dejar pendiente)</button>`:''}`;
+
+    <!-- ── BOTONES DE ACCIÓN ─── -->
+    <div class="adm-actions">
+      ${!hasFinal?`<button class="adm-btn-live" onclick="saveLiveScore(${pid})">🔴 Actualizar en vivo<span class="adm-btn-sub">muestra progreso a jugadores · NO liquida</span></button>`:''}
+      <button class="adm-btn-final" onclick="saveScore(${pid})">${hasFinal?'✓ Corregir resultado final':'🏁 Guardar resultado final'}<span class="adm-btn-sub">liquida todas las apuestas del partido</span></button>
+      ${res?`<button class="adm-btn-revert" onclick="revertir(${pid})">↩ Revertir${paParcial?' el PA':''} (volver a pendiente)</button>`:''}
+      ${live&&!hasFinal&&!paParcial?`<button class="adm-btn-revert" onclick="clearLiveScore(${pid})">🗑 Quitar marcador en vivo</button>`:''}
+    </div>`;
   document.getElementById('overlay').style.display='flex';
   if(p.pa){
     const paL=res&&res.pa?res.pa.l:(hasFinal?(res.gl-res.gv>=2):false);
@@ -3049,6 +3228,33 @@ function openScore(pid){
     document.getElementById('paV').checked=paV;
   }
   scorePreview(pid);
+}
+function bumpScore(id,delta){
+  const el=document.getElementById(id);if(!el)return;
+  const cur=parseInt(el.value)||0;
+  el.value=Math.max(0,Math.min(30,cur+delta));
+  el.dispatchEvent(new Event('input'));
+}
+async function saveLiveScore(pid){
+  const gl=document.getElementById('scoreL').value.trim();
+  const gv=document.getElementById('scoreV').value.trim();
+  const corners=document.getElementById('cornersIn').value.trim();
+  const tarjetas=document.getElementById('tarjetasIn').value.trim();
+  if(!gl&&!gv&&!corners&&!tarjetas)return toast('Mete al menos un dato para actualizar en vivo');
+  const r=await api({action:'setLiveScore',payload:{adminKey,partidoId:pid,gl:gl||null,gv:gv||null,corners:corners||null,tarjetas:tarjetas||null}});
+  if(r.error)return toast(r.error);
+  state.liveScores=r.liveScores;
+  toast('🔴 Marcador en vivo actualizado · los jugadores verán su progreso');
+  // No cierro el modal — el admin puede seguir actualizando
+  renderAdmin();
+}
+async function clearLiveScore(pid){
+  if(!confirm('¿Quitar el marcador en vivo de este partido?'))return;
+  const r=await api({action:'setLiveScore',payload:{adminKey,partidoId:pid}});
+  if(r.error)return toast(r.error);
+  state.liveScores=r.liveScores;
+  toast('Marcador en vivo eliminado');
+  closeModal();renderAdmin();
 }
 async function aplicarPALive(pid){
   const cl=document.getElementById('paL'),cv=document.getElementById('paV');
@@ -3401,11 +3607,11 @@ function bgFill(ctx,W,H){
 }
 
 function betToView(b){
-  if(b.tipo==='parlay')return{parlay:true,legs:b.legs.map(l=>{const p=byId(l.partidoId);return{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,l.pick,l.linea),momio:l.momio};}),momio:b.momioTotal,monto:b.monto};
-  const p=byId(b.partidoId);return{parlay:false,legs:[{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,b.pick,b.linea),momio:b.momio}],momio:b.momio,monto:b.monto};
+  if(b.tipo==='parlay')return{parlay:true,legs:b.legs.map(l=>{const p=byId(l.partidoId);return{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,l.pick,l.linea,l.mercado),momio:l.momio};}),momio:b.momioTotal,monto:b.monto};
+  const p=byId(b.partidoId);return{parlay:false,legs:[{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,b.pick,b.linea,b.mercado),momio:b.momio}],momio:b.momio,monto:b.monto};
 }
 function slipToView(monto){
-  return{parlay:betslip.length>1,legs:betslip.map(s=>{const p=byId(s.partidoId);return{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,s.pick,s.linea),momio:s.momio};}),momio:slipMomioTotal(),monto};
+  return{parlay:betslip.length>1,legs:betslip.map(s=>{const p=byId(s.partidoId);return{match:`${p.local} vs ${p.visita}`,pick:pickLabelLong(p,s.pick,s.linea,s.mercado),momio:s.momio};}),momio:slipMomioTotal(),monto};
 }
 
 function makeBetImage(v){
