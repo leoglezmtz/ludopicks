@@ -343,7 +343,8 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 /* Parlay expandible en vista admin */
 .vap-legs-btn{margin-top:6px;background:none;border:1px solid rgba(255,219,0,.3);color:var(--gold);font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;transition:.15s}
 .vap-legs-btn:hover{background:rgba(255,219,0,.08);border-color:rgba(255,219,0,.5)}
-.vap-legs{margin-top:8px;background:rgba(0,0,0,.3);border-radius:10px;padding:6px 10px;border:1px solid rgba(255,219,0,.15)}
+.vap-legs{margin-top:8px;background:rgba(0,0,0,.3);border-radius:10px;padding:8px 12px;border:1px solid rgba(255,219,0,.15);overflow:visible}
+.vap-legs .parlay-leg{padding:7px 0}
 .vap-leg{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:11.5px}
 .vap-leg:last-child{border-bottom:none}
 .vap-leg.here{background:rgba(31,196,58,.05);margin:0 -10px;padding:6px 10px;border-radius:6px;border:none}
@@ -555,6 +556,9 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .parlay-vs{color:var(--muted2);font-size:11px}
 .parlay-leg-pick{color:#fff;font-weight:600}
 .parlay-leg-momio{font-weight:800;flex-shrink:0;font-size:11.5px}
+/* Variante admin: pata destacada como "aquí" */
+.parlay-leg-here{background:rgba(31,196,58,.06);margin:0 -10px;padding:8px 10px;border-radius:8px;border-bottom-color:rgba(31,196,58,.15)}
+.vap-leg-here{font-size:9px;font-weight:800;color:var(--green);background:rgba(31,196,58,.2);padding:1px 6px;border-radius:5px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
 /* Mini-barra de progreso (Over/Under) */
 .lbar{margin-top:7px;padding:0 4px}
 .lbar-track{position:relative;height:5px;background:rgba(255,255,255,.07);border-radius:99px;margin:14px 0 4px}
@@ -1308,7 +1312,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.22.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.23.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3501,9 +3505,15 @@ async function saveLiveScore(pid){
   const r=await api({action:'setLiveScore',payload:{adminKey,partidoId:pid,gl:gl||null,gv:gv||null,corners:corners||null,tarjetas:tarjetas||null}});
   if(r.error)return toast(r.error);
   state.liveScores=r.liveScores;
-  toast('🔴 Marcador en vivo actualizado · los jugadores verán su progreso');
-  // No cierro el modal — el admin puede seguir actualizando
+  // Actualizar también jugadores y apuestas si hubo insta-liquidación
+  if(r.jugadores)state.jugadores=r.jugadores;
+  if(r.apuestas)state.apuestas=r.apuestas;
+  // Contar apuestas recién cobradas (las que ahora son 'won' por live)
+  const recienPagadas=r.apuestas?Object.values(r.apuestas).filter(b=>b.status==='won'&&((b.tipo!=='parlay'&&b.partidoId===pid)||(b.tipo==='parlay'&&b.legs.some(l=>l.partidoId===pid)))).length:0;
+  const msgPagos=recienPagadas>0?` · ${recienPagadas} apuesta${recienPagadas!==1?'s':''} cobrada${recienPagadas!==1?'s':''}`:'';
+  toast(`🔴 Marcador actualizado${msgPagos}`);
   renderAdmin();
+  try{refreshHero();}catch(e){}
 }
 async function clearLiveScore(pid){
   if(!confirm('¿Quitar el marcador en vivo de este partido?'))return;
@@ -3676,24 +3686,24 @@ async function verApuestas(pid){
           parlayLegs=`<button class="vap-legs-btn" onclick="vapToggleLegs('${uid}')">Ver las ${b.legs.length} patas ▾</button>
             <div class="vap-legs" id="${uid}" hidden>
               ${b.legs.map(l=>{const mp=byId(l.partidoId);if(!mp)return '';
-                const r=state.resultados[l.partidoId];
                 const subM=l.mercado==='corners'?'corners':l.mercado==='tarjetas'?'tarjetas':'goles';
-                // Estado de la pata
-                let legSt='⏳';let legCol='var(--muted2)';
-                if(r&&r.gl!=null&&!r.parcial){
-                  // resultado final disponible
-                  if(subM==='corners'&&r.corners==null){legSt='⏳';}
-                  else if(subM==='tarjetas'&&r.tarjetas==null){legSt='⏳';}
-                  else{const w=pickWinsClient(mp,r,l.pick,l.linea,subM);legSt=w?'✓':'✗';legCol=w?'var(--green)':'var(--rl)';}
-                }else if(r&&r.pa){
-                  if((l.pick==='local'&&r.pa.l)||(l.pick==='visita'&&r.pa.v)){legSt='⚡';legCol='var(--gold)';}
-                }
+                // Estado y color del icono
+                const [legSt,legCol]=legResIcon(l);
                 const esEste=l.partidoId===pid;
-                return `<div class="vap-leg${esEste?' here':''}">
-                  <span class="vap-leg-match">${flagImg(mp.local,11)} ${mp.local} <span style="color:var(--muted2)">vs</span> ${mp.visita} ${flagImg(mp.visita,11)}${esEste?' <span class="vap-leg-here">aquí</span>':''}</span>
-                  <span class="vap-leg-pick">${pickLabelAdmin(mp,l.pick,l.linea,l.mercado)}</span>
-                  <span class="vap-leg-momio">${l.momio}x</span>
-                  <span class="vap-leg-st" style="color:${legCol}">${legSt}</span>
+                // Mini-barra en vivo si el parlay padre está pendiente
+                const pendiente=(b.status||'pending')==='pending';
+                const live=pendiente?partidoLive(l.partidoId):null;
+                const miniBar=live?legMiniBar(l,mp,live,subM):'';
+                return `<div class="parlay-leg${esEste?' parlay-leg-here':''}">
+                  <div class="parlay-leg-top">
+                    <div class="parlay-leg-info">
+                      <span class="parlay-leg-teams">${flagImg(mp.local,11)} ${mp.local} <span class="parlay-vs">v</span> ${mp.visita} ${flagImg(mp.visita,11)}</span>
+                      ${esEste?'<span class="vap-leg-here">aquí</span>':''}
+                      <span class="parlay-leg-pick">${pickLabelAdmin(mp,l.pick,l.linea,l.mercado)}</span>
+                    </div>
+                    <span class="parlay-leg-momio" style="color:${legCol}">${legSt} ${l.momio}x</span>
+                  </div>
+                  ${miniBar}
                 </div>`;
               }).join('')}
             </div>`;
