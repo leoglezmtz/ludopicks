@@ -337,6 +337,18 @@ function rankingSnapshot(jugadores, refPartidoId) {
   return { pos, saldo, partidoId: refPartidoId != null ? refPartidoId : null, ts: Date.now() };
 }
 
+// Toma snapshot SOLO si aún no se ha tomado para este partido (o si el actual referencia
+// un partido diferente). Esto preserva el estado "antes del primer movimiento" cuando hay
+// múltiples actualizaciones (live → live → final → corrección) sobre el mismo partido.
+async function snapshotIfFirstTouch(jugadores, partidoId) {
+  if (partidoId == null) return false;
+  const cur = (await kv.get("rankPrev")) || {};
+  // Si el snapshot ya pertenece a este partido, NO sobrescribir (preservar el original)
+  if (cur.partidoId === partidoId) return false;
+  await kv.set("rankPrev", rankingSnapshot(jugadores, partidoId));
+  return true;
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -879,6 +891,8 @@ export default async function handler(req, res) {
     const apuestasLs = (await kv.get("apuestas")) || {};
     const campeonLs = (await kv.get("campeon")) || null;
     const especialesLs = await loadEspeciales();
+    // Snapshot del ranking ANTES de que cualquier insta-pago modifique saldos
+    await snapshotIfFirstTouch(jugadoresLs, partidoId);
     const statusBefore = {};
     Object.values(apuestasLs).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
     settleAll(jugadoresLs, apuestasLs, resultados, campeonLs, especialesLs, live);
@@ -928,7 +942,7 @@ export default async function handler(req, res) {
     // Snapshot del estado anterior de apuestas para detectar las recién ganadas
     const statusBefore = {};
     Object.values(apuestas).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
-    await kv.set("rankPrev", rankingSnapshot(jugadores, partidoId));
+    await snapshotIfFirstTouch(jugadores, partidoId);
     resultados[partidoId] = { pa: { l: !!pa.l, v: !!pa.v }, parcial: true };
     settleAll(jugadores, apuestas, resultados, campeon, especialesMap, (await kv.get("liveScores")) || {});
     await kv.set("resultados", resultados);
@@ -983,7 +997,7 @@ export default async function handler(req, res) {
     const resultados = (await kv.get("resultados")) || {};
     const campeon    = (await kv.get("campeon"))    || null;
     const especialesMap = await loadEspeciales();
-    await kv.set("rankPrev", rankingSnapshot(jugadores, partidoId));
+    await snapshotIfFirstTouch(jugadores, partidoId);
     // Mantener corners/tarjetas previos si ya estaban registrados (parcial)
     const prevR = resultados[partidoId] || {};
     const rEntry = { gl: golL, gv: golV };
