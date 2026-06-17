@@ -332,6 +332,7 @@ export default async function handler(req, res) {
     const especiales = await loadEspeciales();
     const jackpot    = (await kv.get("jackpot")) ?? RULETA.jackpotSemilla;
     const ruletaHist = (await kv.get("ruletaHist")) || [];
+    const liveScores = (await kv.get("liveScores")) || {};
     return res.json({
       jugadores: publicJugadores(jugadores), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
@@ -340,7 +341,7 @@ export default async function handler(req, res) {
       lineas_tarjetas: LINEAS_TARJETAS, linea_tarjetas_default: LINEA_TARJETAS_DEFAULT, momios_tarjetas: MOMIOS_TARJETAS,
       campeon_odds: CAMPEON, campeon_cierra: CAMPEON_CIERRA, campeon,
       especiales,
-      ruleta: RULETA, jackpot, ruletaHist,
+      ruleta: RULETA, jackpot, ruletaHist, liveScores,
       now: Date.now(),
     });
   }
@@ -829,6 +830,31 @@ export default async function handler(req, res) {
 
   // ── ADMIN: registrar resultado con marcador exacto ─────────────────
   // ── ADMIN: aplicar Pago Anticipado EN VIVO (sin marcador final) ────
+  // ── ADMIN: actualizar marcador EN VIVO sin liquidar nada ─────
+  // Estilo "Draftea": admin va actualizando gl/gv durante el partido para que
+  // los jugadores vean su progreso. NO afecta apuestas — solo informativo.
+  if (action === "setLiveScore") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { partidoId, gl, gv, corners, tarjetas } = payload;
+    const m = BY_ID[partidoId];
+    if (!m) return res.status(400).json({ error: "Partido no existe" });
+    // Si el partido YA tiene resultado final (no parcial), no permitir live updates
+    const resultados = (await kv.get("resultados")) || {};
+    const r = resultados[partidoId];
+    if (r && r.gl != null && !r.parcial) return res.status(400).json({ error: "El partido ya está liquidado. Edita el resultado en su lugar." });
+    const live = (await kv.get("liveScores")) || {};
+    const entry = { ts: Date.now() };
+    if (gl != null && gl !== '') { const g = Math.floor(Number(gl)); if (!isNaN(g) && g >= 0 && g <= 30) entry.gl = g; }
+    if (gv != null && gv !== '') { const g = Math.floor(Number(gv)); if (!isNaN(g) && g >= 0 && g <= 30) entry.gv = g; }
+    if (corners != null && corners !== '') { const c = Math.floor(Number(corners)); if (!isNaN(c) && c >= 0 && c <= 50) entry.corners = c; }
+    if (tarjetas != null && tarjetas !== '') { const t = Math.floor(Number(tarjetas)); if (!isNaN(t) && t >= 0 && t <= 30) entry.tarjetas = t; }
+    // Si todos los campos vienen vacíos, limpiar
+    if (Object.keys(entry).length === 1) delete live[partidoId];
+    else live[partidoId] = entry;
+    await kv.set("liveScores", live);
+    return res.json({ ok: true, liveScores: live });
+  }
+
   if (action === "aplicarPA") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     const { partidoId, pa } = payload;
@@ -843,12 +869,37 @@ export default async function handler(req, res) {
     const especialesMap = await loadEspeciales();
     if (resultados[partidoId] && resultados[partidoId].gl != null)
       return res.status(400).json({ error: "Ese partido ya tiene marcador final; edítalo desde Resultados" });
+    // Snapshot del estado anterior de apuestas para detectar las recién ganadas
+    const statusBefore = {};
+    Object.values(apuestas).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
     await kv.set("rankPrev", rankingSnapshot(jugadores, partidoId));
-    resultados[partidoId] = { pa: { l: !!pa.l, v: !!pa.v }, parcial: true }; // sin gl/gv = parcial
+    resultados[partidoId] = { pa: { l: !!pa.l, v: !!pa.v }, parcial: true };
     settleAll(jugadores, apuestas, resultados, campeon, especialesMap);
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
+
+    // Notificar a quienes ganaron por PA (simples + parlays que cerraron con esta pata)
+    const subs = (await kv.get("pushSubs")) || {};
+    if (Object.keys(subs).length) {
+      const acumulado = {}; // {nombre: monto ganado}
+      Object.values(apuestas).forEach(b => {
+        const wasPending = (statusBefore[b.id] || "pending") === "pending";
+        if (wasPending && b.status === "won" && b.payout) {
+          acumulado[b.nombre] = (acumulado[b.nombre] || 0) + b.payout;
+        }
+      });
+      for (const [nombre, monto] of Object.entries(acumulado)) {
+        if (!subs[nombre]) continue;
+        try {
+          await sendPush(subs[nombre], {
+            title: `⚡ ¡Cobraste por PA en ${m.local} vs ${m.visita}!`,
+            body: `Pago anticipado a tu favor · +$${monto.toLocaleString()} a tu saldo`,
+            tag: "pa-" + partidoId, url: "/"
+          });
+        } catch (e) {}
+      }
+    }
     return res.json({ ok: true, resultados, jugadores: publicJugadores(jugadores), apuestas });
   }
 
@@ -894,6 +945,9 @@ export default async function handler(req, res) {
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
+    // Limpiar live score: ya tenemos resultado final
+    const liveScoresAfter = (await kv.get("liveScores")) || {};
+    if (liveScoresAfter[partidoId]) { delete liveScoresAfter[partidoId]; await kv.set("liveScores", liveScoresAfter); }
 
     // ── Notificaciones push a ganadores ──────────────────────────────
     const subs = (await kv.get("pushSubs")) || {};
