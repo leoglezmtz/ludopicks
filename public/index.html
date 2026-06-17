@@ -500,6 +500,9 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .pod.p3 .bar{height:28px;background:linear-gradient(180deg,#c87f4a,#6b3f1f)}
 
 .rank-list{display:flex;flex-direction:column;gap:6px}
+.rank-ref-card{background:linear-gradient(135deg,rgba(31,196,58,.08),rgba(255,219,0,.06));border:1px solid rgba(31,196,58,.22);border-radius:13px;padding:10px 13px;margin-bottom:10px}
+.rank-ref-label{font-size:10.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.rank-ref-match{font-size:13.5px;font-weight:700;color:#fff;margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .rank-row{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line)}
 .rank-row.me{background:linear-gradient(90deg,rgba(24,95,165,.3),rgba(17,22,42,.6));border-color:rgba(93,202,165,.3)}
 .rank-pos{font-size:14px;font-weight:900;color:var(--muted2);min-width:24px;text-align:center}
@@ -1157,7 +1160,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.20.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.20.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2320,35 +2323,74 @@ function renderMis(){
 function renderRanking(){
   const js=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo);
   if(!js.length){document.getElementById('listaRanking').innerHTML='<div class="empty"><div class="emoji">🏆</div>Nadie se ha registrado.</div>';return;}
+  // El snapshot guarda el estado del ranking JUSTO ANTES del partido referenciado (refPartidoId).
+  // {pos:{nombre:pos}, saldo:{nombre:saldoAntes}, partidoId, ts}
   const prev=state.rankPrev||{};
-  // Posición con empates (denso: 1,1,2,2,3): mismo saldo = mismo lugar, sin saltos
+  const prevPos=prev.pos||{};
+  const prevSaldo=prev.saldo||{};
+  const refPartidoId=prev.partidoId;
+  const partidosLiq=Object.keys(state.resultados||{}).length;
+  // ¿El snapshot referencia un partido que sigue con resultado? Si no, es snapshot viejo o sin partido (campeón, especial).
+  const refPartido=refPartidoId!=null?byId(refPartidoId):null;
+  const refValida=refPartido&&state.resultados[refPartidoId];
+  // Posición con empates (denso): mismo saldo = mismo lugar, sin saltos
   const posByName={};let _r=0;
   js.forEach((p,i)=>{ if(i===0||p.saldo!==js[i-1].saldo)_r++; posByName[p.nombre]=_r; });
   const medalFor=pos=>pos===1?'🥇':pos===2?'🥈':pos===3?'🥉':'';
   const top3=js.slice(0,3);
   const order=[top3[1],top3[0],top3[2]].filter(Boolean);
-  // Clase de barra por POSICIÓN real (empatados = misma barra/color/tamaño)
   const pc=p=>{const pos=posByName[p.nombre];return pos===1?'p1':pos===2?'p2':'p3';};
   const md=p=>medalFor(posByName[p.nombre]);
   let pod='<div class="podium">';
   order.forEach((p,i)=>{pod+=`<div class="pod ${pc(p)}" style="animation-delay:${i*.15}s"><div class="av">${buildAvSvg(p.avatar,pc(p)==='p1'?56:46)}</div><div class="nm">${p.nombre}</div><div class="sl">$${Math.round(p.saldo).toLocaleString()}</div><div class="bar">${md(p)}</div></div>`;});
   pod+='</div>';
   pod+=`<div style="text-align:center;margin-bottom:12px"><button class="share-btn" onclick="shareRanking()">📲 Compartir ranking</button></div>`;
-  let list='<div class="sec-title">Tabla completa</div><div class="rank-list">';
+  let list='<div class="sec-title">Tabla completa</div>';
+  // Encabezado contextual: explica respecto a qué partido es el delta
+  if(refValida){
+    const res=state.resultados[refPartidoId];
+    const marcador=res.gl!=null?`${res.gl}-${res.gv}`:'⚡ PA';
+    list+=`<div class="rank-ref-card">
+      <div class="rank-ref-label">📊 Cambios desde el último partido liquidado</div>
+      <div class="rank-ref-match">${flagImg(refPartido.local,14)} <b>${refPartido.local}</b> <span style="color:var(--gold);font-weight:900">${marcador}</span> <b>${refPartido.visita}</b> ${flagImg(refPartido.visita,14)}</div>
+    </div>`;
+  }else if(partidosLiq>0){
+    list+=`<div class="rank-ref-card"><div class="rank-ref-label">📊 Cambios desde el último ajuste</div><div class="rank-ref-match" style="color:var(--muted)">Snapshot histórico</div></div>`;
+  }else{
+    list+=`<div class="rank-ref-card"><div class="rank-ref-label" style="color:var(--muted2)">Aún no hay partidos liquidados</div></div>`;
+  }
+  list+='<div class="rank-list">';
   js.forEach((p,i)=>{
-    const d=p.saldo-state.saldo_inicial;
-    const pos=posByName[p.nombre];const pp=prev[p.nombre];
+    const pos=posByName[p.nombre];
+    const pPos=prevPos[p.nombre];
+    const pSaldo=prevSaldo[p.nombre];
     const medal=medalFor(pos);
+    // Movimiento de posición vs el snapshot
     let mov='';
-    if(pp){const ch=pp-pos;mov=ch>0?`<span style="color:var(--green);font-size:10px"> ▲${ch}</span>`:ch<0?`<span style="color:var(--rl);font-size:10px"> ▼${-ch}</span>`:`<span style="color:var(--muted2);font-size:10px"> =</span>`;}
+    if(pPos!=null){
+      const ch=pPos-pos; // positivo = subió
+      mov=ch>0?`<span style="color:var(--green);font-size:10px;font-weight:800"> ▲${ch}</span>`:ch<0?`<span style="color:var(--rl);font-size:10px;font-weight:800"> ▼${-ch}</span>`:'';
+    }
+    // Delta de saldo vs snapshot
+    let deltaHtml;
+    if(pSaldo!=null){
+      const d=p.saldo-pSaldo;
+      if(d===0){
+        deltaHtml=`<div class="rank-dl even" style="font-size:10.5px">— sin cambio</div>`;
+      }else{
+        deltaHtml=`<div class="rank-dl ${d>0?'up':'dn'}">${d>0?'▲ +':'▼ −'}$${Math.abs(Math.round(d)).toLocaleString()}</div>`;
+      }
+    }else{
+      // Sin snapshot todavía (ningún partido liquidado aún o jugador nuevo)
+      deltaHtml=`<div class="rank-dl even" style="font-size:10.5px;color:var(--muted2)">— sin movimiento</div>`;
+    }
     list+=`<div class="rank-row${p.nombre===me?' me':''}" onclick="openPlayerPicks('${p.nombre.replace(/'/g,"\\'")}')" style="cursor:pointer">
       <div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid var(--line2)">${buildAvSvg(p.avatar,36)}</div>
       <div class="rank-pos">${medal||('#'+pos)}${mov}</div>
       <div class="rank-nm">${p.nombre}${p.nombre===me?'<span class="yt">TÚ</span>':''}<span style="display:block;font-size:10px;color:var(--muted2);font-weight:600">👁 ver picks</span></div>
-      <div class="rank-vals"><div class="rank-sd">$${Math.round(p.saldo).toLocaleString()}</div>
-        <div class="rank-dl ${d>0?'up':d<0?'dn':'even'}">${d>0?'▲ +':d<0?'▼ −':''}${d===0?'—':'$'+Math.abs(Math.round(d)).toLocaleString()}</div></div></div>`;});
+      <div class="rank-vals"><div class="rank-sd">$${Math.round(p.saldo).toLocaleString()}</div>${deltaHtml}</div></div>`;});
   list+='</div>';
-  list+=`<div class="info-card" style="margin-top:12px;background:rgba(255,255,255,.04)"><span style="color:var(--muted);font-size:13px">Partidos liquidados: <strong style="color:#fff">${Object.keys(state.resultados).length}/${state.partidos.length}</strong></span></div>`;
+  list+=`<div class="info-card" style="margin-top:12px;background:rgba(255,255,255,.04)"><span style="color:var(--muted);font-size:13px">Partidos liquidados: <strong style="color:#fff">${partidosLiq}/${state.partidos.length}</strong></span></div>`;
   document.getElementById('listaRanking').innerHTML=pod+list;
 }
 // Ver los picks de cualquier jugador (toca su fila en el ranking)
