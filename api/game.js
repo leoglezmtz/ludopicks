@@ -305,15 +305,16 @@ function settleAll(jugadores, apuestas, resultados, campeon, especiales) {
   }
 }
 
-function rankingSnapshot(jugadores) {
+function rankingSnapshot(jugadores, refPartidoId) {
   const orden = Object.values(jugadores).sort((a, b) => b.saldo - a.saldo);
-  const pos = {};
+  const pos = {}, saldo = {};
   let r = 0;
   orden.forEach((j, i) => {
     if (i === 0 || j.saldo !== orden[i-1].saldo) r++;
     pos[j.nombre] = r;
+    saldo[j.nombre] = j.saldo;
   });
-  return pos;
+  return { pos, saldo, partidoId: refPartidoId != null ? refPartidoId : null, ts: Date.now() };
 }
 
 export default async function handler(req, res) {
@@ -468,7 +469,7 @@ export default async function handler(req, res) {
     const jugadores  = (await kv.get("jugadores"))  || {};
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
-    await kv.set("rankPrev", rankingSnapshot(jugadores));
+    await kv.set("rankPrev", rankingSnapshot(jugadores, null));
     await kv.set("campeon", equipo || null); // equipo vacío = revertir (vuelve a pending)
     settleAll(jugadores, apuestas, resultados, equipo || null, await loadEspeciales());
     await kv.set("jugadores", jugadores);
@@ -577,7 +578,7 @@ export default async function handler(req, res) {
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
     const campeon    = (await kv.get("campeon"))    || null;
-    await kv.set("rankPrev", rankingSnapshot(jugadores));
+    await kv.set("rankPrev", rankingSnapshot(jugadores, null));
     sp.res = opcion || null;
     await kv.set("especiales", especiales);
     settleAll(jugadores, apuestas, resultados, campeon, especiales);
@@ -842,7 +843,7 @@ export default async function handler(req, res) {
     const especialesMap = await loadEspeciales();
     if (resultados[partidoId] && resultados[partidoId].gl != null)
       return res.status(400).json({ error: "Ese partido ya tiene marcador final; edítalo desde Resultados" });
-    await kv.set("rankPrev", rankingSnapshot(jugadores));
+    await kv.set("rankPrev", rankingSnapshot(jugadores, partidoId));
     resultados[partidoId] = { pa: { l: !!pa.l, v: !!pa.v }, parcial: true }; // sin gl/gv = parcial
     settleAll(jugadores, apuestas, resultados, campeon, especialesMap);
     await kv.set("resultados", resultados);
@@ -875,7 +876,7 @@ export default async function handler(req, res) {
     const resultados = (await kv.get("resultados")) || {};
     const campeon    = (await kv.get("campeon"))    || null;
     const especialesMap = await loadEspeciales();
-    await kv.set("rankPrev", rankingSnapshot(jugadores));
+    await kv.set("rankPrev", rankingSnapshot(jugadores, partidoId));
     // Mantener corners/tarjetas previos si ya estaban registrados (parcial)
     const prevR = resultados[partidoId] || {};
     const rEntry = { gl: golL, gv: golV };
@@ -937,10 +938,14 @@ export default async function handler(req, res) {
     if (!resultados[partidoId]) return res.status(400).json({ error: "Ese partido no tiene resultado" });
     delete resultados[partidoId];
     const campeon = (await kv.get("campeon")) || null;
-    settleAll(jugadores, apuestas, resultados, campeon, await loadEspeciales()); // revierte pagos automáticamente
+    settleAll(jugadores, apuestas, resultados, campeon, await loadEspeciales());
     await kv.set("resultados", resultados);
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
+    // Si el snapshot vigente apuntaba a este partido, lo limpiamos para que el frontend
+    // no muestre un delta engañoso referenciando un partido que ya no existe como resultado.
+    const rankPrevActual = (await kv.get("rankPrev")) || {};
+    if (rankPrevActual.partidoId === partidoId) await kv.set("rankPrev", { pos: {}, saldo: {}, partidoId: null, ts: Date.now() });
     return res.json({ ok: true, resultados, jugadores: publicJugadores(jugadores), apuestas });
   }
 
@@ -1111,7 +1116,7 @@ export default async function handler(req, res) {
     await kv.set("jugadores", {});
     await kv.set("apuestas", {});
     await kv.set("resultados", {});
-    await kv.set("rankPrev", {});
+    await kv.set("rankPrev", { pos: {}, saldo: {} });
     return res.json({ ok: true });
   }
 
