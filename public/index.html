@@ -340,6 +340,18 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .vap-bet-st{font-size:11px;font-weight:800}
 .vap-del{background:none;border:none;font-size:14px;cursor:pointer;color:rgba(255,255,255,.35);padding:4px;flex-shrink:0;transition:.15s}
 .vap-del:hover{color:var(--rl)}
+/* Parlay expandible en vista admin */
+.vap-legs-btn{margin-top:6px;background:none;border:1px solid rgba(255,219,0,.3);color:var(--gold);font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;transition:.15s}
+.vap-legs-btn:hover{background:rgba(255,219,0,.08);border-color:rgba(255,219,0,.5)}
+.vap-legs{margin-top:8px;background:rgba(0,0,0,.3);border-radius:10px;padding:6px 10px;border:1px solid rgba(255,219,0,.15)}
+.vap-leg{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:11.5px}
+.vap-leg:last-child{border-bottom:none}
+.vap-leg.here{background:rgba(31,196,58,.05);margin:0 -10px;padding:6px 10px;border-radius:6px;border:none}
+.vap-leg-match{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vap-leg-here{font-size:9px;font-weight:800;color:var(--green);background:rgba(31,196,58,.15);padding:1px 5px;border-radius:5px;margin-left:4px;text-transform:uppercase;letter-spacing:.04em}
+.vap-leg-pick{color:#fff;font-weight:700;text-align:right}
+.vap-leg-momio{color:var(--gold);font-weight:800;font-size:11px}
+.vap-leg-st{font-weight:900;font-size:12px;text-align:center;min-width:14px}
 
 /* ── RECORDS / HALL OF FAME ── */
 .rec-section-title{font-size:11px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px;padding-left:2px}
@@ -1215,7 +1227,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.21.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.21.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3347,13 +3359,30 @@ async function verApuestas(pid){
       <div class="vap-stat"><div class="vap-stat-n" style="color:var(--green)">${ganadas}</div><div class="vap-stat-l">Ganadas</div></div>
       <div class="vap-stat"><div class="vap-stat-n" style="color:var(--rl)">${perdidas}</div><div class="vap-stat-l">Perdidas</div></div>
     </div>`;
-    // Agrupar por mercado
+    // Agrupar por mercado (clave: tipo + mercado + linea/equipo)
+    function mktLabel(b){
+      if(b.tipo==='parlay'){
+        // Para parlays, agrupar por la pata específica a este partido
+        const l=b.legs.find(x=>x.partidoId===pid);
+        if(!l)return 'Parlay';
+        return pickLabelAdmin(p,l.pick,l.linea,l.mercado);
+      }
+      return pickLabelAdmin(p,b.pick,b.linea,b.mercado);
+    }
+    // Helper local: etiqueta clara con sub-mercado explícito
+    function pickLabelAdmin(p,pick,linea,mercado){
+      if(pick==='local')return `${p.local} gana`;
+      if(pick==='visita')return `${p.visita} gana`;
+      if(pick==='empate')return 'Empate';
+      if(pick==='si')return 'Ambos anotan: Sí';
+      if(pick==='no')return 'Ambos anotan: No';
+      const sub=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
+      if(pick==='over')return `Over ${linea}${sub}`;
+      if(pick==='under')return `Under ${linea}${sub}`;
+      return pick;
+    }
     const grupos={};
-    aps.forEach(b=>{
-      const mkt=b.tipo==='parlay'?'Parlay':b.pick==='local'?`${p.local} gana`:b.pick==='visita'?`${p.visita} gana`:b.pick==='empate'?'Empate':b.pick==='over'?`Over ${b.linea}`:b.pick==='under'?`Under ${b.linea}`:b.pick==='si'?'Ambos anotan: Sí':'Ambos anotan: No';
-      if(!grupos[mkt])grupos[mkt]=[];
-      grupos[mkt].push(b);
-    });
+    aps.forEach(b=>{const mkt=mktLabel(b);if(!grupos[mkt])grupos[mkt]=[];grupos[mkt].push(b);});
     Object.entries(grupos).forEach(([mkt,bets])=>{
       const mktTot=bets.reduce((s,b)=>s+b.monto,0);
       html+=`<div class="vap-group">
@@ -3366,12 +3395,50 @@ async function verApuestas(pid){
         const payout=st==='won'?`+$${Math.round(b.monto*(b.tipo==='parlay'?b.momioTotal:b.momio)).toLocaleString()}`:st==='lost'?`−$${b.monto.toLocaleString()}`:`→ $${Math.round(b.monto*(b.tipo==='parlay'?b.momioTotal:b.momio)).toLocaleString()}`;
         const payCol=st==='won'?'var(--green)':st==='lost'?'var(--rl)':'rgba(255,255,255,.55)';
         const parlayExtra=b.tipo==='parlay'?`<div class="vap-parlay-tag">Parlay ${b.legs.length} patas · ${b.momioTotal.toFixed(2)}x total</div>`:'';
+        // Pick label más claro para la pata específica del parlay
+        let pickStr;
+        if(b.tipo==='parlay'){
+          const l=b.legs.find(x=>x.partidoId===pid);
+          pickStr=l?`${pickLabelAdmin(p,l.pick,l.linea,l.mercado)} (${l.momio}x)`:'';
+        }else{
+          pickStr=`${b.momio}x`;
+        }
+        // Parlay: botón expandible con TODAS las patas
+        let parlayLegs='';
+        if(b.tipo==='parlay'){
+          const uid='vbet'+Math.random().toString(36).slice(2,8);
+          parlayLegs=`<button class="vap-legs-btn" onclick="vapToggleLegs('${uid}')">Ver las ${b.legs.length} patas ▾</button>
+            <div class="vap-legs" id="${uid}" hidden>
+              ${b.legs.map(l=>{const mp=byId(l.partidoId);if(!mp)return '';
+                const r=state.resultados[l.partidoId];
+                const subM=l.mercado==='corners'?'corners':l.mercado==='tarjetas'?'tarjetas':'goles';
+                // Estado de la pata
+                let legSt='⏳';let legCol='var(--muted2)';
+                if(r&&r.gl!=null&&!r.parcial){
+                  // resultado final disponible
+                  if(subM==='corners'&&r.corners==null){legSt='⏳';}
+                  else if(subM==='tarjetas'&&r.tarjetas==null){legSt='⏳';}
+                  else{const w=pickWinsClient(mp,r,l.pick,l.linea,subM);legSt=w?'✓':'✗';legCol=w?'var(--green)':'var(--rl)';}
+                }else if(r&&r.pa){
+                  if((l.pick==='local'&&r.pa.l)||(l.pick==='visita'&&r.pa.v)){legSt='⚡';legCol='var(--gold)';}
+                }
+                const esEste=l.partidoId===pid;
+                return `<div class="vap-leg${esEste?' here':''}">
+                  <span class="vap-leg-match">${flagImg(mp.local,11)} ${mp.local} <span style="color:var(--muted2)">vs</span> ${mp.visita} ${flagImg(mp.visita,11)}${esEste?' <span class="vap-leg-here">aquí</span>':''}</span>
+                  <span class="vap-leg-pick">${pickLabelAdmin(mp,l.pick,l.linea,l.mercado)}</span>
+                  <span class="vap-leg-momio">${l.momio}x</span>
+                  <span class="vap-leg-st" style="color:${legCol}">${legSt}</span>
+                </div>`;
+              }).join('')}
+            </div>`;
+        }
         html+=`<div class="vap-bet">
           <div class="vap-bet-av">${buildAvSvg((state.jugadores[b.nombre]||{}).avatar,32)}</div>
           <div class="vap-bet-info">
             <div class="vap-bet-name">${b.nombre}</div>
             ${parlayExtra}
-            <div class="vap-bet-pick">${b.tipo==='parlay'?(()=>{const l=b.legs.find(x=>x.partidoId===pid);return l?pickLabel(p,l.pick,l.linea)+` (${l.momio}x)`:''})():(b.momio+'x')}</div>
+            <div class="vap-bet-pick">${pickStr}</div>
+            ${parlayLegs}
           </div>
           <div class="vap-bet-right">
             <div class="vap-bet-monto">$${b.monto.toLocaleString()}</div>
@@ -3387,6 +3454,16 @@ async function verApuestas(pid){
   document.getElementById('mTitle').innerHTML=`${teamFlag(p.local,16)} ${p.local} vs ${p.visita} ${teamFlag(p.visita,16)}`;
   document.getElementById('mBody').innerHTML=`<div class="vap-wrap">${html}</div><button class="btn btn-ghost" style="margin-top:14px;width:100%" onclick="closeModal()">Cerrar</button>`;
   document.getElementById('overlay').style.display='flex';
+}
+function vapToggleLegs(uid){
+  const el=document.getElementById(uid);if(!el)return;
+  const btn=el.previousElementSibling;
+  const hidden=el.hidden;
+  el.hidden=!hidden;
+  if(btn){
+    const n=el.querySelectorAll('.vap-leg').length;
+    btn.textContent=hidden?`Ocultar patas ▴`:`Ver las ${n} patas ▾`;
+  }
 }
 async function adminBorrarApuesta(key,pid){
   if(!confirm('¿Borrar esta apuesta? Se le devuelve el saldo al jugador como si nunca hubiera apostado.'))return;
