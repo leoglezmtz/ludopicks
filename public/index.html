@@ -1426,7 +1426,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.25.6';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.25.7';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3043,10 +3043,9 @@ function renderRecords(){
     <div class="rec-section-title">🏆 Hitos del torneo</div>
     ${rec('💰','Primero en llegar al millón','$1,000,000','¿Quién llegará?',null,true)}
     <div class="rec-section-title">💪 Apuestas</div>
-    ${rec('⚡','Mejor multiplicador ganado',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?mejorMul.b.nombre:null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)')}
+    ${rec('⚡','Mejor multiplicador ganado',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?(mejorMul.b.tipo==='parlay'?`Parlay ${mejorMul.b.legs.length} patas · ${mejorMul.b.nombre}`:`Simple · ${mejorMul.b.nombre}`):null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)')}
     ${rec('💸','Mayor ganancia en una apuesta',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:' —',mayorGan.b?mayorGan.b.nombre:null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)')}
     ${rec('😱','Mayor pérdida en una apuesta',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',mayorPerd.b?mayorPerd.b.nombre:null,mayorPerd.b?.nombre,!mayorPerd.b,mayorPerd.b,'var(--rl)')}
-    ${rec('🎰','Mejor parlay ganado',mejorParlay.b?mejorParlay.mul.toFixed(2)+'x':'—',mejorParlay.b?mejorParlay.b.nombre:null,mejorParlay.b?.nombre,!mejorParlay.b,mejorParlay.b,'var(--green)')}
     ${rec('🔥','Mayor racha ganadora',mejorRacha?`${mejorRacha[1].max} seguidas`:'—',mejorRacha?mejorRacha[0]:null,mejorRacha?.[0],!mejorRacha,null)}
     ${rec('🃏','Jugador más activo',masApuestas?`${masApuestas[1]} apuestas`:'—',masApuestas?masApuestas[0]:null,masApuestas?.[0],!masApuestas,null)}
     <div class="rec-section-title">📊 Globales</div>
