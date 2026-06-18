@@ -955,6 +955,7 @@ select option{background:#161c30;color:#fff}
     <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()" aria-label="Refrescar">⟳</button>
     <h1>LudoPicks</h1>
     <div class="who" id="appWho"></div>
+    <button id="switchBtn" onclick="switchMode()" style="display:none;position:absolute;top:18px;right:52px;background:none;border:none;color:rgba(255,255,255,.28);font-size:18px;cursor:pointer;padding:4px;line-height:1;z-index:2" title="Cambiar modo">⇄</button>
     <div class="saldo-card" id="saldoCard" onclick="openEditAvatar()">
       <div style="display:flex;align-items:center;gap:10px">
         <div id="heroAv" style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.3);flex-shrink:0"></div>
@@ -1371,7 +1372,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.24.3';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.24.4';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1790,8 +1791,27 @@ function enterApp(){
   ['tab-mis','tab-records','tab-elim','tab-especiales'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isAdmin?'none':'flex';});
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
+  const hasAdmin=!!localStorage.getItem('mundial_admin');
+  const hasLeo=localStorage.getItem('mundial_me')==='Leonidas'&&!!localStorage.getItem('mundial_pin');
+  const sb=document.getElementById('switchBtn');
+  if(sb)sb.style.display=(hasAdmin&&hasLeo)?'block':'none';
   refreshHero();renderSlipBar();
   if(!isAdmin){checkNotifStatus();setTimeout(()=>{ if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);}
+}
+function switchMode(){
+  if(isAdmin){
+    // Admin → Leonidas
+    const savedMe=localStorage.getItem('mundial_me');
+    const savedPin=localStorage.getItem('mundial_pin');
+    if(!savedMe||!savedPin){toast('No hay sesión de Leonidas guardada');return;}
+    isAdmin=false;me=savedMe;myPin=savedPin;
+  } else {
+    // Leonidas → Admin
+    const savedAdmin=localStorage.getItem('mundial_admin');
+    if(!savedAdmin){toast('No hay sesión admin guardada');return;}
+    adminKey=savedAdmin;isAdmin=true;me=null;myPin=null;
+  }
+  enterApp();
 }
 function refreshHero(){
   if(isAdmin)return;
