@@ -2045,7 +2045,8 @@ function showTab(name){
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));
   document.getElementById('tab-'+name).classList.add('on');
   document.querySelectorAll('.tabc').forEach(t=>t.style.display='none');
-  document.getElementById('tabc-'+name).style.display='block';
+  const tabEl=document.getElementById('tabc-'+name);
+  tabEl.style.display=(name==='admin'&&window.innerWidth>=900)?'flex':'block';
   if(name==='partidos'){renderPartidos();renderInstallCard();renderEspecialBanner();}
   if(name==='mis')renderMis();
   if(name==='ranking')renderRanking();
