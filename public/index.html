@@ -1468,7 +1468,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.5';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1934,7 +1934,9 @@ function enterApp(){
   document.getElementById('tab-admin').style.display=isAdmin?'flex':'none';
   document.getElementById('saldoCard').style.display=isAdmin?'none':'flex';
   // Cuando es admin, oculta las pestañas de jugador irrelevantes (Mis picks, Récords, Liguilla, Especiales-vista-jugador)
-  ['tab-mis','tab-records','tab-elim','tab-especiales'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isAdmin?'none':'flex';});
+  ['tab-mis','tab-records','tab-especiales'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=isAdmin?'none':'flex';});
+  // Liguilla siempre oculta hasta fase eliminatoria
+  const elimTab=document.getElementById('tab-elim');if(elimTab)elimTab.style.display='none';
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
   // Persistir credenciales del switch en claves dedicadas (sobreviven logout)
