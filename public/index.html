@@ -1372,7 +1372,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.24.5';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.24.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1795,20 +1795,33 @@ function enterApp(){
   if(isAdmin&&adminKey)localStorage.setItem('ludo_sw_admin',adminKey);
   if(!isAdmin&&me==='Leonidas'&&myPin)localStorage.setItem('ludo_sw_pin',myPin);
   const sb=document.getElementById('switchBtn');
-  if(sb){const hasBoth=!!localStorage.getItem('ludo_sw_admin')&&!!localStorage.getItem('ludo_sw_pin');sb.style.display=hasBoth?'block':'none';}
+  if(sb)sb.style.display=(isAdmin||me==='Leonidas')?'block':'none';
   refreshHero();renderSlipBar();
   if(!isAdmin){checkNotifStatus();setTimeout(()=>{ if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);}
 }
-function switchMode(){
+async function switchMode(){
   if(isAdmin){
-    const pin=localStorage.getItem('ludo_sw_pin');
-    if(!pin){toast('Inicia sesión como Leonidas primero');return;}
+    let pin=localStorage.getItem('ludo_sw_pin');
+    if(!pin){
+      pin=prompt('PIN de Leonidas (4 dígitos):');
+      if(!pin)return;
+      const r=await api({action:'login',payload:{nombre:'Leonidas',pin}});
+      if(r.error){toast('PIN incorrecto');return;}
+      localStorage.setItem('ludo_sw_pin',pin);
+      state.jugadores=r.jugadores;
+    }
     isAdmin=false;me='Leonidas';myPin=pin;
     localStorage.setItem('mundial_me',me);localStorage.setItem('mundial_pin',pin);
     localStorage.removeItem('mundial_admin');
   } else {
-    const key=localStorage.getItem('ludo_sw_admin');
-    if(!key){toast('Inicia sesión como admin primero');return;}
+    let key=localStorage.getItem('ludo_sw_admin');
+    if(!key){
+      key=prompt('Clave admin:');
+      if(!key)return;
+      const r=await api({action:'resultado',payload:{adminKey:key,partidoId:-1}});
+      if(r.error==='No autorizado'){toast('Clave incorrecta');return;}
+      localStorage.setItem('ludo_sw_admin',key);
+    }
     adminKey=key;isAdmin=true;me=null;myPin=null;
     localStorage.setItem('mundial_admin',key);
     localStorage.removeItem('mundial_me');localStorage.removeItem('mundial_pin');
