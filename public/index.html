@@ -64,6 +64,10 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .nav button{flex:1;padding:11px 2px;font-size:11px;font-weight:700;border:none;background:none;color:var(--muted2);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;border-bottom:2.5px solid transparent;transition:all .2s;position:relative}
 .nav button.on{color:#fff;border-bottom-color:var(--gold)}
 .nav button.on i{filter:drop-shadow(0 0 8px rgba(255,219,0,.7));color:var(--gold)}
+.tab-records-glow i{color:var(--gold);filter:drop-shadow(0 0 6px rgba(255,219,0,.5))}
+.tab-records-glow{color:var(--gold)!important;animation:recTabPulse 2.8s ease-in-out infinite}
+.tab-records-glow.on{animation:none}
+@keyframes recTabPulse{0%,100%{opacity:1}50%{opacity:.6}}
 .nav button i{font-size:18px;transition:all .2s}
 
 #app{display:none}
@@ -1052,7 +1056,7 @@ select option{background:#161c30;color:#fff}
         <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">Toca para editar avatar</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px">
       <button id="ruletaBtn" class="ruleta-btn" onclick="openRuleta()" style="display:none;margin-top:0" aria-label="Abrir ruleta">
         <span class="rb-pulse"></span>
         <span class="rb-ico">🎰</span>
@@ -1060,7 +1064,7 @@ select option{background:#161c30;color:#fff}
         <span class="rb-tk">🎟️ <span id="ruletaBtnTk">2</span></span>
         <span id="heroJpBadge" style="font-size:9.5px;font-weight:900;color:#1a1400;background:var(--gold);border-radius:10px;padding:1px 7px;margin-left:4px;letter-spacing:.03em;display:none"></span>
       </button>
-      <button onclick="shareLudo()" style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-weight:700;font-size:13px;padding:9px 14px;border-radius:14px;cursor:pointer;margin-top:11px;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.13)'" onmouseout="this.style.background='rgba(255,255,255,.07)'" aria-label="Compartir LudoPicks">
+      <button onclick="shareLudo()" style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-weight:700;font-size:13px;padding:9px 14px;border-radius:14px;cursor:pointer;margin-top:0;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.13)'" onmouseout="this.style.background='rgba(255,255,255,.07)'" aria-label="Compartir LudoPicks">
         <span style="font-size:16px">📲</span> Invitar
       </button>
     </div>
@@ -1075,8 +1079,8 @@ select option{background:#161c30;color:#fff}
     <button id="tab-especiales" onclick="showTab('especiales')"><i class="ti ti-sparkles"></i>Especiales</button>
     <button id="tab-mis" onclick="showTab('mis')"><i class="ti ti-ticket"></i>Mis picks</button>
     <button id="tab-ranking" onclick="showTab('ranking')"><i class="ti ti-trophy"></i>Ranking</button>
-    <button id="tab-records" onclick="showTab('records')"><i class="ti ti-star"></i>Récords</button>
-    <button id="tab-elim" onclick="showTab('elim')"><i class="ti ti-tournament"></i>Liguilla</button>
+    <button id="tab-elim" style="display:none" onclick="showTab('elim')"><i class="ti ti-tournament"></i>Liguilla</button>
+    <button id="tab-records" class="tab-records-glow" onclick="showTab('records')"><i class="ti ti-star"></i>Récords</button>
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
   <div class="body">
@@ -1464,7 +1468,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.4';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.5';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
