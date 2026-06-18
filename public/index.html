@@ -901,7 +901,19 @@ select option{background:#161c30;color:#fff}
   /* Modales y slip centrados */
   .overlay{align-items:center}
   .sheet{border-radius:20px;max-width:540px;padding:24px 24px 28px}
-  .slip-bar{left:280px;right:0;width:auto;max-width:none;transform:none;padding:0 20px calc(12px + env(safe-area-inset-bottom))}
+  /* Slip: widget flotante esquina inferior derecha */
+  .slip-bar{left:auto!important;right:28px;bottom:28px;width:320px;max-width:320px;transform:none!important;padding:0}
+  .slip-bar .slip-inner{border-radius:16px;box-shadow:0 8px 32px -6px rgba(255,219,0,.55),inset 0 1px 0 rgba(255,255,255,.4)}
+  .slip-bar.sd-open .slip-inner{border-radius:0 0 16px 16px}
+  .sd-panel{display:none;background:#0d0d0d;border:1px solid rgba(255,219,0,.28);border-bottom:none;border-radius:16px 16px 0 0;padding:14px 14px 10px;max-height:55vh;overflow-y:auto}
+  .slip-bar.sd-open .sd-panel{display:block}
+  .sd-header-lbl{font-size:11px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+  .sd-close-btn{background:none;border:none;color:var(--muted2);font-size:18px;cursor:pointer;line-height:1;padding:0}
+  .sd-panel .slip-leg{padding:8px 0}
+  .sd-monto-row{display:flex;gap:8px;margin-top:12px;align-items:center}
+  .sd-monto-row input{flex:1;font-size:14px;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;font-weight:700}
+  .sd-bet-btn{background:linear-gradient(135deg,#FFE34D,var(--gold));color:#1a1400;border:none;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap}
+  .sd-clear{background:none;border:none;color:var(--muted2);font-size:12px;font-weight:700;cursor:pointer;margin-top:8px;width:100%;text-align:center;padding:4px}
 }
 </style>
 </head>
@@ -1241,7 +1253,10 @@ select option{background:#161c30;color:#fff}
   </div>
 </div>
 
-<div class="slip-bar hidden" id="slipBar"><div class="slip-inner" onclick="openSlip()"><span><span class="slip-count" id="slipCount">0</span>Ver ticket</span><span id="slipMomio"></span></div></div>
+<div class="slip-bar hidden" id="slipBar">
+  <div class="sd-panel" id="sdPanel"></div>
+  <div class="slip-inner" onclick="onSlipBarClick()"><span><span class="slip-count" id="slipCount">0</span><span id="slipBarLabel">Ver ticket</span></span><span id="slipMomio"></span></div>
+</div>
 
 <div class="especial-pop" id="ruletaPromo" style="display:none">
   <div class="rp-card">
@@ -1407,7 +1422,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.25.3';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.25.4';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2415,13 +2430,72 @@ function removeSlip(pid,pick,linea){
   if(!betslip.length)closeModal();else openSlip();
 }
 function clearSlip(){betslip=[];renderSlipBar();}
+function isDesktop(){return window.innerWidth>=900;}
 function renderSlipBar(){
   const bar=document.getElementById('slipBar');if(!bar)return;
-  if(!betslip.length||isAdmin){bar.classList.add('hidden');return;}
+  if(!betslip.length||isAdmin){bar.classList.add('hidden');bar.classList.remove('sd-open');return;}
   bar.classList.remove('hidden');
   document.getElementById('slipCount').textContent=betslip.length;
   const tot=slipMomioTotal();
   document.getElementById('slipMomio').textContent=betslip.length>1?('Parlay '+tot.toFixed(2)+'x →'):'Apostar →';
+  document.getElementById('slipBarLabel').textContent='Ver ticket';
+  if(isDesktop()&&bar.classList.contains('sd-open')) renderSlipPanel();
+}
+function onSlipBarClick(){
+  if(!betslip.length)return;
+  if(isDesktop()){
+    const bar=document.getElementById('slipBar');
+    const opening=!bar.classList.contains('sd-open');
+    bar.classList.toggle('sd-open');
+    if(opening) renderSlipPanel();
+  } else {
+    openSlip();
+  }
+}
+function renderSlipPanel(){
+  const panel=document.getElementById('sdPanel');if(!panel)return;
+  const isParlay=betslip.length>1;
+  const tot=slipMomioTotal();
+  const min=state.apuesta_min||100;
+  const j=state.jugadores[me]||{};
+  let html=`<div class="sd-header-lbl"><span>${isParlay?'🎲 Parlay':'🎟️ Ticket'} · ${betslip.length} pata${betslip.length>1?'s':''}</span><button class="sd-close-btn" onclick="document.getElementById('slipBar').classList.remove('sd-open')">✕</button></div>`;
+  betslip.forEach(s=>{
+    const p=byId(s.partidoId);if(!p)return;
+    const lbl=pickLabelLong(p,s.pick,s.linea,s.mercado);
+    html+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${p.local} vs ${p.visita}</div><div class="sl-pick">${lbl} · <b style="color:var(--gold)">${s.momio}x</b></div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}',${s.linea||0})">×</button></div>`;
+  });
+  if(isParlay) html+=`<div style="font-size:12px;color:var(--gold);font-weight:800;text-align:right;margin-top:4px">Momio total: ${tot.toFixed(2)}x</div>`;
+  const prevMonto=document.getElementById('sdMontoInput')?document.getElementById('sdMontoInput').value:'';
+  html+=`<div class="sd-monto-row"><input id="sdMontoInput" type="tel" inputmode="numeric" placeholder="Monto ($${min.toLocaleString()} mín)" value="${prevMonto}" oninput="updateSdPreview()"><button class="sd-bet-btn" onclick="doSdBet()">Apostar</button></div>`;
+  html+=`<div id="sdPreview" style="font-size:11.5px;color:var(--muted);margin-top:6px;text-align:right"></div>`;
+  html+=`<button class="sd-clear" onclick="clearSlip()">Limpiar ticket</button>`;
+  panel.innerHTML=html;
+  updateSdPreview();
+}
+function updateSdPreview(){
+  const el=document.getElementById('sdPreview');if(!el)return;
+  const monto=parseInt(document.getElementById('sdMontoInput')?.value||0);
+  if(!monto||monto<(state.apuesta_min||100)){el.textContent='';return;}
+  const win=Math.round(monto*slipMomioTotal());
+  el.textContent=`Saldo: $${Math.round((state.jugadores[me]||{}).saldo||0).toLocaleString()} · Ganancia posible: $${win.toLocaleString()}`;
+}
+async function doSdBet(){
+  const monto=parseInt(document.getElementById('sdMontoInput')?.value||0);
+  const min=state.apuesta_min||100;
+  const j=state.jugadores[me]||{};
+  if(!monto||monto<min)return toast(`Mínimo $${min.toLocaleString()}`);
+  if(monto>j.saldo)return toast('Saldo insuficiente');
+  const isParlay=betslip.length>1;
+  let r;
+  try{
+    if(isParlay) r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea,mercado:s.mercado||'goles'})),monto}});
+    else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,mercado:s.mercado||'goles',monto}});}
+  }catch(e){return toast('Error al apostar');}
+  if(r.error)return toast(r.error);
+  toast('¡Apuesta registrada! 🎉');
+  betslip=[];
+  document.getElementById('slipBar').classList.remove('sd-open');
+  await loadState();renderSlipBar();renderTab(currentTab);
 }
 function openSlip(){
   if(!betslip.length)return;
