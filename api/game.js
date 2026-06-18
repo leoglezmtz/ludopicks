@@ -1146,7 +1146,7 @@ export default async function handler(req, res) {
       if (b.tipo === "parlay") {
         let total = 1, cambio = false;
         for (const leg of b.legs) {
-          const nm = momioPick(leg.partidoId, leg.pick, leg.linea);
+          const nm = momioPick(leg.partidoId, leg.pick, leg.linea, leg.mercado);
           if (nm != null && nm !== leg.momio) { leg.momio = nm; cambio = true; }
           total *= (leg.momio || 1);
         }
@@ -1211,8 +1211,14 @@ export default async function handler(req, res) {
 
   // ── Guardar suscripción push de un jugador ─────────────────────────
   if (action === "saveSub") {
-    const { nombre, sub } = payload;
+    const { nombre, pin, sub } = payload;
     if (!nombre || !sub) return res.status(400).json({ error: "Faltan datos" });
+    if (!isAdmin()) {
+      const jugadores = (await kv.get("jugadores")) || {};
+      const j = jugadores[nombre];
+      if (!j) return res.status(403).json({ error: "Jugador no existe" });
+      if (!pin || String(j.pin) !== String(pin)) return res.status(403).json({ error: "PIN incorrecto" });
+    }
     const subs = (await kv.get("pushSubs")) || {};
     subs[nombre] = sub;
     await kv.set("pushSubs", subs);

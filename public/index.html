@@ -3,7 +3,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LudoPicks · Mundial 2026</title>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0a0a0a">
@@ -16,7 +16,7 @@
 :root{
   --bg:#060606;--bg2:#0e0e0e;--card:#171717;--card2:#101010;
   --line:rgba(255,255,255,.07);--line2:rgba(255,255,255,.12);
-  --txt:#fff;--muted:rgba(255,255,255,.58);--muted2:rgba(255,255,255,.36);
+  --txt:#fff;--muted:rgba(255,255,255,.58);--muted2:rgba(255,255,255,.5);
   /* Paleta oficial Mundial 2026: negro, blanco, oro #FFDB00, verde #02B906 */
   --green:#1FC43A;--gd:#0C8C26;--blue:#2A7DE1;--bd:#0C447C;
   --amber:#FFC400;--al:#FFDB00;--red:#E5402A;--rl:#F2938A;
@@ -1025,6 +1025,7 @@ select option{background:#161c30;color:#fff}
       <span class="rb-ico">🎰</span>
       <span id="ruletaBtnTxt">Ruleta</span>
       <span class="rb-tk">🎟️ <span id="ruletaBtnTk">2</span></span>
+      <span id="heroJpBadge" style="font-size:9.5px;font-weight:900;color:#1a1400;background:var(--gold);border-radius:10px;padding:1px 7px;margin-left:4px;letter-spacing:.03em;display:none"></span>
     </button>
     <div id="notifBtn" style="display:none;margin-top:10px">
       <button onclick="activarNotifs()" style="width:100%;padding:10px;background:rgba(239,159,39,.15);border:1.5px solid rgba(239,159,39,.35);border-radius:12px;color:#FAC775;font-size:13px;font-weight:700;cursor:pointer">
@@ -1262,7 +1263,7 @@ select option{background:#161c30;color:#fff}
   <div class="slip-inner" onclick="onSlipBarClick()"><span><span class="slip-count" id="slipCount">0</span><span id="slipBarLabel">Ver ticket</span></span><span id="slipMomio"></span></div>
 </div>
 
-<div class="especial-pop" id="ruletaPromo" style="display:none">
+<div class="especial-pop" id="ruletaPromoModal" style="display:none">
   <div class="rp-card">
     <button class="ep-x" onclick="closeRuletaPromo()">×</button>
     <div class="rp-badge">NUEVO EN LUDOPICKS</div>
@@ -1378,7 +1379,7 @@ async function activarNotifs(){
     const sw=await navigator.serviceWorker.ready;
     let sub=await sw.pushManager.getSubscription();
     if(!sub)sub=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8(VAPID_PUB)});
-    await api({action:'saveSub',payload:{nombre:me,sub:sub.toJSON()}});
+    await api({action:'saveSub',payload:{nombre:me,pin:myPin,sub:sub.toJSON()}});
     document.getElementById('notifBtn').style.display='none';
     toast('🔔 ¡Notificaciones activadas! Te avisamos cuando ganes.');
   }catch(e){toast('No se pudieron activar: '+e.message);}
@@ -1391,7 +1392,7 @@ async function subscribePush(nombre){
     const sw=await navigator.serviceWorker.ready;
     let sub=await sw.pushManager.getSubscription();
     if(!sub)sub=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8(VAPID_PUB)});
-    await api({action:'saveSub',payload:{nombre,sub:sub.toJSON()}});
+    await api({action:'saveSub',payload:{nombre,pin:myPin,sub:sub.toJSON()}});
   }catch(e){}
 }
 registerSW();
@@ -1426,7 +1427,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.25.8';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1648,15 +1649,65 @@ function initRegAvatar(){
 // ── STATE ─────────────────────────────────────────────────────
 let loadFailed=false, serverOffset=0, betslip=[], lineSel={};
 async function loadState(){
+  const prevApuestas=state&&state.apuestas?{...state.apuestas}:null;
   try{
     const r=await fetch(API);
     if(!r.ok)throw new Error('http '+r.status);
     state=await r.json();
     if(state.now)serverOffset=state.now-Date.now();
-    // Apuestas viejas pueden no tener "id"; usar su clave de KV como id
     if(state.apuestas)for(const [k,b] of Object.entries(state.apuestas)){if(b&&!b.id)b.id=k;}
     loadFailed=false;
+    if(me&&prevApuestas){checkNearMissParlays(prevApuestas,state.apuestas);checkStreakToast(prevApuestas,state.apuestas);}
   }catch(e){loadFailed=true;console.error('loadState falló:',e);}
+}
+function checkNearMissParlays(prev,next){
+  if(!next)return;
+  for(const[id,b] of Object.entries(next)){
+    if(b.nombre!==me||b.tipo!=='parlay'||b.status!=='lost')continue;
+    const wasP=prev[id];
+    if(!wasP||wasP.status!=='pending')continue;
+    // Contar patas perdedoras
+    const resultados=state.resultados||{};
+    let failCount=0,failLabel='';
+    for(const leg of b.legs){
+      const r=resultados[leg.partidoId];
+      if(!r)continue;
+      const won=evaluatePickResult(leg.pick,leg.linea,leg.mercado||'goles',r);
+      if(won===false){failCount++;const p=byId(leg.partidoId);failLabel=p?`${p.local} vs ${p.visita}`:'una pata';}
+    }
+    if(failCount===1){
+      setTimeout(()=>toast(`😤 ¡Casi! Tu parlay falló solo por ${failLabel}. Habría pagado $${Math.round(b.monto*b.momioTotal).toLocaleString()} 💸`,5000),800);
+    }
+  }
+}
+function evaluatePickResult(pick,linea,mercado,r){
+  if(!r||r.parcial)return null;
+  let total;
+  if(mercado==='corners')total=r.corners!=null?r.corners:null;
+  else if(mercado==='tarjetas')total=r.tarjetas!=null?r.tarjetas:null;
+  else if(mercado==='1x2'){if(r.gl==null||r.gv==null)return null;const w=r.gl>r.gv?'local':r.gv>r.gl?'visita':'empate';return pick===w;}
+  else if(mercado==='btts'){if(r.gl==null||r.gv==null)return null;const btts=r.gl>0&&r.gv>0;return pick==='si'?btts:!btts;}
+  else total=(r.gl||0)+(r.gv||0);
+  if(total==null)return null;
+  return pick==='over'?total>linea:total<linea;
+}
+function checkStreakToast(prevApuestas,nextApuestas){
+  if(!me||!nextApuestas)return;
+  // Calcula racha actual del jugador en el nuevo estado
+  const mine=Object.values(nextApuestas)
+    .filter(b=>b.nombre===me&&(b.status==='won'||b.status==='lost'))
+    .sort((a,b)=>(a.ts||0)-(b.ts||0));
+  let streak=0;
+  for(let i=mine.length-1;i>=0;i--){
+    if(mine[i].status==='won')streak++;
+    else break;
+  }
+  // Solo notificar si la racha creció (había una apuesta pendiente que acaba de resolverse)
+  const prevMine=prevApuestas?Object.values(prevApuestas).filter(b=>b.nombre===me&&(b.status==='won'||b.status==='lost')):[];
+  if(mine.length<=prevMine.length)return;
+  if(streak===3)setTimeout(()=>toast('🔥 ¡3 seguidas! Vienes en racha, sigue así.',4000),1200);
+  else if(streak===5)setTimeout(()=>toast('🚀 ¡5 EN RACHA! Eres el crack del grupo 👑',5000),1200);
+  else if(streak===10)setTimeout(()=>toast('🏆 ¡¡10 SEGUIDAS!! Leyenda absoluta 🐐',6000),1200);
 }
 async function api(body){
   try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return await r.json();}
@@ -1743,7 +1794,7 @@ async function init(){
 }
 // Bloquea scroll del body cuando hay cualquier modal/overlay visible.
 function setupBodyScrollLock(){
-  const ids=['overlay','ruletaOv','ruletaResult','ruletaPromo','paPromo','newsPop','espPop','betErr','editAvatarOverlay'];
+  const ids=['overlay','ruletaOv','ruletaResult','ruletaPromo','ruletaPromoModal','paPromo','newsPop','espPop','betErr','editAvatarOverlay'];
   function recompute(){
     const anyOpen=ids.some(id=>{const el=document.getElementById(id);if(!el)return false;
       const cs=getComputedStyle(el);
@@ -1851,7 +1902,7 @@ function enterApp(){
   const sb=document.getElementById('switchBtn');
   if(sb)sb.style.display=(isAdmin||me==='Leonidas')?'block':'none';
   refreshHero();renderSlipBar();
-  if(!isAdmin){checkNotifStatus();setTimeout(()=>{ if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);}
+  if(!isAdmin){checkNotifStatus();setTimeout(()=>{ if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
 }
 async function switchMode(){
   if(isAdmin){
@@ -1894,6 +1945,19 @@ function refreshHero(){
   el.className='saldo-delta '+(d>0?'up':d<0?'dn':'even');
   el.innerHTML=`${d>0?'▲ +':d<0?'▼ −':''}${d===0?'Sin movimiento hoy':'$'+Math.abs(Math.round(d)).toLocaleString()}<small style="display:block;color:rgba(255,255,255,.4);font-weight:600">hoy</small>`;
   updateRuletaBtn();
+  const jpBadge=document.getElementById('heroJpBadge');
+  if(jpBadge&&state.jackpot>0){jpBadge.textContent='JP $'+Math.round(state.jackpot/1000)+'K';jpBadge.style.display='inline';}
+}
+function maybeToastTickets(){
+  const key='ludo_ticket_toast_'+new Date().toDateString();
+  if(localStorage.getItem(key))return;
+  const j=state.jugadores&&me?state.jugadores[me]:null;
+  if(!j)return;
+  const tk=j.tickets||0;
+  if(tk<=0)return;
+  localStorage.setItem(key,'1');
+  const jp=state.jackpot||0;
+  setTimeout(()=>toast(`🎟️ Tienes ${tk} ticket${tk>1?'s':''} de ruleta hoy${jp>0?' · JP $'+Math.round(jp/1000)+'K':''} 🎰`,4500),3500);
 }
 async function manualRefresh(){
   const btn=document.getElementById('refreshBtn');btn.classList.remove('spin');void btn.offsetWidth;btn.classList.add('spin');
@@ -2139,7 +2203,7 @@ function showTab(name){
   const tabEl=document.getElementById('tabc-'+name);
   tabEl.style.display=(name==='admin'&&window.innerWidth>=900)?'flex':'block';
   if(name==='partidos'){renderPartidos();renderInstallCard();renderEspecialBanner();}
-  if(name==='mis')renderMis();
+  if(name==='mis'){misF='todas';renderMis();}
   if(name==='ranking')renderRanking();
   if(name==='records')renderRecords();
   if(name==='elim')renderElim();
@@ -2490,12 +2554,14 @@ async function doSdBet(){
   if(!monto||monto<min)return toast(`Mínimo $${min.toLocaleString()}`);
   if(monto>j.saldo)return toast('Saldo insuficiente');
   const isParlay=betslip.length>1;
+  const btn=document.querySelector('.sd-bet-btn');
+  if(btn){btn.disabled=true;btn.textContent='...';}
   let r;
   try{
     if(isParlay) r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea,mercado:s.mercado||'goles'})),monto}});
     else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,mercado:s.mercado||'goles',monto}});}
-  }catch(e){return toast('Error al apostar');}
-  if(r.error)return toast(r.error);
+  }catch(e){if(btn){btn.disabled=false;btn.textContent='Apostar';}return toast('Error al apostar');}
+  if(r.error){if(btn){btn.disabled=false;btn.textContent='Apostar';}return toast(r.error);}
   toast('¡Apuesta registrada! 🎉');
   betslip=[];
   document.getElementById('slipBar').classList.remove('sd-open');
@@ -2533,14 +2599,15 @@ async function confirmSlip(){
   const min=state.apuesta_min||100;
   if(!monto||monto<min)return toast('Mínimo $'+min);
   const isParlay=betslip.length>1;const tot=slipMomioTotal();
-  // Doble candado: revalida incongruencias también al confirmar
   if(isParlay){const incEr=validarIncongruenciasSlip(betslip);if(incEr)return showBetError(incEr);}
-  const view=slipToView(monto);  // captura antes de limpiar el cupón
+  const view=slipToView(monto);
+  const confirmBtn=document.querySelector('#mBody .btn-primary');
+  if(confirmBtn){confirmBtn.disabled=true;confirmBtn.textContent='Enviando...';}
   let r;
   try{
     if(isParlay)r=await api({action:'apostarParlay',payload:{nombre:me,legs:betslip.map(s=>({partidoId:s.partidoId,pick:s.pick,linea:s.linea,mercado:s.mercado||'goles'})),monto}});
     else{const s=betslip[0];r=await api({action:'apostar',payload:{nombre:me,partidoId:s.partidoId,pick:s.pick,linea:s.linea,mercado:s.mercado||'goles',monto}});}
-  }catch(e){return toast('Error de conexión, intenta de nuevo');}
+  }catch(e){if(confirmBtn){confirmBtn.disabled=false;confirmBtn.textContent=isParlay?'Apostar parlay':'Confirmar apuesta';}return toast('Error de conexión, intenta de nuevo');}
   if(!r||r.error){
     const e=(r&&r.error)||'No se pudo registrar la apuesta';
     // Si el backend rechazó por incongruencia (red de seguridad), usar el modal en vez del toast
@@ -2837,8 +2904,10 @@ function setMisF(f){misF=f;renderMis();}
 function renderMis(){
   const mine=Object.values(state.apuestas).filter(b=>b.nombre===me).sort((a,b)=>b.ts-a.ts);
   const el=document.getElementById('listaMis');
-  if(!mine.length){el.innerHTML=`<div class="empty"><div class="emoji">🎟️</div>${frase('sinPicks')}<br><span style="font-size:13px;color:var(--muted2)">Ve a Partidos y arma tu ticket.</span></div>`;return;}
+  if(!mine.length){el.innerHTML=`<div class="empty"><div class="emoji">🎟️</div>${frase('sinPicks')}<br><span style="font-size:13px;color:var(--muted2)">Aún no tienes picks.</span><br><button class="btn btn-primary" style="margin-top:14px;width:auto;padding:10px 24px" onclick="showTab('partidos')">⚽ Ver partidos</button></div>`;return;}
   const pend=mine.filter(b=>(b.status||'pending')==='pending');
+  // Auto-seleccionar "Abiertas" cuando hay pendientes y el usuario llega por primera vez
+  if(misF==='todas'&&pend.length)misF='abiertas';
   const won=mine.filter(b=>b.status==='won');
   const lost=mine.filter(b=>b.status==='lost');
   const counts={todas:mine.length,abiertas:pend.length,ganadas:won.length,perdidas:lost.length};
@@ -2920,7 +2989,32 @@ function renderRanking(){
       <div class="rank-vals"><div class="rank-sd">$${Math.round(p.saldo).toLocaleString()}</div>${deltaHtml}</div></div>`;});
   list+='</div>';
   list+=`<div class="info-card" style="margin-top:12px;background:rgba(255,255,255,.04)"><span style="color:var(--muted);font-size:13px">Partidos liquidados: <strong style="color:#fff">${partidosLiq}/${state.partidos.length}</strong></span></div>`;
-  document.getElementById('listaRanking').innerHTML=pod+list;
+  // ── Feed de actividad reciente ─────────────────────────────
+  const recentBets=Object.values(state.apuestas)
+    .filter(b=>b.status==='won'||b.status==='lost')
+    .sort((a,b)=>(b.ts||0)-(a.ts||0))
+    .slice(0,12);
+  let feed='';
+  if(recentBets.length){
+    feed='<div class="sec-title" style="margin-top:18px">Últimas movidas 🔥</div><div style="display:flex;flex-direction:column;gap:7px">';
+    recentBets.forEach(b=>{
+      const won=b.status==='won';
+      const payout=Math.round(b.monto*(b.tipo==='parlay'?b.momioTotal:b.momio));
+      const isParlay=b.tipo==='parlay';
+      const ico=won?(isParlay?'🎲':'✅'):'❌';
+      const color=won?'var(--green)':'var(--rl)';
+      const amtHtml=won?`<span style="color:var(--green);font-weight:800">+$${payout.toLocaleString()}</span>`:`<span style="color:var(--rl);font-weight:700">−$${b.monto.toLocaleString()}</span>`;
+      let desc='';
+      if(isParlay){desc=`Parlay ${b.legs.length} patas · ${b.momioTotal.toFixed(2)}x`;}
+      else{const p=byId(b.partidoId);desc=p?`${p.local} vs ${p.visita}`:(b.partidoId||'Especial');}
+      feed+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,.04);border-radius:12px;border:1px solid rgba(255,255,255,.07)">
+        <span style="font-size:18px">${ico}</span>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.nombre}</div><div style="font-size:11px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${desc}</div></div>
+        <div style="text-align:right;flex-shrink:0">${amtHtml}</div></div>`;
+    });
+    feed+='</div>';
+  }
+  document.getElementById('listaRanking').innerHTML=pod+list+feed;
 }
 // Ver los picks de cualquier jugador (toca su fila en el ranking)
 function openPlayerPicks(nombre){
@@ -3073,6 +3167,29 @@ function renderRecords(){
     ${rec('🏦','Mayor saldo actual',lider?`$${Math.round(lider.saldo).toLocaleString()}`:'—',null,lider?.nombre,!lider,null)}
     ${rec('🎯','Total apostado en el torneo',`$${totalTorneo.toLocaleString()}`,`entre ${jugList.length} jugadores`,null,!totalTorneo,null)}
   `;
+  // ── Badges personales (solo visibles al jugador) ──────────────
+  if(me&&!isAdmin){
+    const myBets=apList.filter(b=>b.nombre===me);
+    const myWon=myBets.filter(b=>b.status==='won');
+    const myLost=myBets.filter(b=>b.status==='lost');
+    const myParlaysWon=myWon.filter(b=>b.tipo==='parlay');
+    const myStreak=(()=>{let s=0;for(let i=myBets.sort((a,b)=>(a.ts||0)-(b.ts||0)).length-1;i>=0;i--){if(myBets[i].status==='won')s++;else break;}return s;})();
+    const isLiderNow=Object.values(state.jugadores).sort((a,b)=>b.saldo-a.saldo)[0]?.nombre===me;
+    const badges=[
+      {done:myWon.length>=1,      ico:'⚽', name:'Primera victoria',    desc:'Ganaste tu primera apuesta'},
+      {done:myParlaysWon.length>=1,ico:'🎲', name:'Parlay maestro',      desc:'Ganaste un parlay'},
+      {done:myStreak>=3,           ico:'🔥', name:'En racha',            desc:'3 picks seguidos correctos'},
+      {done:myWon.length>=10,      ico:'💯', name:'Veterano',            desc:'10 apuestas ganadas'},
+      {done:isLiderNow,            ico:'👑', name:'El rey del grupo',    desc:'Vas primero en el ranking'},
+      {done:myBets.length>=20,     ico:'🃏', name:'Apostador compulsivo',desc:'20 apuestas colocadas'},
+    ];
+    const badgeHtml=badges.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:${b.done?'rgba(255,219,0,.1)':'rgba(255,255,255,.04)'};border:1px solid ${b.done?'rgba(255,219,0,.35)':'rgba(255,255,255,.07)'};opacity:${b.done?1:.45}">
+      <span style="font-size:22px;filter:${b.done?'none':'grayscale(1)'}">${b.ico}</span>
+      <div><div style="font-size:13px;font-weight:700;color:${b.done?'var(--gold)':'var(--muted)'}">${b.name}</div><div style="font-size:11px;color:var(--muted2)">${b.desc}</div></div>
+      ${b.done?'<span style="margin-left:auto;font-size:10px;font-weight:800;color:var(--gold);background:rgba(255,219,0,.15);padding:2px 8px;border-radius:10px">✓</span>':''}
+    </div>`).join('');
+    el.innerHTML+=`<div class="rec-section-title" style="grid-column:1/-1;margin-top:4px">🏅 Tus logros</div><div style="grid-column:1/-1;display:flex;flex-direction:column;gap:7px">${badgeHtml}</div>`;
+  }
 }
 function recToggle(id){
   const el=document.getElementById(id);if(!el)return;
@@ -4306,10 +4423,10 @@ async function doSendPush(){
 }
 
 let toastT;
-function toast(msg){
+function toast(msg,dur){
   const el=document.getElementById('toast');
   el.textContent=msg;el.classList.add('show');
-  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),2600);
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),dur||2600);
 }
 function fireConfetti(){
   if(typeof confetti==='undefined')return;
