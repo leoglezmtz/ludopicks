@@ -1426,7 +1426,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.25.7';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.25.8';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2988,6 +2988,24 @@ function renderRecords(){
     else rachas[b.nombre].cur=0;
   });
   const mejorRacha=Object.entries(rachas).sort((a,b)=>b[1].max-a[1].max)[0];
+  // Peor racha perdedora
+  const rachasPerd={};
+  apList.filter(b=>b.status==='won'||b.status==='lost').sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(b=>{
+    if(!rachasPerd[b.nombre])rachasPerd[b.nombre]={cur:0,max:0};
+    if(b.status==='lost'){rachasPerd[b.nombre].cur++;rachasPerd[b.nombre].max=Math.max(rachasPerd[b.nombre].max,rachasPerd[b.nombre].cur);}
+    else rachasPerd[b.nombre].cur=0;
+  });
+  const peorRacha=Object.entries(rachasPerd).filter(e=>e[1].max>0).sort((a,b)=>b[1].max-a[1].max)[0];
+  // Porcentajes (mínimo 5 apuestas liquidadas)
+  const pctMap={};
+  apList.filter(b=>b.status==='won'||b.status==='lost').forEach(b=>{
+    if(!pctMap[b.nombre])pctMap[b.nombre]={w:0,t:0};
+    pctMap[b.nombre].t++;
+    if(b.status==='won')pctMap[b.nombre].w++;
+  });
+  const pctList=Object.entries(pctMap).filter(e=>e[1].t>=5).map(e=>({nombre:e[0],pct:e[1].w/e[1].t,w:e[1].w,t:e[1].t}));
+  const mejorPct=pctList.sort((a,b)=>b.pct-a.pct)[0]||null;
+  const peorPct=pctList.sort((a,b)=>a.pct-b.pct)[0]||null;
   const lider=[...jugList].sort((a,b)=>b.saldo-a.saldo)[0];
   const totalTorneo=apList.reduce((s,b)=>s+b.monto,0);
 
@@ -3047,6 +3065,9 @@ function renderRecords(){
     ${rec('💸','Mayor ganancia en una apuesta',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:' —',mayorGan.b?mayorGan.b.nombre:null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)')}
     ${rec('😱','Mayor pérdida en una apuesta',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',mayorPerd.b?mayorPerd.b.nombre:null,mayorPerd.b?.nombre,!mayorPerd.b,mayorPerd.b,'var(--rl)')}
     ${rec('🔥','Mayor racha ganadora',mejorRacha?`${mejorRacha[1].max} seguidas`:'—',mejorRacha?mejorRacha[0]:null,mejorRacha?.[0],!mejorRacha,null)}
+    ${rec('🥶','Peor racha perdedora',peorRacha?`${peorRacha[1].max} seguidas`:'—',peorRacha?peorRacha[0]:null,peorRacha?.[0],!peorRacha,null)}
+    ${rec('🎯','Mejor % de acierto',mejorPct?`${Math.round(mejorPct.pct*100)}%`:'—',mejorPct?`${mejorPct.w}/${mejorPct.t} ganadas · ${mejorPct.nombre}`:null,mejorPct?.nombre,!mejorPct,null)}
+    ${rec('💀','Peor % de acierto',peorPct?`${Math.round(peorPct.pct*100)}%`:'—',peorPct?`${peorPct.w}/${peorPct.t} ganadas · ${peorPct.nombre}`:null,peorPct?.nombre,!peorPct,null)}
     ${rec('🃏','Jugador más activo',masApuestas?`${masApuestas[1]} apuestas`:'—',masApuestas?masApuestas[0]:null,masApuestas?.[0],!masApuestas,null)}
     <div class="rec-section-title">📊 Globales</div>
     ${rec('🏦','Mayor saldo actual',lider?`$${Math.round(lider.saldo).toLocaleString()}`:'—',null,lider?.nombre,!lider,null)}
