@@ -905,7 +905,8 @@ select option{background:#161c30;color:#fff}
   .slip-bar{left:auto!important;right:28px;bottom:28px;width:320px;max-width:320px;transform:none!important;padding:0}
   .slip-bar .slip-inner{border-radius:16px;box-shadow:0 8px 32px -6px rgba(255,219,0,.55),inset 0 1px 0 rgba(255,255,255,.4)}
   .slip-bar.sd-open .slip-inner{border-radius:0 0 16px 16px}
-  .sd-panel{display:none;background:#0d0d0d;border:1px solid rgba(255,219,0,.28);border-bottom:none;border-radius:16px 16px 0 0;padding:14px 14px 10px;max-height:55vh;overflow-y:auto}
+  .sd-panel{display:none;background:#0d0d0d;border:1px solid rgba(255,219,0,.28);border-bottom:none;border-radius:16px 16px 0 0;padding:14px 14px 10px;max-height:55vh;overflow-y:auto;pointer-events:auto}
+  .slip-bar.sd-open{pointer-events:auto}
   .slip-bar.sd-open .sd-panel{display:block}
   .sd-header-lbl{font-size:11px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
   .sd-close-btn{background:none;border:none;color:var(--muted2);font-size:18px;cursor:pointer;line-height:1;padding:0}
@@ -1422,7 +1423,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.25.4';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.25.5';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
