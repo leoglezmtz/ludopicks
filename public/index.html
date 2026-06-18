@@ -1054,7 +1054,7 @@ select option{background:#161c30;color:#fff}
           </div>
           <div class="gp-label">2 · Cantidad</div>
           <div class="gp-chips" id="gpChips"></div>
-          <input id="gpCant" type="tel" inputmode="numeric" placeholder="O escribe la cantidad..." style="width:100%;margin-top:6px">
+          <input id="gpCant" type="tel" inputmode="numeric" placeholder="O escribe otro monto..." style="width:100%;margin-top:6px" oninput="onGiftCantInput()">
           <div class="gp-label">3 · ¿A quién?</div>
           <div class="gp-rcp">
             <button class="gp-rb on" id="gpRcpAll"   onclick="setGiftRcp('all')">👥 Todos</button>
@@ -1077,8 +1077,8 @@ select option{background:#161c30;color:#fff}
               </div>
             </div>
           </div>
-          <button class="btn btn-primary" style="margin-top:14px;width:100%;font-size:14.5px;padding:13px" onclick="doRegaloUnif()">📲 Enviar regalo<span id="gpBtnPush"></span></button>
-          <div id="gpDestInfo" style="font-size:11px;color:var(--muted2);margin-top:8px;text-align:center"></div>
+          <div id="gpDestInfo" style="display:none;background:rgba(255,219,0,.08);border:1px solid rgba(255,219,0,.28);border-radius:12px;padding:10px 14px;margin-top:12px;font-size:13px;font-weight:700;color:var(--gold);text-align:center;line-height:1.4"></div>
+          <button class="btn btn-primary" style="margin-top:10px;width:100%;font-size:14.5px;padding:13px" onclick="doRegaloUnif()">📲 Enviar regalo<span id="gpBtnPush"></span></button>
         </div>
 
         <!-- Acciones secundarias colapsadas -->
@@ -1407,7 +1407,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.25.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.25.3';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3932,6 +3932,13 @@ function renderGiftChips(){
   box.innerHTML=GIFT_PRESETS[giftKind].map(v=>`<button class="gp-chip${v===giftQty?' on':''}" onclick="setGiftQty(${v})">${giftKind==='tickets'?v+' 🎟️':'$'+v.toLocaleString()}</button>`).join('');
 }
 function setGiftQty(v){giftQty=v;document.getElementById('gpCant').value='';renderGiftChips();renderGiftPreview();}
+function onGiftCantInput(){
+  const val=document.getElementById('gpCant').value.trim();
+  // Si el usuario escribe, desactivar chips visualmente
+  document.querySelectorAll('#gpChips .gp-chip').forEach(b=>b.classList.toggle('on',false));
+  if(!val) renderGiftChips(); // restaurar chip activo si borra el campo
+  renderGiftPreview();
+}
 function setGiftRcp(r){
   giftRcp=r;
   ['all','short','top','one'].forEach(x=>{const el=document.getElementById('gpRcp'+x.charAt(0).toUpperCase()+x.slice(1));if(el)el.classList.toggle('on',x===r);});
@@ -3963,7 +3970,15 @@ function renderGiftPreview(){
   else wrap.style.display='none';
   document.getElementById('gpBtnPush').textContent=(t||d)?' + push 📲':'';
   const n=giftRcpCount();const q=readGiftQty();
-  document.getElementById('gpDestInfo').textContent=`Llegará a ${n} jugador${n!==1?'es':''} · ${giftKind==='tickets'?q+' 🎟️ c/u':'$'+q.toLocaleString()+' c/u'}`;
+  const info=document.getElementById('gpDestInfo');
+  if(q>0&&n>0){
+    const quien=n===1?'1 jugador':`${n} jugadores`;
+    const cuanto=giftKind==='tickets'?`${q} 🎟️ c/u`:`$${q.toLocaleString()} c/u`;
+    info.style.display='block';
+    info.textContent=`📦 Se enviará a ${quien} · ${cuanto}`;
+  } else {
+    info.style.display='none';
+  }
 }
 function giftRcpNombres(){
   const jug=Object.values(state.jugadores||{});
