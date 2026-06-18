@@ -854,8 +854,11 @@ select option{background:#161c30;color:#fff}
   .hero::after{top:auto;bottom:16px;right:8px;font-size:100px;opacity:.06}
   .hero h1{font-size:21px}
   .who{font-size:13px}
-  .saldo-card{margin-top:18px;border-radius:18px}
+  .saldo-card{margin-top:18px;border-radius:18px;flex-direction:column;align-items:flex-start;gap:10px}
   .saldo-val{font-size:34px}
+  .saldo-card > div:last-child{width:100%;display:flex;justify-content:space-between;align-items:center}
+  .saldo-delta{text-align:left}
+  #saldoCard > div:first-child{width:100%}
   #ruletaBtn{margin-top:12px}
   #notifBtn{margin-top:10px}
   #switchBtn{width:100%;text-align:center;margin-top:12px;box-sizing:border-box}
@@ -1423,7 +1426,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.25.5';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.25.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
