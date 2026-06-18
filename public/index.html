@@ -835,11 +835,16 @@ select option{background:#161c30;color:#fff}
 @media(min-width:900px){
   body{max-width:none;font-size:15px;overflow-x:hidden}
 
-  /* ── LAYOUT: sidebar fijo izquierdo + columna derecha scrollable ── */
-  #app.app-visible{display:flex!important;align-items:stretch;min-height:100vh}
+  /* ── LAYOUT: grid 2 columnas — sidebar | (nav sobre body) ── */
+  #app.app-visible{
+    display:grid!important;
+    grid-template-columns:280px 1fr;
+    grid-template-rows:auto 1fr;
+    min-height:100vh;
+  }
 
   .hero{
-    width:280px;flex-shrink:0;
+    grid-column:1; grid-row:1/3;
     position:sticky;top:0;height:100vh;overflow-y:auto;
     padding:28px 22px 24px;
     display:flex;flex-direction:column;
@@ -855,8 +860,8 @@ select option{background:#161c30;color:#fff}
   #notifBtn{margin-top:10px}
   #switchBtn{width:100%;text-align:center;margin-top:12px;box-sizing:border-box}
 
-  /* Columna derecha: nav sticky + body scrollable */
   nav.nav{
+    grid-column:2; grid-row:1;
     position:sticky;top:0;z-index:50;
     justify-content:flex-start;padding:0 12px;gap:0;
     background:rgba(6,6,6,.95);
@@ -865,14 +870,7 @@ select option{background:#161c30;color:#fff}
   .nav button{flex:0 0 auto;flex-direction:row;gap:6px;padding:14px 16px;font-size:12.5px;border-bottom:2.5px solid transparent;white-space:nowrap}
   .nav button i{font-size:15px}
 
-  /* Wrapper derecho (nav+body) — flex column, ocupa el resto */
-  #app.app-visible > nav.nav,
-  #app.app-visible > .body{flex:1;min-width:0}
-  #app.app-visible{flex-wrap:wrap}
-  #app.app-visible > nav.nav{width:calc(100% - 280px);flex:none;align-self:flex-start}
-  #app.app-visible > .body{width:calc(100% - 280px);flex:none}
-
-  .body{padding:20px 28px 40px}
+  .body{grid-column:2;grid-row:2;padding:20px 28px 40px}
 
   /* Partidos y Mis picks: 2 columnas */
   #listaPartidos,#listaMis{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:start}
@@ -1409,7 +1407,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.25.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.25.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
