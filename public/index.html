@@ -831,42 +831,90 @@ select option{background:#161c30;color:#fff}
 
 /* ── DESKTOP (≥900px) ── */
 @media(min-width:900px){
-  body{max-width:1100px;font-size:15px}
+  /* ── LAYOUT PRINCIPAL: sidebar izquierdo + contenido derecho ── */
+  body{max-width:1200px;font-size:15px}
 
-  /* Nav horizontal más cómoda */
-  .nav{justify-content:center;gap:4px;padding:0 24px}
-  .nav button{flex:0 0 auto;padding:12px 20px;font-size:12.5px;flex-direction:row;gap:6px;border-bottom:none;border-radius:0;border-top:2.5px solid transparent;border-bottom:2.5px solid transparent}
-  .nav button.on{border-bottom-color:var(--gold);border-top-color:transparent}
-  .nav button i{font-size:16px}
+  #app{display:grid;grid-template-columns:300px 1fr;grid-template-rows:auto 1fr;grid-template-areas:"sidebar nav" "sidebar body";min-height:100vh;align-items:start}
 
-  /* Hero más amplio */
-  .hero{padding:22px 32px 20px}
+  /* Sidebar (hero) — columna izquierda sticky */
+  .hero{
+    grid-area:sidebar;
+    position:sticky;top:0;height:100vh;overflow-y:auto;
+    padding:28px 24px;
+    display:flex;flex-direction:column;gap:0;
+    border-bottom:none;border-right:1px solid rgba(255,219,0,.13);
+    background:linear-gradient(180deg,#0a0a0a 0%,#141206 50%,#0a2a12 100%);
+  }
+  .hero::after{top:auto;bottom:20px;right:10px;font-size:110px}
 
-  /* Body con más respiración */
-  .body{padding:20px 32px 40px}
+  .hero h1{font-size:22px;margin-bottom:2px}
+  .who{font-size:13px}
 
-  /* Admin: sidebar de tabs a la izquierda + contenido a la derecha */
-  #tabc-admin{display:flex;gap:20px;align-items:flex-start}
-  .admin-tabs{flex-direction:column;overflow:visible;mask-image:none;-webkit-mask-image:none;margin:0;padding:0;gap:4px;min-width:160px;flex-shrink:0;position:sticky;top:60px}
-  .admin-tabs .fbtn{width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:12px;white-space:nowrap}
-  #admin-content-wrap{flex:1;min-width:0}
+  /* Botón refresh — reubicado en sidebar */
+  .refresh-btn{position:absolute;top:20px;right:16px}
 
-  /* Cards de partido en 2 columnas en tab Partidos */
-  #listaPartidos,#listaAdmin{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
-  #listaPartidos .adm-section,#listaAdmin .adm-section,
-  #listaPartidos .adm-section-live,#listaAdmin .adm-section-live,
-  #listaPartidos .adm-section-pending,#listaAdmin .adm-section-pending,
-  #listaPartidos .adm-section-done,#listaAdmin .adm-section-done{grid-column:1/-1}
+  /* Saldo card más grande en sidebar */
+  .saldo-card{margin-top:20px;padding:18px 18px;border-radius:20px}
+  .saldo-val{font-size:36px}
+
+  /* Ruleta y notif con más margen */
+  #ruletaBtn{margin-top:14px}
+  #notifBtn{margin-top:12px}
+
+  /* Switch button full-width en sidebar (visibilidad la maneja JS) */
+  #switchBtn{width:100%;justify-content:center;margin-top:14px;text-align:center}
+
+  /* Separador visual al final del sidebar */
+  .hero::before{border-radius:0}
+
+  /* ── NAV: barra horizontal en columna derecha ── */
+  nav.nav{
+    grid-area:nav;
+    position:sticky;top:0;
+    justify-content:flex-start;gap:0;padding:0 8px;
+    border-left:none;
+    background:rgba(8,8,8,.92);
+  }
+  .nav button{flex:0 0 auto;padding:14px 18px;font-size:12.5px;flex-direction:row;gap:7px;border-bottom:2.5px solid transparent;border-radius:0;white-space:nowrap}
+  .nav button.on{border-bottom-color:var(--gold)}
+  .nav button i{font-size:15px}
+
+  /* ── BODY: columna derecha ── */
+  .body{grid-area:body;padding:22px 28px 40px;min-height:80vh}
+
+  /* Cards de partido en 2 columnas */
+  #listaPartidos{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+  #listaPartidos .daylabel,#listaPartidos .install-card,#listaPartidos #especialBanner,#listaPartidos #installCard,#listaPartidos #countdownBox,.filters{grid-column:1/-1}
 
   /* Mis picks en 2 columnas */
   #listaMis{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
 
-  /* Ranking más ancho */
-  #listaRanking{max-width:600px;margin:0 auto}
+  /* Ranking más ancho con mejor aprovechamiento */
+  #listaRanking{max-width:100%}
+  .rank-row{padding:13px 16px;border-radius:14px}
+  .pod{gap:12px}
+  .pod-card{min-width:160px;padding:18px 14px 14px}
 
-  /* Modales centrados en pantalla */
+  /* Récords en 2 columnas */
+  #listaRecords{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+  #listaRecords .rec-section-title{grid-column:1/-1}
+
+  /* Especiales en 2 columnas */
+  #listaEspeciales{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+  #listaEspeciales .especial-banner:first-child{grid-column:1/-1}
+
+  /* Admin: sidebar de tabs a la izquierda + contenido */
+  #tabc-admin{display:flex;gap:20px;align-items:flex-start}
+  .admin-tabs{flex-direction:column;overflow:visible;mask-image:none;-webkit-mask-image:none;margin:0;padding:0;gap:4px;min-width:155px;flex-shrink:0;position:sticky;top:60px}
+  .admin-tabs .fbtn{width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:12px;white-space:nowrap}
+  #admin-content-wrap{flex:1;min-width:0}
+  #listaAdmin{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+  #listaAdmin .adm-section,#listaAdmin .adm-section-live,#listaAdmin .adm-section-pending,#listaAdmin .adm-section-done{grid-column:1/-1}
+
+  /* Modales centrados */
   .overlay{align-items:center}
-  .sheet{border-radius:20px;max-width:520px;padding:24px 24px 28px}
+  .sheet{border-radius:20px;max-width:540px;padding:24px 24px 28px}
+  .slip-bar{left:calc(50% + 150px);transform:translateX(-50%);max-width:calc(100% - 340px)}
 }
 </style>
 </head>
@@ -955,7 +1003,7 @@ select option{background:#161c30;color:#fff}
     <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()" aria-label="Refrescar">⟳</button>
     <h1>LudoPicks</h1>
     <div class="who" id="appWho"></div>
-    <button id="switchBtn" onclick="switchMode()" style="display:none;position:absolute;top:18px;right:52px;background:none;border:none;color:rgba(255,255,255,.28);font-size:18px;cursor:pointer;padding:4px;line-height:1;z-index:2" title="Cambiar modo">⇄</button>
+    <button id="switchBtn" onclick="switchMode()" style="display:none;margin-top:8px;background:rgba(255,219,0,.08);border:1.5px solid rgba(255,219,0,.35);color:rgba(255,219,0,.85);font-size:12px;font-weight:800;cursor:pointer;padding:5px 13px;border-radius:20px;letter-spacing:.04em;transition:all .18s;z-index:2;position:relative" onmouseover="this.style.background='rgba(255,219,0,.16)';this.style.borderColor='rgba(255,219,0,.6)'" onmouseout="this.style.background='rgba(255,219,0,.08)';this.style.borderColor='rgba(255,219,0,.35)'">⇄ Cambiar modo</button>
     <div class="saldo-card" id="saldoCard" onclick="openEditAvatar()">
       <div style="display:flex;align-items:center;gap:10px">
         <div id="heroAv" style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.3);flex-shrink:0"></div>
@@ -1372,7 +1420,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.24.6';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.25.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
