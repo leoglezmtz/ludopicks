@@ -1020,13 +1020,18 @@ select option{background:#161c30;color:#fff}
         <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">Toca para editar avatar</div>
       </div>
     </div>
-    <button id="ruletaBtn" class="ruleta-btn" onclick="openRuleta()" style="display:none" aria-label="Abrir ruleta">
-      <span class="rb-pulse"></span>
-      <span class="rb-ico">🎰</span>
-      <span id="ruletaBtnTxt">Ruleta</span>
-      <span class="rb-tk">🎟️ <span id="ruletaBtnTk">2</span></span>
-      <span id="heroJpBadge" style="font-size:9.5px;font-weight:900;color:#1a1400;background:var(--gold);border-radius:10px;padding:1px 7px;margin-left:4px;letter-spacing:.03em;display:none"></span>
-    </button>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button id="ruletaBtn" class="ruleta-btn" onclick="openRuleta()" style="display:none;margin-top:0" aria-label="Abrir ruleta">
+        <span class="rb-pulse"></span>
+        <span class="rb-ico">🎰</span>
+        <span id="ruletaBtnTxt">Ruleta</span>
+        <span class="rb-tk">🎟️ <span id="ruletaBtnTk">2</span></span>
+        <span id="heroJpBadge" style="font-size:9.5px;font-weight:900;color:#1a1400;background:var(--gold);border-radius:10px;padding:1px 7px;margin-left:4px;letter-spacing:.03em;display:none"></span>
+      </button>
+      <button onclick="shareLudo()" style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-weight:700;font-size:13px;padding:9px 14px;border-radius:14px;cursor:pointer;margin-top:11px;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.13)'" onmouseout="this.style.background='rgba(255,255,255,.07)'" aria-label="Compartir LudoPicks">
+        <span style="font-size:16px">📲</span> Invitar
+      </button>
+    </div>
     <div id="notifBtn" style="display:none;margin-top:10px">
       <button onclick="activarNotifs()" style="width:100%;padding:10px;background:rgba(239,159,39,.15);border:1.5px solid rgba(239,159,39,.35);border-radius:12px;color:#FAC775;font-size:13px;font-weight:700;cursor:pointer">
         🔔 Activar notificaciones de ganancias
@@ -1427,7 +1432,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4427,6 +4432,19 @@ async function shareBetById(betId){
   const b=Object.values(state.apuestas).find(x=>x.id===betId);
   if(!b)return;
   await shareBetImage(betToView(b));
+}
+async function shareLudo(){
+  const url='https://ludopicks.vercel.app';
+  const text='¡Únete a LudoPicks y apuesta en el Mundial 2026 con nosotros! 🏆⚽';
+  if(navigator.share){
+    try{await navigator.share({title:'LudoPicks · Mundial 2026',text,url});}
+    catch(e){if(e.name!=='AbortError')copyLudo(url);}
+  } else {
+    copyLudo(url);
+  }
+}
+function copyLudo(url){
+  navigator.clipboard.writeText(url).then(()=>toast('🔗 Enlace copiado · pégalo donde quieras',3500)).catch(()=>toast('ludopicks.vercel.app',4000));
 }
 async function shareRanking(){
   toast('Generando imagen…');
