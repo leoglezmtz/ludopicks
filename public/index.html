@@ -1427,7 +1427,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3475,12 +3475,34 @@ function renderEspAdmin(){
   if(!list.length){el.innerHTML='<div class="info-card" style="font-size:13px;color:var(--muted)">No has creado ninguna todavía.</div>';return;}
   el.innerHTML=list.map(e=>{
     const est=especialEstado(e);
-    const nApu=Object.values(state.apuestas).filter(b=>b.tipo==='especial'&&b.especialId===e.id).length;
+    const apEsp=Object.values(state.apuestas).filter(b=>b.tipo==='especial'&&b.especialId===e.id);
+    const nApu=apEsp.length;
     const opts=e.opciones.map(o=>`<option value="${o.key}"${e.res===o.key?' selected':''}>${o.emoji} ${o.label} (${o.momio}x)</option>`).join('');
+    // Agrupar apuestas por opción para mostrar quién apostó qué
+    const porOpcion={};
+    e.opciones.forEach(o=>{porOpcion[o.key]=[];});
+    apEsp.forEach(b=>{if(porOpcion[b.opcion]!==undefined)porOpcion[b.opcion].push(b);else{if(!porOpcion['__otro'])porOpcion['__otro']=[];porOpcion['__otro'].push(b);}});
+    const apuestasHtml=nApu?`<div style="margin:8px 0;display:flex;flex-direction:column;gap:5px">`+e.opciones.map(o=>{
+      const bets=porOpcion[o.key]||[];
+      if(!bets.length)return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.03);opacity:.5"><span style="font-size:13px">${o.emoji}</span><span style="font-size:12px;color:var(--muted);flex:1">${o.label}</span><span style="font-size:11px;color:var(--muted2)">0 apuestas</span></div>`;
+      const total=bets.reduce((s,b)=>s+b.monto,0);
+      const ganadores=bets.filter(b=>b.status==='won');
+      const isWinner=e.res===o.key;
+      return `<div style="border-radius:10px;background:${isWinner?'rgba(31,196,58,.12)':'rgba(255,255,255,.04)'};border:1px solid ${isWinner?'rgba(31,196,58,.3)':'rgba(255,255,255,.07)'};padding:6px 10px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:14px">${o.emoji}</span>
+          <span style="font-size:12px;font-weight:700;flex:1">${o.label} <span style="color:var(--muted2);font-weight:600">${o.momio}x</span></span>
+          <span style="font-size:11px;font-weight:800;color:${isWinner?'var(--green)':'var(--muted2)'}">$${total.toLocaleString()}</span>
+          ${isWinner?'<span style="font-size:10px;font-weight:900;color:#1a2a00;background:var(--green);padding:1px 7px;border-radius:8px">✓ GANA</span>':''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${bets.map(b=>`<span style="font-size:10.5px;font-weight:700;background:rgba(255,255,255,.08);padding:2px 8px;border-radius:8px;color:${b.status==='won'?'var(--green)':b.status==='lost'?'var(--rl)':'#fff'}">${b.nombre} $${b.monto.toLocaleString()}</span>`).join('')}</div>
+      </div>`;
+    }).join('')+`</div>`:'';
     return `<div class="info-card">
       <div style="font-weight:800">${e.emoji} ${e.titulo}</div>
       <div style="font-size:12px;color:var(--muted);margin:3px 0 8px">${e.pregunta}</div>
-      <div style="font-size:11px;color:var(--muted2);margin-bottom:8px">${est==='abierto'?'🟢 Abierta':est==='cerrado'?'🔒 Cerrada':est==='declarado'?'✅ Declarada':'—'} · ${nApu} apuesta${nApu!==1?'s':''} · cierra ${new Date(e.cierra).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:4px">${est==='abierto'?'🟢 Abierta':est==='cerrado'?'🔒 Cerrada':est==='declarado'?'✅ Declarada':'—'} · ${nApu} apuesta${nApu!==1?'s':''} · cierra ${new Date(e.cierra).toLocaleString('es-MX',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+      ${apuestasHtml}
       <div style="display:flex;gap:6px;align-items:center">
         <select id="espdecl_${e.id}" style="flex:1"><option value="">— Declarar resultado —</option>${opts}</select>
         <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00" onclick="doDeclararEspecial('${e.id}')">Declarar</button>
