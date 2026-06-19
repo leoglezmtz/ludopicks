@@ -374,50 +374,60 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .vap-leg-st{font-weight:900;font-size:12px;text-align:center;min-width:14px}
 
 /* ── RECORDS / HALL OF FAME ── */
-#listaRecords{display:flex;flex-direction:column;gap:0;padding-bottom:12px}
+#listaRecords{display:flex;flex-direction:column;gap:0;padding-bottom:16px}
+/* HOF banner */
+.rec-hof{display:flex;align-items:center;gap:16px;padding:18px 16px;background:linear-gradient(135deg,rgba(255,219,0,.11),rgba(255,255,255,.03));border:1px solid rgba(255,219,0,.25);border-radius:18px;margin-bottom:22px;box-shadow:0 4px 28px rgba(255,219,0,.08)}
+.rec-hof-trophy{font-size:38px;flex-shrink:0;filter:drop-shadow(0 0 16px rgba(255,219,0,.7))}
+.rec-hof-title{font-size:21px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1}
+.rec-hof-sub{font-size:10.5px;font-weight:800;color:rgba(255,219,0,.65);text-transform:uppercase;letter-spacing:.12em;margin-top:4px}
 /* Category divider */
-.rec-cat{display:flex;align-items:center;gap:10px;margin:22px 0 10px}
-.rec-cat:first-child{margin-top:6px}
-.rec-cat-lbl{font-size:10.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+.rec-cat{display:flex;align-items:center;gap:10px;margin:24px 0 11px}
+.rec-cat:first-child{margin-top:0}
+.rec-cat-lbl{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.12em;white-space:nowrap}
 .rec-cat::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
 /* ─ MILESTONE cards (full-width, gold accent) ─ */
-.rec-ms{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(255,219,0,.07),rgba(255,255,255,.02));border:1px solid rgba(255,219,0,.2);border-left:3px solid rgba(255,219,0,.55);border-radius:15px;padding:15px 16px;margin-bottom:8px;min-width:0;overflow:hidden}
-.rec-ms.pending{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.07);border-left-color:rgba(255,255,255,.14);opacity:.58}
-.rec-ms-ico{font-size:30px;flex-shrink:0;filter:drop-shadow(0 2px 12px rgba(255,219,0,.45))}
+.rec-ms{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(255,219,0,.07),rgba(255,255,255,.02));border:1px solid rgba(255,219,0,.2);border-left:3px solid rgba(255,219,0,.6);border-radius:16px;padding:16px 16px;margin-bottom:9px;min-width:0;overflow:hidden}
+.rec-ms.pending{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.08);border-left-color:rgba(255,255,255,.18);opacity:.65}
+.rec-ms-ico{font-size:32px;flex-shrink:0;filter:drop-shadow(0 2px 14px rgba(255,219,0,.5))}
 .rec-ms-body{flex:1;min-width:0}
-.rec-ms-lbl{font-size:9.5px;font-weight:800;color:rgba(255,219,0,.65);text-transform:uppercase;letter-spacing:.08em}
-.rec-ms-val{font-size:23px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:2px;word-break:break-word}
+.rec-ms-lbl{font-size:9.5px;font-weight:800;color:rgba(255,219,0,.7);text-transform:uppercase;letter-spacing:.08em}
+.rec-ms-val{font-size:24px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:2px;word-break:break-word}
 .rec-ms-sub{font-size:12px;color:var(--muted);margin-top:3px}
-.rec-ms-av{width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,219,0,.35)}
-.rec-ms-av.ghost{border-color:rgba(255,255,255,.1);opacity:.55}
+.rec-ms-prog{margin-top:7px}
+.rec-ms-prog-track{height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+.rec-ms-prog-fill{height:100%;background:linear-gradient(90deg,rgba(255,219,0,.35),rgba(255,219,0,.7));border-radius:2px}
+.rec-ms-prog-lbl{font-size:10px;color:var(--muted);margin-top:4px}
+.rec-ms-av{width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2.5px solid rgba(255,219,0,.4)}
+.rec-ms-av.ghost{border-color:rgba(255,255,255,.1);opacity:.5}
 .rec-ms-av svg,.rec-ms-av img{width:100%;height:100%;display:block}
 /* ─ STAT grid + cards ─ */
-.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
-.rec-card{display:flex;flex-direction:column;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:13px 12px 11px;min-width:0;overflow:hidden;position:relative}
-.rec-card.empty{opacity:.4}
-.rec-card-ico{position:absolute;top:10px;right:10px;font-size:18px;opacity:.4;line-height:1;pointer-events:none}
-.rec-card-lbl{font-size:9.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;line-height:1.3;padding-right:24px}
-.rec-card-val{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:5px;word-break:break-word}
-.rec-card-sub{font-size:10px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rec-card-footer{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)}
-.rec-card-av{width:20px;height:20px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid rgba(255,255,255,.22)}
-.rec-card-av.ghost{border-color:rgba(255,255,255,.08);opacity:.5}
+.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
+.rec-card{display:flex;flex-direction:column;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:13px 12px 11px;min-width:0;overflow:hidden;position:relative;transition:box-shadow .2s}
+.rec-card.empty{opacity:.38}
+.rec-card-expanded{grid-column:1/-1;overflow:visible}
+.rec-card-ico{position:absolute;top:10px;right:10px;font-size:19px;opacity:.35;line-height:1;pointer-events:none}
+.rec-card-lbl{font-size:9.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;line-height:1.35;padding-right:26px}
+.rec-card-val{font-size:23px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:6px;word-break:break-word}
+.rec-card-sub{font-size:10px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-card-footer{display:flex;align-items:center;gap:7px;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}
+.rec-card-av{width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}
+.rec-card-av.ghost{border-color:rgba(255,255,255,.08);opacity:.45}
 .rec-card-av svg,.rec-card-av img{width:100%;height:100%;display:block}
 .rec-card-name{font-size:11.5px;font-weight:700;color:var(--gold);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rec-card-name.dim{color:var(--muted2)}
-.rec-toggle{background:none;border:none;color:var(--muted);font-size:10px;font-weight:800;padding:2px 0 0;cursor:pointer;letter-spacing:.02em;text-align:left;margin-top:5px}
-.rec-toggle:hover{color:var(--gold)}
-.rec-detail{margin-top:8px}
+.rec-toggle{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--muted);font-size:10px;font-weight:800;padding:4px 9px;cursor:pointer;margin-top:8px;transition:.15s;letter-spacing:.02em}
+.rec-toggle:hover{color:#fff;border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.1)}
+.rec-detail{margin-top:10px}
 /* ─ Bet breakdown ─ */
-.rec-breakdown{background:rgba(0,0,0,.28);border-radius:12px;padding:10px 12px;font-size:12.5px}
-.rec-bd-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;color:rgba(255,255,255,.75)}
+.rec-breakdown{background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:11px 13px;font-size:12.5px}
+.rec-bd-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;color:rgba(255,255,255,.78);gap:8px}
 .rec-bd-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.06)}
-.rec-bd-total{font-size:13.5px;font-weight:900;padding-top:8px;margin-top:4px;border-top:1px solid rgba(255,255,255,.15)!important}
+.rec-bd-total{font-size:14px;font-weight:900;padding-top:9px;margin-top:5px;border-top:2px solid rgba(255,255,255,.12)!important}
 .rec-bd-legs{padding:6px 0 2px}
-.rec-leg{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);gap:8px}
+.rec-leg{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);gap:8px;flex-wrap:wrap}
 .rec-leg:last-child{border-bottom:none}
 .rec-leg-teams{font-size:11px;color:var(--muted);flex-shrink:0}
-.rec-leg-pick{font-size:12px;font-weight:700;color:#fff;flex:1;text-align:center}
+.rec-leg-pick{font-size:12px;font-weight:700;color:#fff;flex:1;text-align:center;min-width:60px}
 .rec-leg-momio{font-size:12px;font-weight:800;color:var(--gold);flex-shrink:0}
 /* ─ Badges ─ */
 .rec-badges{display:grid;grid-template-columns:1fr 1fr;gap:7px}
@@ -1495,7 +1505,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.13';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.14';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3211,15 +3221,17 @@ function renderRecords(){
   const ghostSvg=`<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="rgba(255,255,255,.1)"/><circle cx="20" cy="14" r="7.5" fill="rgba(255,255,255,.25)"/><ellipse cx="20" cy="36" rx="13" ry="9" fill="rgba(255,255,255,.25)"/></svg>`;
 
   // Milestone card (ancho completo, borde dorado)
-  function ms(emoji,titulo,valor,sub,winner,empty){
+  function ms(emoji,titulo,valor,sub,winner,empty,progPct,progLbl){
     const av=winner?jugList.find(j=>j.nombre===winner):null;
     const avEl=av?`<div class="rec-ms-av">${buildAvSvg(av.avatar)}</div>`:`<div class="rec-ms-av ghost">${ghostSvg}</div>`;
+    const prog=(empty&&progPct)?`<div class="rec-ms-prog"><div class="rec-ms-prog-track"><div class="rec-ms-prog-fill" style="width:${progPct}%"></div></div><div class="rec-ms-prog-lbl">${progLbl}</div></div>`:'';
     return `<div class="rec-ms${empty?' pending':''}">
       <div class="rec-ms-ico">${emoji}</div>
       <div class="rec-ms-body">
         <div class="rec-ms-lbl">${titulo}</div>
         <div class="rec-ms-val">${valor}</div>
         ${sub?`<div class="rec-ms-sub">${sub}</div>`:''}
+        ${prog}
       </div>
       ${avEl}
     </div>`;
@@ -3246,11 +3258,16 @@ function renderRecords(){
     </div>`;
   }
 
+  const p1M=lider?Math.min(98,Math.round(lider.saldo/10000)):0;
+  const p5M=lider?Math.min(98,Math.round(lider.saldo/50000)):0;
+  const p10M=lider?Math.min(98,Math.round(lider.saldo/100000)):0;
+  const pLbl=(j,t)=>j?`${j.nombre} · $${Math.round(j.saldo).toLocaleString()} (${Math.round(j.saldo/t*100)}%)`:'';
   el.innerHTML=`
-    <div class="rec-cat"><span class="rec-cat-lbl">🏆 Hitos del torneo</span></div>
-    ${ms('💰','Primero al millón',millonero?`$${Math.round(millonero.saldo).toLocaleString()}`:'$1,000,000',millonero?`¡${millonero.nombre} lo logró!`:'¿Quién llegará primero?',millonero?.nombre,!millonero)}
-    ${ms('💎','Primero a los 5 millones',cincoM?`$${Math.round(cincoM.saldo).toLocaleString()}`:'$5,000,000',cincoM?`¡${cincoM.nombre}!`:'¿El nuevo millonario?',cincoM?.nombre,!cincoM)}
-    ${ms('👑','Primero a los 10 millones',diezM?`$${Math.round(diezM.saldo).toLocaleString()}`:'$10,000,000',diezM?`¡Leyenda: ${diezM.nombre}!`:'La cima absoluta',diezM?.nombre,!diezM)}
+    <div class="rec-hof"><div class="rec-hof-trophy">🏆</div><div><div class="rec-hof-title">Hall of Fame</div><div class="rec-hof-sub">Mundial 2026</div></div></div>
+    <div class="rec-cat"><span class="rec-cat-lbl">Hitos del torneo</span></div>
+    ${ms('💰','Primero al millón',millonero?`$${Math.round(millonero.saldo).toLocaleString()}`:'$1,000,000',millonero?`¡${millonero.nombre} lo logró!`:'¿Quién llegará primero?',millonero?.nombre,!millonero,p1M,pLbl(lider,1000000))}
+    ${ms('💎','Primero a los 5 millones',cincoM?`$${Math.round(cincoM.saldo).toLocaleString()}`:'$5,000,000',cincoM?`¡${cincoM.nombre}!`:'¿El nuevo millonario?',cincoM?.nombre,!cincoM,p5M,pLbl(lider,5000000))}
+    ${ms('👑','Primero a los 10 millones',diezM?`$${Math.round(diezM.saldo).toLocaleString()}`:'$10,000,000',diezM?`¡Leyenda: ${diezM.nombre}!`:'La cima absoluta',diezM?.nombre,!diezM,p10M,pLbl(lider,10000000))}
     <div class="rec-cat"><span class="rec-cat-lbl">💪 Apuestas</span></div>
     <div class="rec-grid">
       ${rec('🤑','Apuesta más grande',mayorApuesta.monto?`$${mayorApuesta.monto.toLocaleString()}`:'—',null,mayorApuesta.nombre||null,!mayorApuesta.monto,null)}
@@ -3294,11 +3311,13 @@ function renderRecords(){
   }
 }
 function recToggle(id){
-  const el=document.getElementById(id);if(!el)return;
-  const btn=el.previousElementSibling;
-  const hidden=el.hidden;
-  el.hidden=!hidden;
-  if(btn)btn.textContent=hidden?'Ocultar ▴':'Ver apuesta ▾';
+  const detail=document.getElementById(id);if(!detail)return;
+  const btn=detail.previousElementSibling;
+  const opening=detail.hidden;
+  detail.hidden=!opening;
+  if(btn)btn.textContent=opening?'Ocultar ▴':'Ver apuesta ▾';
+  const card=detail.closest('.rec-card');
+  if(card)card.classList.toggle('rec-card-expanded',opening);
 }
 function renderElim(){
   const odds=state.campeon_odds||{};
