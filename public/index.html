@@ -1468,7 +1468,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.7';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.8';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1802,7 +1802,7 @@ function esBtts(pick){return pick==='si'||pick==='no';}
 function marketOf(pick){return esOU(pick)?'ou':esBtts(pick)?'btts':'1x2';}
 function pickLabel(p,pick,linea,mercado){
   if(pick==='local')return p.local;if(pick==='empate')return 'Empate';if(pick==='visita')return p.visita;
-  const sufijo=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':'';
+  const sufijo=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
   if(pick==='over')return 'Over '+linea+sufijo;
   if(pick==='under')return 'Under '+linea+sufijo;
   if(pick==='si')return 'Ambos anotan: Sí';if(pick==='no')return 'Ambos anotan: No';return pick;
