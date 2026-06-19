@@ -1441,65 +1441,125 @@ export default async function handler(req, res) {
     return res.json({ ok: true, aplicados, sinMapear, resultados, liveScores: live, jugadores: publicJugadores(jugadores), apuestas });
   }
 
-  // ── ADMIN: SINCRONIZAR TARJETAS (FAIR PLAY) DESDE FIFA ──
-  // Recorre los partidos finalizados, suma amarillas/rojas por equipo desde Bookings.
-  // Card: 1=amarilla, 2=roja. Best-effort: si una lectura falla, no reduce datos previos.
-  if (action === "syncFifaCards") {
+  // ── ADMIN: SINCRONIZAR CÓRNERS + TARJETAS DESDE ESPN ──
+  // La API de FIFA no da córners; la API oculta de ESPN sí (wonCorners), y de paso
+  // amarillas/rojas por equipo. boxscore es POR PARTIDO (verificado). Liquida córners.
+  // Liga ESPN: fifa.world · scoreboard (ids) → summary?event= (estadísticas).
+  if (action === "syncEspnStats") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const FIFA_BASE = "https://api.fifa.com/api/v3";
-    const ID_COMP = "17", ID_SEASON = "285023", ID_STAGE = "289273";
-    let feed;
+    const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world";
+    let sb;
     try {
-      const resp = await fetch(`${FIFA_BASE}/calendar/matches?idCompetition=${ID_COMP}&idSeason=${ID_SEASON}&count=200&language=en`, { headers: { Accept: "application/json" } });
-      if (!resp.ok) return res.status(502).json({ error: `FIFA respondió ${resp.status}` });
-      feed = await resp.json();
+      const resp = await fetch(`${ESPN}/scoreboard?dates=20260611-20260627&limit=200`, { headers: { Accept: "application/json" } });
+      if (!resp.ok) return res.status(502).json({ error: `ESPN respondió ${resp.status}` });
+      sb = await resp.json();
     } catch (e) {
-      return res.status(502).json({ error: "No se pudo conectar con FIFA: " + (e?.message || e) });
+      return res.status(502).json({ error: "No se pudo conectar con ESPN: " + (e?.message || e) });
     }
-    const matches = Array.isArray(feed?.Results) ? feed.Results : [];
-    // IdTeam -> abreviación (de los equipos de fase de grupos)
-    const idToAbbr = {};
-    for (const mt of matches) {
-      if (mt.Home?.IdTeam && mt.Home?.Abbreviation) idToAbbr[mt.Home.IdTeam] = mt.Home.Abbreviation;
-      if (mt.Away?.IdTeam && mt.Away?.Abbreviation) idToAbbr[mt.Away.IdTeam] = mt.Away.Abbreviation;
+    const events = Array.isArray(sb?.events) ? sb.events : [];
+
+    // Par "LOCAL|VISITA" -> partidoId (fase de grupos)
+    const pairToId = {};
+    for (const p of PARTIDOS) pairToId[p.local + "|" + p.visita] = p.id;
+
+    // Eventos finalizados que mapean a un partido de grupos
+    const finished = [];
+    for (const ev of events) {
+      const comp = ev?.competitions?.[0];
+      if (!comp || !ev.status?.type?.completed) continue;
+      const home = comp.competitors?.find(c => c.homeAway === "home");
+      const away = comp.competitors?.find(c => c.homeAway === "away");
+      const ha = home?.team?.abbreviation, aa = away?.team?.abbreviation;
+      if (!ha || !aa) continue;
+      const pid = pairToId[ha + "|" + aa];
+      if (pid) finished.push({ id: ev.id, pid });
     }
-    const finished = matches.filter(mt => String(mt.IdStage) === ID_STAGE && Number(mt.MatchStatus) === 0 && mt.IdMatch);
-    const fp = {};
+
+    const fp = {};                 // tarjetas recalculadas desde cero
+    const cornersByPid = {};       // córners totales por partido
     let procesados = 0, fallidos = 0;
-    const BATCH = 8;
+    const BATCH = 6;
     for (let i = 0; i < finished.length; i += BATCH) {
       const slice = finished.slice(i, i + BATCH);
-      const datas = await Promise.allSettled(slice.map(mt =>
-        fetch(`${FIFA_BASE}/live/football/${ID_COMP}/${ID_SEASON}/${mt.IdStage}/${mt.IdMatch}?language=en`, { headers: { Accept: "application/json" } }).then(r => r.ok ? r.json() : null)
+      const datas = await Promise.allSettled(slice.map(f =>
+        fetch(`${ESPN}/summary?event=${f.id}`, { headers: { Accept: "application/json" } })
+          .then(r => r.ok ? r.json() : null).then(j => ({ f, j }))
       ));
       for (const d of datas) {
-        if (d.status !== "fulfilled" || !d.value) { fallidos++; continue; }
-        const bookings = Array.isArray(d.value.Bookings) ? d.value.Bookings : [];
-        for (const bk of bookings) {
-          const abbr = idToAbbr[bk.IdTeam];
-          if (!abbr) continue;
-          if (!fp[abbr]) fp[abbr] = { a: 0, r: 0 };
-          if (Number(bk.Card) === 1) fp[abbr].a++;
-          else if (Number(bk.Card) >= 2) fp[abbr].r++;
+        if (d.status !== "fulfilled" || !d.value?.j) { fallidos++; continue; }
+        const teams = d.value.j.boxscore?.teams;
+        if (!Array.isArray(teams)) { fallidos++; continue; }
+        let totalCorners = 0, gotCorners = false;
+        for (const t of teams) {
+          const abbr = t.team?.abbreviation;
+          const stat = n => { const s = t.statistics?.find(x => x.name === n); return s ? Number(s.displayValue) : null; };
+          const c = stat("wonCorners");
+          if (c != null && !isNaN(c)) { totalCorners += c; gotCorners = true; }
+          if (abbr) {
+            if (!fp[abbr]) fp[abbr] = { a: 0, r: 0 };
+            const y = stat("yellowCards"), r = stat("redCards");
+            if (y != null && !isNaN(y)) fp[abbr].a += y;
+            if (r != null && !isNaN(r)) fp[abbr].r += r;
+          }
         }
+        if (gotCorners) cornersByPid[d.value.f.pid] = totalCorners;
         procesados++;
       }
     }
-    // Todos los equipos de grupos tienen entrada (0/0 si sin tarjetas)
-    for (const abbr of Object.values(idToAbbr)) if (!fp[abbr]) fp[abbr] = { a: 0, r: 0 };
-    // Si alguna lectura falló, fusionar con lo previo tomando el máximo (las tarjetas no bajan)
-    let stored = fp;
+
+    // Fair play: si hubo lecturas fallidas, fusionar con lo previo (las tarjetas no bajan)
+    let storedFp = fp;
     if (fallidos > 0) {
       const prev = (await kv.get("fairplay")) || {};
-      stored = {};
-      const teams = new Set([...Object.keys(fp), ...Object.keys(prev)]);
-      for (const t of teams) {
+      storedFp = {};
+      const tset = new Set([...Object.keys(fp), ...Object.keys(prev)]);
+      for (const t of tset) {
         const n = fp[t] || { a: 0, r: 0 }, o = prev[t] || { a: 0, r: 0 };
-        stored[t] = { a: Math.max(n.a || 0, o.a || 0), r: Math.max(n.r || 0, o.r || 0) };
+        storedFp[t] = { a: Math.max(n.a || 0, o.a || 0), r: Math.max(n.r || 0, o.r || 0) };
       }
     }
-    await kv.set("fairplay", stored);
-    return res.json({ ok: true, fairplay: stored, procesados, fallidos, totalFinalizados: finished.length });
+    await kv.set("fairplay", storedFp);
+
+    // Aplicar córners SOLO a partidos con marcador final ya guardado (liquida over/under)
+    const jugadores  = (await kv.get("jugadores"))  || {};
+    const apuestas   = (await kv.get("apuestas"))   || {};
+    const resultados = (await kv.get("resultados")) || {};
+    const campeon    = (await kv.get("campeon"))    || null;
+    const especialesMap = await loadEspeciales();
+    const live       = (await kv.get("liveScores")) || {};
+
+    const statusBefore = {};
+    Object.values(apuestas).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
+
+    let cornersAplicados = 0, firstTouched = null;
+    for (const [pid, corners] of Object.entries(cornersByPid)) {
+      const r = resultados[pid];
+      if (!r || r.gl == null || r.parcial) continue; // sin marcador final aún
+      if (r.corners === corners) continue;
+      r.corners = corners;
+      cornersAplicados++;
+      if (firstTouched == null) firstTouched = Number(pid);
+    }
+
+    if (cornersAplicados > 0) {
+      if (firstTouched != null) await snapshotIfFirstTouch(jugadores, firstTouched);
+      settleAll(jugadores, apuestas, resultados, campeon, especialesMap, live);
+      await kv.set("resultados", resultados);
+      await kv.set("jugadores", jugadores);
+      await kv.set("apuestas", apuestas);
+      const ganadores = {};
+      Object.values(apuestas).forEach(b => {
+        if ((statusBefore[b.id] || "pending") === "pending" && b.status === "won" && b.payout)
+          ganadores[b.nombre] = (ganadores[b.nombre] || 0) + b.payout;
+      });
+      const subs = (await kv.get("pushSubs")) || {};
+      for (const [nombre, monto] of Object.entries(ganadores)) {
+        if (!subs[nombre]) continue;
+        try { await sendPush(subs[nombre], { title: "✓ ¡Córners liquidados!", body: `Estadísticas ESPN · +$${monto.toLocaleString()} a tu saldo`, tag: "corner-" + Date.now(), url: "/" }); } catch (e) {}
+      }
+    }
+
+    return res.json({ ok: true, fairplay: storedFp, cornersAplicados, procesados, fallidos, total: finished.length, jugadores: publicJugadores(jugadores), apuestas, resultados });
   }
 
   return res.status(400).json({ error: "Acción no reconocida" });
