@@ -375,52 +375,55 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 
 /* ── RECORDS / HALL OF FAME ── */
 #listaRecords{display:flex;flex-direction:column;gap:0;padding-bottom:16px}
-/* HOF banner */
-.rec-hof{display:flex;align-items:center;gap:16px;padding:18px 16px;background:linear-gradient(135deg,rgba(255,219,0,.11),rgba(255,255,255,.03));border:1px solid rgba(255,219,0,.25);border-radius:18px;margin-bottom:22px;box-shadow:0 4px 28px rgba(255,219,0,.08)}
-.rec-hof-trophy{font-size:38px;flex-shrink:0;filter:drop-shadow(0 0 16px rgba(255,219,0,.7))}
-.rec-hof-title{font-size:21px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1}
-.rec-hof-sub{font-size:10.5px;font-weight:800;color:rgba(255,219,0,.65);text-transform:uppercase;letter-spacing:.12em;margin-top:4px}
+/* HOF title */
+.rec-hof-wrap{text-align:center;padding:12px 0 28px}
+.rec-hof-emblem{font-size:48px;display:block;filter:drop-shadow(0 0 22px rgba(255,219,0,.85));margin-bottom:14px}
+.rec-hof-line{height:1px;background:linear-gradient(90deg,transparent,rgba(255,219,0,.5),transparent);margin:0 8px}
+.rec-hof-h1{font-size:24px;font-weight:900;color:#fff;letter-spacing:5px;text-transform:uppercase;margin:14px 0 5px}
+.rec-hof-h2{font-size:10px;font-weight:800;color:rgba(255,219,0,.6);text-transform:uppercase;letter-spacing:5px;margin-bottom:14px}
 /* Category divider */
-.rec-cat{display:flex;align-items:center;gap:10px;margin:24px 0 11px}
-.rec-cat:first-child{margin-top:0}
-.rec-cat-lbl{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.12em;white-space:nowrap}
+.rec-cat{display:flex;align-items:center;gap:10px;margin:26px 0 12px}
+.rec-cat:first-child{margin-top:2px}
+.rec-cat-lbl{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.14em;white-space:nowrap}
 .rec-cat::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
-/* ─ MILESTONE cards (full-width, gold accent) ─ */
-.rec-ms{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(255,219,0,.07),rgba(255,255,255,.02));border:1px solid rgba(255,219,0,.2);border-left:3px solid rgba(255,219,0,.6);border-radius:16px;padding:16px 16px;margin-bottom:9px;min-width:0;overflow:hidden}
+/* ─ MILESTONE cards (full-width) ─ */
+.rec-ms{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(255,219,0,.07),rgba(255,255,255,.02));border:1px solid rgba(255,219,0,.2);border-left:3px solid rgba(255,219,0,.6);border-radius:16px;padding:15px 16px;margin-bottom:9px;min-width:0;overflow:hidden}
 .rec-ms.pending{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.08);border-left-color:rgba(255,255,255,.18);opacity:.65}
-.rec-ms-ico{font-size:32px;flex-shrink:0;filter:drop-shadow(0 2px 14px rgba(255,219,0,.5))}
+.rec-ms-ico{font-size:30px;flex-shrink:0;filter:drop-shadow(0 2px 12px rgba(255,219,0,.5))}
 .rec-ms-body{flex:1;min-width:0}
 .rec-ms-lbl{font-size:9.5px;font-weight:800;color:rgba(255,219,0,.7);text-transform:uppercase;letter-spacing:.08em}
-.rec-ms-val{font-size:24px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:2px;word-break:break-word}
+.rec-ms-val{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:2px;word-break:break-word}
 .rec-ms-sub{font-size:12px;color:var(--muted);margin-top:3px}
 .rec-ms-prog{margin-top:7px}
 .rec-ms-prog-track{height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
-.rec-ms-prog-fill{height:100%;background:linear-gradient(90deg,rgba(255,219,0,.35),rgba(255,219,0,.7));border-radius:2px}
+.rec-ms-prog-fill{height:100%;background:linear-gradient(90deg,rgba(255,219,0,.35),rgba(255,219,0,.75));border-radius:2px}
 .rec-ms-prog-lbl{font-size:10px;color:var(--muted);margin-top:4px}
-.rec-ms-av{width:48px;height:48px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2.5px solid rgba(255,219,0,.4)}
+.rec-ms-av{width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2.5px solid rgba(255,219,0,.4)}
 .rec-ms-av.ghost{border-color:rgba(255,255,255,.1);opacity:.5}
 .rec-ms-av svg,.rec-ms-av img{width:100%;height:100%;display:block}
-/* ─ STAT grid + cards ─ */
-.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}
-.rec-card{display:flex;flex-direction:column;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:13px 12px 11px;min-width:0;overflow:hidden;position:relative;transition:box-shadow .2s}
+/* ─ STAT cards – columna única, layout horizontal ─ */
+.rec-card{display:flex;align-items:flex-start;gap:14px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:15px;padding:15px 16px;margin-bottom:9px;min-width:0;overflow:hidden}
 .rec-card.empty{opacity:.38}
-.rec-card-expanded{grid-column:1/-1;overflow:visible}
-.rec-card-ico{position:absolute;top:10px;right:10px;font-size:19px;opacity:.35;line-height:1;pointer-events:none}
-.rec-card-lbl{font-size:9.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;line-height:1.35;padding-right:26px}
-.rec-card-val{font-size:23px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:6px;word-break:break-word}
-.rec-card-sub{font-size:10px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rec-card-footer{display:flex;align-items:center;gap:7px;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}
-.rec-card-av{width:22px;height:22px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}
-.rec-card-av.ghost{border-color:rgba(255,255,255,.08);opacity:.45}
+.rec-card-ico{font-size:28px;flex-shrink:0;margin-top:1px;filter:drop-shadow(0 1px 8px rgba(255,219,0,.2))}
+.rec-card-body{flex:1;min-width:0}
+.rec-card-lbl{font-size:10px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;line-height:1.3}
+.rec-card-val{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:5px;word-break:break-word}
+.rec-card-sub{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.4}
+.rec-card-footer{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08)}
+.rec-card-av{width:26px;height:26px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,255,255,.2)}
+.rec-card-av.ghost{border-color:rgba(255,255,255,.08);opacity:.4}
 .rec-card-av svg,.rec-card-av img{width:100%;height:100%;display:block}
-.rec-card-name{font-size:11.5px;font-weight:700;color:var(--gold);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-card-name{font-size:13px;font-weight:700;color:var(--gold);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rec-card-name.dim{color:var(--muted2)}
-.rec-toggle{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--muted);font-size:10px;font-weight:800;padding:4px 9px;cursor:pointer;margin-top:8px;transition:.15s;letter-spacing:.02em}
-.rec-toggle:hover{color:#fff;border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.1)}
+/* Active / broken streak badges */
+.rec-active{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;color:var(--green);background:rgba(93,202,165,.12);border:1px solid rgba(93,202,165,.3);border-radius:6px;padding:2px 8px;vertical-align:middle}
+.rec-broken{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;color:var(--rl);background:rgba(226,75,74,.1);border:1px solid rgba(226,75,74,.25);border-radius:6px;padding:2px 8px;vertical-align:middle}
+.rec-toggle{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--muted);font-size:10.5px;font-weight:800;padding:5px 11px;cursor:pointer;margin-top:10px;transition:.15s;letter-spacing:.02em}
+.rec-toggle:hover{color:#fff;border-color:rgba(255,255,255,.28);background:rgba(255,255,255,.1)}
 .rec-detail{margin-top:10px}
 /* ─ Bet breakdown ─ */
-.rec-breakdown{background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:11px 13px;font-size:12.5px}
-.rec-bd-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;color:rgba(255,255,255,.78);gap:8px}
+.rec-breakdown{background:rgba(0,0,0,.32);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px 14px;font-size:13px}
+.rec-bd-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;color:rgba(255,255,255,.8);gap:8px}
 .rec-bd-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.06)}
 .rec-bd-total{font-size:14px;font-weight:900;padding-top:9px;margin-top:5px;border-top:2px solid rgba(255,255,255,.12)!important}
 .rec-bd-legs{padding:6px 0 2px}
@@ -1505,7 +1508,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.14';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.15';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3187,6 +3190,26 @@ function renderRecords(){
   const millonero=jugList.find(j=>j.saldo>=1000000);
   const cincoM=jugList.find(j=>j.saldo>=5000000);
   const diezM=jugList.find(j=>j.saldo>=10000000);
+  // ── Hito: primero en 100 apuestas ────────────────────────────
+  const betsByJug={};
+  [...apList].sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(b=>{if(!betsByJug[b.nombre])betsByJug[b.nombre]=[];betsByJug[b.nombre].push(b);});
+  let centena=null;
+  Object.entries(betsByJug).filter(([,bets])=>bets.length>=100).forEach(([nombre,bets])=>{const ts=bets[99]?.ts||0;if(!centena||ts<centena.ts)centena={nombre};});
+  const pCentena=Math.min(98,masApuestas?masApuestas[1]:0);
+  const pCentenaLbl=masApuestas?`${masApuestas[0]} · ${masApuestas[1]} apuestas`:'';
+  // ── Hito: primero en racha de 10 ─────────────────────────────
+  let racha10=null;
+  const _cs={},_h10={};
+  apList.filter(b=>b.status==='won'||b.status==='lost').sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(b=>{
+    if(!_cs[b.nombre])_cs[b.nombre]=0;
+    if(b.status==='won'){_cs[b.nombre]++;if(_cs[b.nombre]>=10&&!_h10[b.nombre]){_h10[b.nombre]=true;if(!racha10||(b.ts&&b.ts<racha10.ts))racha10={nombre:b.nombre};}}
+    else _cs[b.nombre]=0;
+  });
+  const pRacha10=Math.min(98,Math.round((mejorRacha?mejorRacha[1].max:0)/10*100));
+  const pRacha10Lbl=mejorRacha?`Mejor racha: ${mejorRacha[1].max} seguidas (${mejorRacha[0]})`:'';
+  // ── Racha activa/rota ─────────────────────────────────────────
+  const rachaActiva=mejorRacha&&rachas[mejorRacha[0]].cur>=mejorRacha[1].max;
+  const rachaBadge=mejorRacha?`<span class="${rachaActiva?'rec-active':'rec-broken'}">${rachaActiva?'🔥 Activa':'💀 Rota'}</span>`:null;
 
   // ── Helper: genera HTML del desglose de una apuesta ─────────
   function betBreakdown(b,stColor){
@@ -3237,24 +3260,29 @@ function renderRecords(){
     </div>`;
   }
 
-  // Stat card (grid 2 columnas)
-  function rec(emoji,titulo,valor,sub,winner,empty,betObj,stColor){
-    if(empty)return `<div class="rec-card empty">
+  // Stat card – columna única, layout horizontal
+  function rec(emoji,titulo,valor,sub,winner,empty,betObj,stColor,accent){
+    const accentStyle=accent?` style="border-left:3px solid ${accent}"`:'';
+    if(empty)return `<div class="rec-card empty"${accentStyle}>
       <div class="rec-card-ico">${emoji}</div>
-      <div class="rec-card-lbl">${titulo}</div>
-      <div class="rec-card-val" style="font-size:16px;color:var(--muted2)">—</div>
-      <div class="rec-card-footer"><div class="rec-card-av ghost">${ghostSvg}</div><span class="rec-card-name dim">Pendiente</span></div>
+      <div class="rec-card-body">
+        <div class="rec-card-lbl">${titulo}</div>
+        <div class="rec-card-val" style="color:var(--muted2);font-size:17px">—</div>
+        <div class="rec-card-sub">Pendiente</div>
+      </div>
     </div>`;
     const av=winner?jugList.find(j=>j.nombre===winner):null;
     const bd=betObj?betBreakdown(betObj,stColor||'var(--green)'):'';
     const uid='rec'+Math.random().toString(36).slice(2,7);
-    return `<div class="rec-card">
+    return `<div class="rec-card"${accentStyle}>
       <div class="rec-card-ico">${emoji}</div>
-      <div class="rec-card-lbl">${titulo}</div>
-      <div class="rec-card-val">${valor}</div>
-      ${sub?`<div class="rec-card-sub">${sub}</div>`:''}
-      ${winner?`<div class="rec-card-footer"><div class="rec-card-av">${av?buildAvSvg(av.avatar):ghostSvg}</div><span class="rec-card-name">${winner}</span></div>`:''}
-      ${bd?`<button class="rec-toggle" onclick="recToggle('${uid}')">Ver apuesta ▾</button><div class="rec-detail" id="${uid}" hidden>${bd}</div>`:''}
+      <div class="rec-card-body">
+        <div class="rec-card-lbl">${titulo}</div>
+        <div class="rec-card-val">${valor}</div>
+        ${sub?`<div class="rec-card-sub">${sub}</div>`:''}
+        ${winner?`<div class="rec-card-footer"><div class="rec-card-av">${av?buildAvSvg(av.avatar):ghostSvg}</div><span class="rec-card-name">${winner}</span></div>`:''}
+        ${bd?`<button class="rec-toggle" onclick="recToggle('${uid}')">Ver apuesta ▾</button><div class="rec-detail" id="${uid}" hidden>${bd}</div>`:''}
+      </div>
     </div>`;
   }
 
@@ -3263,28 +3291,32 @@ function renderRecords(){
   const p10M=lider?Math.min(98,Math.round(lider.saldo/100000)):0;
   const pLbl=(j,t)=>j?`${j.nombre} · $${Math.round(j.saldo).toLocaleString()} (${Math.round(j.saldo/t*100)}%)`:'';
   el.innerHTML=`
-    <div class="rec-hof"><div class="rec-hof-trophy">🏆</div><div><div class="rec-hof-title">Hall of Fame</div><div class="rec-hof-sub">Mundial 2026</div></div></div>
+    <div class="rec-hof-wrap">
+      <span class="rec-hof-emblem">🏆</span>
+      <div class="rec-hof-line"></div>
+      <div class="rec-hof-h1">Hall of Fame</div>
+      <div class="rec-hof-h2">Mundial 2026</div>
+      <div class="rec-hof-line"></div>
+    </div>
     <div class="rec-cat"><span class="rec-cat-lbl">Hitos del torneo</span></div>
     ${ms('💰','Primero al millón',millonero?`$${Math.round(millonero.saldo).toLocaleString()}`:'$1,000,000',millonero?`¡${millonero.nombre} lo logró!`:'¿Quién llegará primero?',millonero?.nombre,!millonero,p1M,pLbl(lider,1000000))}
     ${ms('💎','Primero a los 5 millones',cincoM?`$${Math.round(cincoM.saldo).toLocaleString()}`:'$5,000,000',cincoM?`¡${cincoM.nombre}!`:'¿El nuevo millonario?',cincoM?.nombre,!cincoM,p5M,pLbl(lider,5000000))}
     ${ms('👑','Primero a los 10 millones',diezM?`$${Math.round(diezM.saldo).toLocaleString()}`:'$10,000,000',diezM?`¡Leyenda: ${diezM.nombre}!`:'La cima absoluta',diezM?.nombre,!diezM,p10M,pLbl(lider,10000000))}
-    <div class="rec-cat"><span class="rec-cat-lbl">💪 Apuestas</span></div>
-    <div class="rec-grid">
-      ${rec('🤑','Apuesta más grande',mayorApuesta.monto?`$${mayorApuesta.monto.toLocaleString()}`:'—',null,mayorApuesta.nombre||null,!mayorApuesta.monto,null)}
-      ${rec('⚡','Mejor multiplicador',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?mejorMul.b.tipo==='parlay'?`Parlay ${mejorMul.b.legs.length} patas`:null:null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)')}
-      ${rec('💸','Mayor ganancia',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:'—',null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)')}
-      ${rec('😱','Mayor pérdida',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',null,mayorPerd.b?.nombre,!mayorPerd.b,mayorPerd.b,'var(--rl)')}
-      ${rec('🔥','Racha ganadora',mejorRacha?`${mejorRacha[1].max} seguidas`:'—',null,mejorRacha?.[0],!mejorRacha,null)}
-      ${rec('🥶','Racha perdedora',peorRacha?`${peorRacha[1].max} seguidas`:'—',null,peorRacha?.[0],!peorRacha,null)}
-      ${rec('🎯','Mejor % acierto',mejorPct?`${Math.round(mejorPct.pct*100)}%`:'—',mejorPct?`${mejorPct.w}/${mejorPct.t} picks`:null,mejorPct?.nombre,!mejorPct,null)}
-      ${rec('💀','Peor % acierto',peorPct?`${Math.round(peorPct.pct*100)}%`:'—',peorPct?`${peorPct.w}/${peorPct.t} picks`:null,peorPct?.nombre,!peorPct,null)}
-      ${rec('🃏','Más activo',masApuestas?`${masApuestas[1]} apuestas`:'—',null,masApuestas?.[0],!masApuestas,null)}
-    </div>
-    <div class="rec-cat"><span class="rec-cat-lbl">📊 Globales</span></div>
-    <div class="rec-grid">
-      ${rec('🏦','Mayor saldo',lider?`$${Math.round(lider.saldo).toLocaleString()}`:'—',null,lider?.nombre,!lider,null)}
-      ${rec('💰','Total apostado',`$${totalTorneo.toLocaleString()}`,`${jugList.length} jugadores`,null,!totalTorneo,null)}
-    </div>
+    ${ms('💯','Primero en 100 apuestas','100 apuestas',centena?`¡${centena.nombre} lo logró!`:'¿Quién será el más activo?',centena?.nombre,!centena,pCentena,pCentenaLbl)}
+    ${ms('🔟','Primero en racha de 10','10 seguidas',racha10?`¡${racha10.nombre} lo logró!`:'¿Quién la logrará?',racha10?.nombre,!racha10,pRacha10,pRacha10Lbl)}
+    <div class="rec-cat"><span class="rec-cat-lbl">Apuestas</span></div>
+    ${rec('🤑','Apuesta más grande',mayorApuesta.monto?`$${mayorApuesta.monto.toLocaleString()}`:'—',null,mayorApuesta.nombre||null,!mayorApuesta.monto,null,null,'rgba(255,219,0,.3)')}
+    ${rec('⚡','Mejor multiplicador',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?mejorMul.b.tipo==='parlay'?`Parlay ${mejorMul.b.legs.length} patas`:`Apuesta individual`:null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)','rgba(255,219,0,.2)')}
+    ${rec('💸','Mayor ganancia',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:'—',null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)','rgba(93,202,165,.35)')}
+    ${rec('😱','Mayor pérdida',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',null,mayorPerd.b?.nombre,!mayorPerd.b,mayorPerd.b,'var(--rl)','rgba(226,75,74,.3)')}
+    ${rec('🔥','Racha ganadora',mejorRacha?`${mejorRacha[1].max} seguidas`:'—',rachaBadge,mejorRacha?.[0],!mejorRacha,null,null,'rgba(255,219,0,.25)')}
+    ${rec('🥶','Racha perdedora',peorRacha?`${peorRacha[1].max} seguidas`:'—',null,peorRacha?.[0],!peorRacha,null,null,'rgba(226,75,74,.2)')}
+    ${rec('🎯','Mejor % acierto',mejorPct?`${Math.round(mejorPct.pct*100)}%`:'—',mejorPct?`${mejorPct.w}/${mejorPct.t} picks correctos`:null,mejorPct?.nombre,!mejorPct,null,null,'rgba(93,202,165,.3)')}
+    ${rec('💀','Peor % acierto',peorPct?`${Math.round(peorPct.pct*100)}%`:'—',peorPct?`${peorPct.w}/${peorPct.t} picks correctos`:null,peorPct?.nombre,!peorPct,null,null,'rgba(226,75,74,.2)')}
+    ${rec('🃏','Más activo',masApuestas?`${masApuestas[1]} apuestas`:'—',masApuestas?'El más fiel del grupo':null,masApuestas?.[0],!masApuestas,null)}
+    <div class="rec-cat"><span class="rec-cat-lbl">Globales</span></div>
+    ${rec('🏦','Mayor saldo',lider?`$${Math.round(lider.saldo).toLocaleString()}`:'—',null,lider?.nombre,!lider,null)}
+    ${rec('💰','Total apostado',`$${totalTorneo.toLocaleString()}`,`${apList.length} apuestas · ${jugList.length} jugadores`,null,!totalTorneo,null)}
   `;
   // ── Badges personales (solo visibles al jugador) ──────────────
   if(me&&!isAdmin){
@@ -3316,8 +3348,6 @@ function recToggle(id){
   const opening=detail.hidden;
   detail.hidden=!opening;
   if(btn)btn.textContent=opening?'Ocultar ▴':'Ver apuesta ▾';
-  const card=detail.closest('.rec-card');
-  if(card)card.classList.toggle('rec-card-expanded',opening);
 }
 function renderElim(){
   const odds=state.campeon_odds||{};
