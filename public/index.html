@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.28.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.28.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3732,8 +3732,7 @@ function renderElim(){
     ${elimHtml}
     <div class="sec-title" style="margin-bottom:8px">⚽ Llaves eliminatorias</div>
     <div style="font-size:10px;color:var(--muted2);margin-bottom:6px">Proyectado según posiciones actuales · desliza →</div>
-    ${lblRow}
-    <div class="bk-wrap">${treeHtml}</div>
+    <div class="bk-wrap">${lblRow}${treeHtml}</div>
   </div>${champHtml}`;
 }
 // Selector de campeón (lista de selecciones ordenadas por momio)
