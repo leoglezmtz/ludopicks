@@ -1462,54 +1462,61 @@ export default async function handler(req, res) {
     const pairToId = {};
     for (const p of PARTIDOS) pairToId[p.local + "|" + p.visita] = p.id;
 
-    // Eventos finalizados que mapean a un partido de grupos
-    const finished = [];
+    // Eventos: FINALIZADOS y EN VIVO que mapean a un partido de grupos
+    const finished = [], liveEv = [];
     for (const ev of events) {
-      const comp = ev?.competitions?.[0];
-      if (!comp || !ev.status?.type?.completed) continue;
+      const comp = ev?.competitions?.[0]; if (!comp) continue;
       const home = comp.competitors?.find(c => c.homeAway === "home");
       const away = comp.competitors?.find(c => c.homeAway === "away");
       const ha = home?.team?.abbreviation, aa = away?.team?.abbreviation;
       if (!ha || !aa) continue;
       const pid = pairToId[ha + "|" + aa];
-      if (pid) finished.push({ id: ev.id, pid });
+      if (!pid) continue;
+      if (ev.status?.type?.completed) finished.push({ id: ev.id, pid });
+      else if (ev.status?.type?.state === "in") liveEv.push({ id: ev.id, pid });
     }
 
-    const fp = {};                 // tarjetas recalculadas desde cero
-    const cornersByPid = {};       // córners totales por partido
-    let procesados = 0, fallidos = 0;
-    const BATCH = 6;
-    for (let i = 0; i < finished.length; i += BATCH) {
-      const slice = finished.slice(i, i + BATCH);
-      const datas = await Promise.allSettled(slice.map(f =>
-        fetch(`${ESPN}/summary?event=${f.id}`, { headers: { Accept: "application/json" } })
-          .then(r => r.ok ? r.json() : null).then(j => ({ f, j }))
-      ));
-      for (const d of datas) {
-        if (d.status !== "fulfilled" || !d.value?.j) { fallidos++; continue; }
-        const teams = d.value.j.boxscore?.teams;
-        if (!Array.isArray(teams)) { fallidos++; continue; }
-        let totalCorners = 0, gotCorners = false;
-        for (const t of teams) {
-          const abbr = t.team?.abbreviation;
-          const stat = n => { const s = t.statistics?.find(x => x.name === n); return s ? Number(s.displayValue) : null; };
-          const c = stat("wonCorners");
-          if (c != null && !isNaN(c)) { totalCorners += c; gotCorners = true; }
-          if (abbr) {
-            if (!fp[abbr]) fp[abbr] = { a: 0, r: 0 };
-            const y = stat("yellowCards"), r = stat("redCards");
-            if (y != null && !isNaN(y)) fp[abbr].a += y;
-            if (r != null && !isNaN(r)) fp[abbr].r += r;
-          }
-        }
-        if (gotCorners) cornersByPid[d.value.f.pid] = totalCorners;
-        procesados++;
+    // Totales de córners/tarjetas (y por equipo) de un summary. null si faltan estadísticas (evita ceros falsos).
+    const espnTotals = (j) => {
+      const teams = j?.boxscore?.teams;
+      if (!Array.isArray(teams) || teams.length < 2 || !teams.every(t => Array.isArray(t.statistics) && t.statistics.length)) return null;
+      let corners = 0, cards = 0; const perTeam = [];
+      for (const t of teams) {
+        const stat = n => { const s = t.statistics.find(x => x.name === n); return s ? Number(s.displayValue) : null; };
+        const c = stat("wonCorners"); if (c != null && !isNaN(c)) corners += c;
+        const y = stat("yellowCards"), r = stat("redCards");
+        const yy = (y != null && !isNaN(y)) ? y : 0, rr = (r != null && !isNaN(r)) ? r : 0;
+        cards += yy + rr; perTeam.push({ abbr: t.team?.abbreviation, yy, rr });
       }
-    }
+      return { corners, cards, perTeam };
+    };
+    const fetchSummaries = async (list) => {
+      const out = {}; const BATCH = 6;
+      for (let i = 0; i < list.length; i += BATCH) {
+        const slice = list.slice(i, i + BATCH);
+        const datas = await Promise.allSettled(slice.map(f =>
+          fetch(`${ESPN}/summary?event=${f.id}`, { headers: { Accept: "application/json" } })
+            .then(r => r.ok ? r.json() : null).then(j => ({ f, j }))));
+        for (const d of datas) { if (d.status === "fulfilled" && d.value?.j) out[d.value.f.pid] = espnTotals(d.value.j); }
+      }
+      return out;
+    };
 
-    // Fair play: SIEMPRE fusionar con lo previo tomando el máximo. Las tarjetas solo
-    // suben durante el torneo, así que esto nunca borra datos buenos si ESPN devuelve
-    // una lectura vacía/incompleta (causa del borrado a cero que vimos antes).
+    // FINALIZADOS → córners/tarjetas finales + fair play (recuento por equipo)
+    const finStats = await fetchSummaries(finished);
+    const fp = {}, cornersByPid = {}, cardsByPid = {};
+    let procesados = 0, fallidos = 0;
+    for (const f of finished) {
+      const tot = finStats[f.pid];
+      if (!tot) { fallidos++; continue; }
+      cornersByPid[f.pid] = tot.corners; cardsByPid[f.pid] = tot.cards;
+      for (const pt of tot.perTeam) { if (!pt.abbr) continue; if (!fp[pt.abbr]) fp[pt.abbr] = { a: 0, r: 0 }; fp[pt.abbr].a += pt.yy; fp[pt.abbr].r += pt.rr; }
+      procesados++;
+    }
+    // EN VIVO → córners/tarjetas provisionales (para insta-pago de Over irreversibles)
+    const liveStats = await fetchSummaries(liveEv);
+
+    // Fair play: SIEMPRE fusionar tomando el máximo (nunca borra si ESPN devuelve vacío).
     const prev = (await kv.get("fairplay")) || {};
     const storedFp = {};
     const tset = new Set([...Object.keys(fp), ...Object.keys(prev)]);
@@ -1519,7 +1526,6 @@ export default async function handler(req, res) {
     }
     await kv.set("fairplay", storedFp);
 
-    // Aplicar córners SOLO a partidos con marcador final ya guardado (liquida over/under)
     const jugadores  = (await kv.get("jugadores"))  || {};
     const apuestas   = (await kv.get("apuestas"))   || {};
     const resultados = (await kv.get("resultados")) || {};
@@ -1530,20 +1536,39 @@ export default async function handler(req, res) {
     const statusBefore = {};
     Object.values(apuestas).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
 
-    let cornersAplicados = 0, firstTouched = null;
-    for (const [pid, corners] of Object.entries(cornersByPid)) {
+    // FINALIZADOS → resultados (el partido terminó: liquidan over Y under)
+    let cornersAplicados = 0, tarjetasAplicadas = 0, firstTouched = null;
+    for (const pid of new Set([...Object.keys(cornersByPid), ...Object.keys(cardsByPid)])) {
       const r = resultados[pid];
       if (!r || r.gl == null || r.parcial) continue; // sin marcador final aún
-      if (r.corners === corners) continue;
-      r.corners = corners;
-      cornersAplicados++;
-      if (firstTouched == null) firstTouched = Number(pid);
+      let touched = false;
+      if (cornersByPid[pid] != null && r.corners !== cornersByPid[pid]) { r.corners = cornersByPid[pid]; cornersAplicados++; touched = true; }
+      if (cardsByPid[pid]   != null && r.tarjetas !== cardsByPid[pid])  { r.tarjetas = cardsByPid[pid]; tarjetasAplicadas++; touched = true; }
+      if (touched && firstTouched == null) firstTouched = Number(pid);
     }
 
-    if (cornersAplicados > 0) {
+    // EN VIVO → liveScores (insta-paga SOLO Over irreversibles; Under/1X2 esperan al final)
+    let liveTocados = 0;
+    for (const pid of Object.keys(liveStats)) {
+      const tot = liveStats[pid];
+      if (!tot) continue;
+      if (resultados[pid] && resultados[pid].gl != null && !resultados[pid].parcial) continue; // ya finalizado
+      const cur = live[pid] || {}, next = { ...cur };
+      // Monotónico (solo sube): córners y tarjetas nunca bajan en vivo → un Over ya
+      // pagado jamás se revierte por un glitch de datos. Es irreversible de verdad.
+      const newC = Math.max(cur.corners || 0, tot.corners);
+      const newT = Math.max(cur.tarjetas || 0, tot.cards);
+      let changed = false;
+      if (cur.corners !== newC) { next.corners = newC; changed = true; }
+      if (cur.tarjetas !== newT) { next.tarjetas = newT; changed = true; }
+      if (changed) { next.ts = Date.now(); live[pid] = next; liveTocados++; }
+    }
+
+    if (cornersAplicados > 0 || tarjetasAplicadas > 0 || liveTocados > 0) {
       if (firstTouched != null) await snapshotIfFirstTouch(jugadores, firstTouched);
       settleAll(jugadores, apuestas, resultados, campeon, especialesMap, live);
       await kv.set("resultados", resultados);
+      await kv.set("liveScores", live);
       await kv.set("jugadores", jugadores);
       await kv.set("apuestas", apuestas);
       const ganadores = {};
@@ -1554,11 +1579,11 @@ export default async function handler(req, res) {
       const subs = (await kv.get("pushSubs")) || {};
       for (const [nombre, monto] of Object.entries(ganadores)) {
         if (!subs[nombre]) continue;
-        try { await sendPush(subs[nombre], { title: "✓ ¡Córners liquidados!", body: `Estadísticas ESPN · +$${monto.toLocaleString()} a tu saldo`, tag: "corner-" + Date.now(), url: "/" }); } catch (e) {}
+        try { await sendPush(subs[nombre], { title: "✓ ¡Apuesta cobrada!", body: `Córners/tarjetas ESPN · +$${monto.toLocaleString()} a tu saldo`, tag: "espn-" + Date.now(), url: "/" }); } catch (e) {}
       }
     }
 
-    return res.json({ ok: true, fairplay: storedFp, cornersAplicados, procesados, fallidos, total: finished.length, jugadores: publicJugadores(jugadores), apuestas, resultados });
+    return res.json({ ok: true, fairplay: storedFp, cornersAplicados, tarjetasAplicadas, liveTocados, enVivo: liveEv.length, procesados, fallidos, total: finished.length, jugadores: publicJugadores(jugadores), apuestas, resultados, liveScores: live });
   }
 
   return res.status(400).json({ error: "Acción no reconocida" });
