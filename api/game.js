@@ -918,73 +918,61 @@ export default async function handler(req, res) {
     else live[partidoId] = entry;
     await kv.set("liveScores", live);
 
-    // ── INSTA-LIQUIDACIÓN: pagar apuestas con mercados irrevocables ya cumplidos ──
-    const jugadoresLs = (await kv.get("jugadores")) || {};
-    const apuestasLs = (await kv.get("apuestas")) || {};
-    const campeonLs = (await kv.get("campeon")) || null;
-    const especialesLs = await loadEspeciales();
-    // Snapshot del ranking ANTES de que cualquier insta-pago modifique saldos
-    await snapshotIfFirstTouch(jugadoresLs, partidoId);
-    const statusBefore = {};
-    Object.values(apuestasLs).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
-    settleAll(jugadoresLs, apuestasLs, resultados, campeonLs, especialesLs, live);
-    // Sólo guardamos si algo cambió a 'won' (no liquidamos 'lost' en vivo)
-    const ganadores = {}; // {nombre: monto ganado nuevo}
-    Object.values(apuestasLs).forEach(b => {
-      const wasPending = (statusBefore[b.id] || "pending") === "pending";
-      if (wasPending && b.status === "won" && b.payout) {
-        ganadores[b.nombre] = (ganadores[b.nombre] || 0) + b.payout;
-      }
-      // Si alguna pasó a 'lost' por liveScore (no debería con nuestra lógica conservadora), revertir
-      if (wasPending && b.status === "lost") b.status = "pending";
-    });
-    if (Object.keys(ganadores).length) {
-      await kv.set("jugadores", jugadoresLs);
-      await kv.set("apuestas", apuestasLs);
-      // Push a ganadores
-      const subs = (await kv.get("pushSubs")) || {};
-      for (const [nombre, monto] of Object.entries(ganadores)) {
-        if (!subs[nombre]) continue;
-        try {
-          await sendPush(subs[nombre], {
-            title: `✓ ¡Apuesta cobrada en ${m.local} vs ${m.visita}!`,
-            body: `Una de tus apuestas ya quedó confirmada · +$${monto.toLocaleString()} a tu saldo`,
-            tag: "live-" + partidoId, url: "/"
-          });
-        } catch (e) {}
-      }
-    }
-    // ── AUTO-PA: si el partido tiene pa:true y un equipo llegó a +2, aplicar automáticamente ──
+    // ── AUTO-PA: verificar ANTES de liquidar para hacer un solo settleAll ──
+    // Si el partido tiene pa:true y un equipo llegó a +2 (y no hay PA previa), inyectar en resultados.
+    let autoPaApplied = false;
     const glN = entry.gl ?? live[partidoId]?.gl;
     const gvN = entry.gv ?? live[partidoId]?.gv;
     if (m.pa && glN != null && gvN != null && !r?.pa) {
       const diff = glN - gvN;
-      const autoPA = {};
-      if (diff >= 2) autoPA.l = true;
-      if (diff <= -2) autoPA.v = true;
-      if (autoPA.l || autoPA.v) {
-        const resultadosPA = (await kv.get("resultados")) || {};
-        if (!resultadosPA[partidoId] || resultadosPA[partidoId].gl == null) {
-          const statusBeforePA = {};
-          Object.values(apuestasLs).forEach(b => { statusBeforePA[b.id] = b.status || "pending"; });
-          await snapshotIfFirstTouch(jugadoresLs, partidoId);
-          resultadosPA[partidoId] = { pa: { l: !!autoPA.l, v: !!autoPA.v }, parcial: true };
-          settleAll(jugadoresLs, apuestasLs, resultadosPA, campeonLs, especialesLs, live);
-          await kv.set("resultados", resultadosPA);
-          await kv.set("jugadores", jugadoresLs);
-          await kv.set("apuestas", apuestasLs);
-          // Push a quienes ganaron por auto-PA
-          const subsPA = (await kv.get("pushSubs")) || {};
-          const acumPA = {};
-          Object.values(apuestasLs).forEach(b => {
-            if ((statusBeforePA[b.id] || "pending") === "pending" && b.status === "won" && b.payout)
-              acumPA[b.nombre] = (acumPA[b.nombre] || 0) + b.payout;
+      const paFlags = {};
+      if (diff >= 2) paFlags.l = true;
+      if (diff <= -2) paFlags.v = true;
+      if ((paFlags.l || paFlags.v) && (!resultados[partidoId] || resultados[partidoId].gl == null)) {
+        resultados[partidoId] = { pa: { l: !!paFlags.l, v: !!paFlags.v }, parcial: true };
+        await kv.set("resultados", resultados);
+        autoPaApplied = true;
+      }
+    }
+
+    // ── LIQUIDACIÓN ÚNICA: insta-pago + PA en una sola pasada ──
+    const jugadoresLs = (await kv.get("jugadores")) || {};
+    const apuestasLs = (await kv.get("apuestas")) || {};
+    const campeonLs = (await kv.get("campeon")) || null;
+    const especialesLs = await loadEspeciales();
+    await snapshotIfFirstTouch(jugadoresLs, partidoId);
+    const statusBefore = {};
+    Object.values(apuestasLs).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
+    settleAll(jugadoresLs, apuestasLs, resultados, campeonLs, especialesLs, live);
+    // Recopilar nuevos ganadores (solo los que pasaron de pending → won)
+    const ganadoresInsta = {}, ganadoresPA = {};
+    Object.values(apuestasLs).forEach(b => {
+      const wasPending = (statusBefore[b.id] || "pending") === "pending";
+      if (wasPending && b.status === "won" && b.payout) {
+        // Es ganador PA si el partido tiene PA aplicada y la apuesta es 1x2 o parlay con pata 1x2
+        const esPa = autoPaApplied && (b.pick === "local" || b.pick === "visita" ||
+          (b.tipo === "parlay" && b.legs?.some(l => l.pick === "local" || l.pick === "visita")));
+        if (esPa) ganadoresPA[b.nombre] = (ganadoresPA[b.nombre] || 0) + b.payout;
+        else ganadoresInsta[b.nombre] = (ganadoresInsta[b.nombre] || 0) + b.payout;
+      }
+      if (wasPending && b.status === "lost") b.status = "pending";
+    });
+    const todosGanadores = { ...ganadoresInsta };
+    for (const [n, v] of Object.entries(ganadoresPA)) todosGanadores[n] = (todosGanadores[n] || 0) + v;
+    if (Object.keys(todosGanadores).length) {
+      await kv.set("jugadores", jugadoresLs);
+      await kv.set("apuestas", apuestasLs);
+      const subs = (await kv.get("pushSubs")) || {};
+      for (const [nombre, monto] of Object.entries(todosGanadores)) {
+        if (!subs[nombre]) continue;
+        const esPA = !!ganadoresPA[nombre];
+        try {
+          await sendPush(subs[nombre], {
+            title: esPA ? `⚡ ¡Cobraste por PA en ${m.local} vs ${m.visita}!` : `✓ ¡Apuesta cobrada en ${m.local} vs ${m.visita}!`,
+            body: esPA ? `Pago anticipado automático · +$${monto.toLocaleString()} a tu saldo` : `Una de tus apuestas ya quedó confirmada · +$${monto.toLocaleString()} a tu saldo`,
+            tag: (esPA ? "pa-" : "live-") + partidoId, url: "/"
           });
-          for (const [nombre, monto] of Object.entries(acumPA)) {
-            if (!subsPA[nombre]) continue;
-            try { await sendPush(subsPA[nombre], { title: `⚡ ¡Cobraste por PA en ${m.local} vs ${m.visita}!`, body: `Pago anticipado automático · +$${monto.toLocaleString()} a tu saldo`, tag: "pa-" + partidoId, url: "/" }); } catch (e) {}
-          }
-        }
+        } catch (e) {}
       }
     }
 
