@@ -1474,7 +1474,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.9';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.10';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2473,7 +2473,7 @@ function matchCard(p,res,i,skipAnim,animBody){
         hint+=`<div class="hint bet">🎫 $${b.monto.toLocaleString()} a ${lbl} → $${Math.round(b.monto*b.momio).toLocaleString()}${locked?'':` <button class="cancel-btn" onclick="cancelBet('${b.id}')">cancelar</button>`}</div>`;
       }
     });
-    const paNotice=p.pa?(paParcial?`<div class="pa-notice pa-notice-applied"><span>⚡</span><span>PA aplicado · apuestas cobradas anticipadamente</span></div>`:`<div class="pa-notice"><span>⚡</span><span><b>Pago Anticipado</b> · se cobra si gana por 2+ goles a los 75'</span></div>`):'';
+    const paNotice=p.pa?(paParcial?`<div class="pa-notice pa-notice-applied"><span>⚡</span><span>PA aplicado · apuestas cobradas anticipadamente</span></div>`:`<div class="pa-notice"><span>⚡</span><span><b>Pago Anticipado</b> · se cobra en cuanto tu equipo gane por 2+ goles</span></div>`):'';
     body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${paNotice}${row1x2}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
   }
   return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}${isOpen?' open':''}" style="${animStyle}">${header}${body}</div>`;
