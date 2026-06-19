@@ -1432,6 +1432,17 @@ select option{background:#161c30;color:#fff}
   </div>
 </div>
 
+<div class="especial-pop" id="giftClaimPop" style="display:none">
+  <div class="ep-card" style="background:linear-gradient(160deg,#1a1407,#0a2a12);border-color:rgba(31,196,58,.4)">
+    <button class="ep-x" onclick="closeGiftClaim()">×</button>
+    <div style="font-size:52px;margin-bottom:8px">🎁</div>
+    <div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:6px" id="giftClaimTitle">¡Tienes un regalo!</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.7);margin-bottom:20px;line-height:1.5" id="giftClaimBody"></div>
+    <button class="btn btn-primary" onclick="doReclamarRegalos()">🎁 Reclamar ahora</button>
+    <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:10px;cursor:pointer" onclick="closeGiftClaim()">Reclamar después</div>
+  </div>
+</div>
+
 <div class="especial-pop" id="paPromo" style="display:none">
   <div class="pa-promo-card">
     <div class="pa-promo-26">26</div>
@@ -1575,7 +1586,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.19';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.20';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -1799,7 +1810,7 @@ let loadFailed=false, serverOffset=0, betslip=[], lineSel={};
 async function loadState(){
   const prevApuestas=state&&state.apuestas?{...state.apuestas}:null;
   try{
-    const r=await fetch(API);
+    const r=await fetch(API+(me?`?nombre=${encodeURIComponent(me)}`:''));
     if(!r.ok)throw new Error('http '+r.status);
     state=await r.json();
     if(state.now)serverOffset=state.now-Date.now();
@@ -2056,7 +2067,7 @@ function enterApp(){
   const sb=document.getElementById('switchBtn');
   if(sb)sb.style.display=(isAdmin||me==='Leonidas')?'block':'none';
   refreshHero();renderSlipBar();
-  if(!isAdmin){checkNotifStatus();setTimeout(()=>{ if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
+  if(!isAdmin){checkNotifStatus();setTimeout(()=>{ if(maybeShowGiftClaim())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
 }
 async function switchMode(){
   if(isAdmin){
@@ -3877,6 +3888,39 @@ function closeNewsPop(){
 function newsGoEspeciales(){
   closeNewsPop();
   showTab('especiales');
+}
+
+// ── REGALO PENDIENTE (claim) ──────────────────────────────────
+function maybeShowGiftClaim(){
+  if(!me||!state.jugadores[me])return false;
+  const regalos=(state.jugadores[me].regalos||[]);
+  if(!regalos.length)return false;
+  const totalFeria=regalos.filter(r=>r.kind==='feria').reduce((s,r)=>s+r.cantidad,0);
+  const totalTix=regalos.filter(r=>r.kind==='tickets').reduce((s,r)=>s+r.cantidad,0);
+  const partes=[];
+  if(totalFeria>0)partes.push(`💵 $${totalFeria.toLocaleString()} de feria`);
+  if(totalTix>0)partes.push(`🎟️ ${totalTix} ticket${totalTix!==1?'s':''} de ruleta`);
+  document.getElementById('giftClaimTitle').textContent=regalos[0].titulo||'¡Tienes un regalo!';
+  document.getElementById('giftClaimBody').textContent='El admin te mandó: '+partes.join(' y ')+'. ¡Reclámalo para sumarlo a tu cuenta!';
+  document.getElementById('giftClaimPop').style.display='flex';
+  return true;
+}
+function closeGiftClaim(){
+  document.getElementById('giftClaimPop').style.display='none';
+}
+async function doReclamarRegalos(){
+  const r=await api({action:'reclamarRegalos',payload:{nombre:me,pin:myPin}});
+  if(!r.ok){toast('Error al reclamar');return;}
+  state.jugadores=r.jugadores;
+  closeGiftClaim();
+  refreshHero();
+  const recs=r.reclamados||[];
+  const totalFeria=recs.filter(x=>x.kind==='feria').reduce((s,x)=>s+x.cantidad,0);
+  const totalTix=recs.filter(x=>x.kind==='tickets').reduce((s,x)=>s+x.cantidad,0);
+  const partes=[];
+  if(totalFeria>0)partes.push(`+$${totalFeria.toLocaleString()}`);
+  if(totalTix>0)partes.push(`+${totalTix} ticket${totalTix!==1?'s':''}`);
+  toast('🎁 ¡Reclamado! '+partes.join(' y '));
 }
 
 // ── ADMIN: editor de apuestas especiales ──────────────────────
