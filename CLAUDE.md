@@ -3,7 +3,7 @@
 App de apuestas ficticias del Mundial 2026 entre ~10 amigos (sin dinero real).  
 **Producción:** https://ludopicks.vercel.app  
 **Repo:** leoglezmtz/ludopicks  
-**Versión actual en producción:** v1.24.3
+**Versión actual en producción:** v1.29.1
 
 ---
 
@@ -205,7 +205,46 @@ Ordenados por urgencia:
 | v1.22.1 | Mini-barras en patas de parlay (bubble + línea de meta) |
 | v1.23.0 | Insta-pago automático en vivo para mercados irrevocables |
 | v1.24.0 | Fix delta ranking (snapshotIfFirstTouch) + UI admin limpiada |
-| v1.24.3 | **VERSIÓN ACTUAL EN PRODUCCIÓN** |
+| v1.26.26 | Fair Play (tarjetas por equipo) admin + carga inicial ESPN |
+| v1.26.28 | Fair Play como desempate FIFA en tablas y mejores terceros |
+| v1.27.0 | Sync automático de marcadores con API de FIFA |
+| v1.27.1 | Sync córners+tarjetas con API oculta de ESPN + cadencia split |
+| v1.27.6 | Desempate completo (fair play + proxy ranking FIFA con momios) |
+| v1.28.0 | **Tabla oficial FIFA Annex C (495 combos) para terceros en R32** |
+
+## Asignación de terceros R32 — Tabla oficial FIFA (v1.28.0)
+
+`buildThirdsMap` usa `T3_TABLE`: las 495 combinaciones oficiales (Annex C) que mapean
+qué grupos clasifican como mejores terceros → rival de cada ganador. NO se puede derivar
+por algoritmo (cada combo tiene varios emparejamientos válidos; FIFA elige uno). El greedy
+anterior dejaba slots vacíos. Clave = 8 grupos ordenados alfabético; valor = grupos rivales
+en orden [1A,1B,1D,1E,1G,1I,1K,1L]. Fuente: parse de Annex C, validada estructura 100% +
+cross-check vs Wikipedia. `buildThirdsMapGreedy` queda solo como fallback de seguridad.
+
+## Sincronización automática Mundial (v1.27.1)
+
+Dos APIs no oficiales pero funcionales. Se llaman SERVER-SIDE (CORS). Liquidan apuestas.
+
+### Marcadores → FIFA · acción `syncFifa`
+- `https://api.fifa.com/api/v3/calendar/matches?idCompetition=17&idSeason=285023&count=200&language=en`
+  - `idSeason=285023` = Canadá-México-USA 2026 · `IdStage=289273` = fase de grupos
+  - `MatchStatus`: 0=final, 1=programado, 3=vivo · marcadores en `Home.Score`/`Away.Score`
+  - Equipos: `Home.Abbreviation` (= códigos de data.js, 72/72 mapean, 0 sin mapear)
+- status 0 → resultado final (réplica de `resultado`); status 3 → liveScore + auto-PA.
+
+### Córners + tarjetas → ESPN · acción `syncEspnStats`
+- FIFA NO da córners; ESPN sí. Liga ESPN: `fifa.world`.
+  - `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260627&limit=200` (ids)
+  - `.../summary?event={id}` → `boxscore.teams[].statistics` (POR PARTIDO, verificado)
+  - Córners: `wonCorners` (sumar ambos equipos) · tarjetas: `yellowCards`/`redCards`
+  - Mapeo por par de abreviaciones (72/72, 0 sin mapear). Rango de fechas evita choques con eliminatorias.
+- Córners se aplican SOLO a partidos con marcador final (liquida over/under). Fair play se recalcula.
+
+### Frontend (pestaña admin Resultados)
+- Botón "🔄 Sincronizar ahora" (full) + auto-sync ENCENDIDO por defecto.
+- Cadencia split: marcadores cada **10s** (ligero), córners/tarjetas cada **5 min** (pesado).
+- Se apaga solo si el admin destilda; persiste en `localStorage.fifaAutoOff`.
+- settleAll es idempotente → cualquier inconsistencia transitoria se auto-corrige al siguiente tick.
 
 ---
 
