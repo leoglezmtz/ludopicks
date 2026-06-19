@@ -1474,7 +1474,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.11';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.12';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3152,7 +3152,7 @@ function renderRecords(){
   const peorPct=pctList.sort((a,b)=>a.pct-b.pct)[0]||null;
   const lider=[...jugList].sort((a,b)=>b.saldo-a.saldo)[0];
   const totalTorneo=apList.reduce((s,b)=>s+b.monto,0);
-  const mejorApuesta=ganadas.reduce((best,b)=>{const neta=Math.round(b.monto*((b.tipo==='parlay'?b.momioTotal:b.momio)-1));return neta>best.neta?{neta,b}:best;},{neta:0,b:null});
+  const mayorApuesta=apList.reduce((best,b)=>b.monto>best.monto?b:best,{monto:0});
   const millonero=jugList.find(j=>j.saldo>=1000000);
   const cincoM=jugList.find(j=>j.saldo>=5000000);
   const diezM=jugList.find(j=>j.saldo>=10000000);
@@ -3212,7 +3212,7 @@ function renderRecords(){
     ${rec('💎','Primero a los 5 millones',cincoM?`$${Math.round(cincoM.saldo).toLocaleString()}`:'$5,000,000',cincoM?`¡${cincoM.nombre}!`:'¿El nuevo millonario?',cincoM?.nombre,!cincoM)}
     ${rec('👑','Primero a los 10 millones',diezM?`$${Math.round(diezM.saldo).toLocaleString()}`:'$10,000,000',diezM?`¡Leyenda: ${diezM.nombre}!`:'La cima absoluta',diezM?.nombre,!diezM)}
     <div class="rec-section-title">💪 Apuestas</div>
-    ${rec('🌟','Mejor apuesta jamás hecha',mejorApuesta.b?`+$${mejorApuesta.neta.toLocaleString()}`:'—',mejorApuesta.b?`${mejorApuesta.b.nombre} · ${mejorApuesta.b.tipo==='parlay'?mejorApuesta.b.momioTotal.toFixed(2)+'x':mejorApuesta.b.momio+'x'}`:null,mejorApuesta.b?.nombre,!mejorApuesta.b,mejorApuesta.b,'var(--green)')}
+    ${rec('🤑','Apuesta más grande',mayorApuesta.monto?`$${mayorApuesta.monto.toLocaleString()}`:'—',mayorApuesta.nombre||null,mayorApuesta.nombre||null,!mayorApuesta.monto,mayorApuesta.monto?mayorApuesta:null,'var(--green)')}
     ${rec('⚡','Mejor multiplicador ganado',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?(mejorMul.b.tipo==='parlay'?`Parlay ${mejorMul.b.legs.length} patas · ${mejorMul.b.nombre}`:`Simple · ${mejorMul.b.nombre}`):null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)')}
     ${rec('💸','Mayor ganancia en una apuesta',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:' —',mayorGan.b?mayorGan.b.nombre:null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)')}
     ${rec('😱','Mayor pérdida en una apuesta',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',mayorPerd.b?mayorPerd.b.nombre:null,mayorPerd.b?.nombre,!mayorPerd.b,mayorPerd.b,'var(--rl)')}
