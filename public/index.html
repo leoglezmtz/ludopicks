@@ -374,16 +374,20 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .vap-leg-st{font-weight:900;font-size:12px;text-align:center;min-width:14px}
 
 /* ── RECORDS / HALL OF FAME ── */
-.rec-section-title{font-size:11px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px;padding-left:2px}
+#listaRecords{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:start}
+#listaRecords .rec-section-title{grid-column:1/-1}
+.rec-section-title{font-size:11px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 6px;padding-left:2px}
 .rec-section-title:first-child{margin-top:4px}
-.rec-card{display:flex;align-items:center;gap:12px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:16px;padding:14px;margin-bottom:8px}
-.rec-card.rec-empty{opacity:.5}
-.rec-ico{font-size:30px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,219,0,.3))}
+.rec-card{display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:12px 11px}
+.rec-card.rec-empty{opacity:.55}
+.rec-ico{font-size:26px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,219,0,.3))}
 .rec-body{flex:1;min-width:0}
-.rec-title{font-size:11.5px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em}
-.rec-val{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;margin-top:2px;line-height:1}
-.rec-sub{font-size:12px;color:var(--muted);margin-top:3px}
-.rec-av{width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,255,255,.15)}
+.rec-title{font-size:10.5px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em;line-height:1.3}
+.rec-val{font-size:18px;font-weight:900;color:#fff;letter-spacing:-.5px;margin-top:2px;line-height:1}
+.rec-sub{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rec-av{width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,255,255,.15)}
+.rec-av svg{width:100%;height:100%;display:block}
+.rec-av-ghost{border-color:rgba(255,255,255,.08)}
 .rec-expandable .rec-body{min-width:0}
 .rec-toggle{background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:11px;font-weight:700;padding:4px 9px;border-radius:8px;cursor:pointer;margin-top:7px;transition:.15s}
 .rec-toggle:hover{color:#fff;border-color:rgba(255,255,255,.3)}
@@ -399,6 +403,9 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .rec-leg-pick{font-size:12px;font-weight:700;color:#fff;flex:1;text-align:center}
 .rec-leg-momio{font-size:12px;font-weight:800;color:var(--gold);flex-shrink:0}
 
+/* PA notice inside expanded match body */
+.pa-notice{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--gold);background:rgba(255,219,0,.09);border:1px solid rgba(255,219,0,.2);border-radius:10px;padding:8px 11px;margin-bottom:9px}
+.pa-notice-applied{background:rgba(255,219,0,.14);border-color:rgba(255,219,0,.35)}
 /* ── MODO CASINO ── */
 .cas-hero{text-align:center;padding:22px 16px;background:linear-gradient(160deg,rgba(15,110,86,.3),rgba(12,68,124,.25));backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-brd);border-radius:20px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
 .cas-hero-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
@@ -897,9 +904,8 @@ select option{background:#161c30;color:#fff}
   #listaPartidos #especialBanner,#listaPartidos #installCard,#listaPartidos #countdownBox{grid-column:1/-1}
   .filters{grid-column:1/-1}
 
-  /* Récords: 2 columnas */
-  #listaRecords{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:start}
-  #listaRecords .rec-section-title{grid-column:1/-1}
+  /* Récords: ampliar gap en desktop */
+  #listaRecords{gap:11px}
 
   /* Especiales: 2 columnas */
   #listaEspeciales{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:start}
@@ -1468,7 +1474,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.8';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.9';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2412,7 +2418,7 @@ function matchCard(p,res,i,skipAnim,animBody){
   const hasBet=myBets.length>0;
   let meta;
   if(done)meta=`<span class="rb rb-info">${res.gl} - ${res.gv}</span>`;
-  else if(paParcial)meta=`<span class="locktag" style="background:rgba(255,219,0,.16);color:var(--gold);border-color:rgba(255,219,0,.3)">⚡ PA · en juego</span>`;
+  else if(paParcial)meta=`<span class="locktag">🔒 En juego</span>`;
   else if(locked)meta=`<span class="locktag">🔒 En juego</span>`;
   else{
     const ms=p.kickoff-eNow();const urg=ms<3600000;
@@ -2421,7 +2427,7 @@ function matchCard(p,res,i,skipAnim,animBody){
   const animStyle=skipAnim?'animation:none':`animation-delay:${i*.03}s`;
   const header=`<div class="match-head" onclick="toggleExpand(${p.id})">
     <div class="teams">${teamFlag(p.local,18)} <span class="vsx">vs</span> ${teamFlag(p.visita,18)}</div>
-    <div class="match-meta-wrap">${(p.pa&&!done)?'<span class="pa-chip">⚡PA</span>':''}${hasBet?'<span class="bet-dot" title="Tienes apuesta">🎫</span>':''}${meta}<span class="chev">▾</span></div>
+    <div class="match-meta-wrap">${hasBet?'<span class="bet-dot" title="Tienes apuesta">🎫</span>':''}${meta}<span class="chev">▾</span></div>
   </div>`;
   let body='';
   if(isOpen){
@@ -2467,7 +2473,8 @@ function matchCard(p,res,i,skipAnim,animBody){
         hint+=`<div class="hint bet">🎫 $${b.monto.toLocaleString()} a ${lbl} → $${Math.round(b.monto*b.momio).toLocaleString()}${locked?'':` <button class="cancel-btn" onclick="cancelBet('${b.id}')">cancelar</button>`}</div>`;
       }
     });
-    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
+    const paNotice=p.pa?(paParcial?`<div class="pa-notice pa-notice-applied"><span>⚡</span><span>PA aplicado · apuestas cobradas anticipadamente</span></div>`:`<div class="pa-notice"><span>⚡</span><span><b>Pago Anticipado</b> · se cobra si gana por 2+ goles a los 75'</span></div>`):'';
+    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${paNotice}${row1x2}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
   }
   return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}${isOpen?' open':''}" style="${animStyle}">${header}${body}</div>`;
 }
@@ -3145,6 +3152,9 @@ function renderRecords(){
   const peorPct=pctList.sort((a,b)=>a.pct-b.pct)[0]||null;
   const lider=[...jugList].sort((a,b)=>b.saldo-a.saldo)[0];
   const totalTorneo=apList.reduce((s,b)=>s+b.monto,0);
+  const millonero=jugList.find(j=>j.saldo>=1000000);
+  const cincoM=jugList.find(j=>j.saldo>=5000000);
+  const diezM=jugList.find(j=>j.saldo>=10000000);
 
   // ── Helper: genera HTML del desglose de una apuesta ─────────
   function betBreakdown(b,stColor){
@@ -3177,7 +3187,8 @@ function renderRecords(){
 
   // ── Helper: genera la tarjeta con desglose opcional ─────────
   function rec(emoji,titulo,valor,sub,winner,empty,betObj,stColor){
-    if(empty)return `<div class="rec-card rec-empty"><div class="rec-ico">🔒</div><div class="rec-body"><div class="rec-title">${titulo}</div><div class="rec-val" style="font-size:14px;color:var(--muted2)">Pendiente</div></div></div>`;
+    const ghostAv=`<div class="rec-av rec-av-ghost"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="rgba(255,255,255,.09)"/><circle cx="20" cy="14" r="7.5" fill="rgba(255,255,255,.22)"/><ellipse cx="20" cy="36" rx="13" ry="9" fill="rgba(255,255,255,.22)"/></svg></div>`;
+    if(empty)return `<div class="rec-card rec-empty"><div class="rec-ico">${emoji}</div><div class="rec-body"><div class="rec-title">${titulo}</div><div class="rec-val" style="font-size:13px;color:var(--muted2)">Pendiente</div></div>${ghostAv}</div>`;
     const av=winner?jugList.find(j=>j.nombre===winner):null;
     const bd=betObj?betBreakdown(betObj,stColor||'var(--green)'):'';
     const hasDetail=!!bd;
@@ -3196,7 +3207,9 @@ function renderRecords(){
 
   el.innerHTML=`
     <div class="rec-section-title">🏆 Hitos del torneo</div>
-    ${rec('💰','Primero en llegar al millón','$1,000,000','¿Quién llegará?',null,true)}
+    ${rec('💰','Primero al millón',millonero?`$${Math.round(millonero.saldo).toLocaleString()}`:'$1,000,000',millonero?`¡${millonero.nombre} lo logró!`:'¿Quién llegará?',millonero?.nombre,!millonero)}
+    ${rec('💎','Primero a los 5 millones',cincoM?`$${Math.round(cincoM.saldo).toLocaleString()}`:'$5,000,000',cincoM?`¡${cincoM.nombre}!`:'¿El nuevo millonario?',cincoM?.nombre,!cincoM)}
+    ${rec('👑','Primero a los 10 millones',diezM?`$${Math.round(diezM.saldo).toLocaleString()}`:'$10,000,000',diezM?`¡Leyenda: ${diezM.nombre}!`:'La cima absoluta',diezM?.nombre,!diezM)}
     <div class="rec-section-title">💪 Apuestas</div>
     ${rec('⚡','Mejor multiplicador ganado',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?(mejorMul.b.tipo==='parlay'?`Parlay ${mejorMul.b.legs.length} patas · ${mejorMul.b.nombre}`:`Simple · ${mejorMul.b.nombre}`):null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)')}
     ${rec('💸','Mayor ganancia en una apuesta',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:' —',mayorGan.b?mayorGan.b.nombre:null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)')}
