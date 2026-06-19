@@ -1592,7 +1592,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.21';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.22';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4336,34 +4336,10 @@ function openScore(pid){
       </div>
     </div>
 
-    ${p.pa?`<!-- ── SECCIÓN PA SIMPLIFICADA ─── -->
-    <div class="adm-sect">
-      <div class="adm-sect-h">⚡ Pago Anticipado (2 Up)</div>
-      <div class="adm-sect-note">Si un equipo llega a +2 de ventaja, toca su botón para pagar al instante. Las apuestas a ese ganador se cobran ya y los parlays donde solo faltaba esta pata también.</div>
-      ${(res&&res.pa)?`
-        <div class="pa-status-card">
-          <div class="pa-status-icon">⚡</div>
-          <div class="pa-status-text">
-            <div class="pa-status-title">PA aplicado</div>
-            <div class="pa-status-sub">${res.pa.l?`<b>${p.local}</b>`:''}${res.pa.l&&res.pa.v?' y ':''}${res.pa.v?`<b>${p.visita}</b>`:''}</div>
-          </div>
-        </div>
-      `:`
-        <div class="pa-quick">
-          <button class="pa-quick-btn" onclick="aplicarPaQuick(${p.id},'l')">
-            <span class="pa-quick-flag">${flagImg(p.local,22)}</span>
-            <span class="pa-quick-team">${p.local}</span>
-            <span class="pa-quick-action">⚡ Aplicar PA</span>
-          </button>
-          <button class="pa-quick-btn" onclick="aplicarPaQuick(${p.id},'v')">
-            <span class="pa-quick-flag">${flagImg(p.visita,22)}</span>
-            <span class="pa-quick-team">${p.visita}</span>
-            <span class="pa-quick-action">⚡ Aplicar PA</span>
-          </button>
-        </div>
-      `}
-      <input type="hidden" id="paL">
-      <input type="hidden" id="paV">
+    ${(res&&res.pa)?`
+    <div class="adm-sect" style="background:rgba(255,219,0,.06);border-color:rgba(255,219,0,.25)">
+      <div class="adm-sect-h" style="color:var(--gold)">⚡ Pago Anticipado aplicado</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.7)">Las apuestas al ganador de ${res.pa.l?`<b>${p.local}</b>`:''}${res.pa.l&&res.pa.v?' y ':''}${res.pa.v?`<b>${p.visita}</b>`:''} ya fueron cobradas automáticamente.</div>
     </div>`:''}
 
     <!-- ── BOTONES DE ACCIÓN ─── -->
