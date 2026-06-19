@@ -1592,7 +1592,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.22';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.24';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2374,7 +2374,11 @@ function showTab(name){
   const tabEl=document.getElementById('tabc-'+name);
   tabEl.style.display=(name==='admin'&&window.innerWidth>=900)?'flex':'block';
   if(name==='partidos'){renderPartidos();renderInstallCard();renderEspecialBanner();}
-  if(name==='mis'){misF='todas';renderMis();}
+  if(name==='mis'){
+    const hasPend=Object.values(state.apuestas).some(b=>b.nombre===me&&(b.status||'pending')==='pending');
+    misF=hasPend?'abiertas':'todas';
+    renderMis();
+  }
   if(name==='ranking')renderRanking();
   if(name==='records')renderRecords();
   if(name==='elim')renderElim();
@@ -3080,8 +3084,6 @@ function renderMis(){
   const el=document.getElementById('listaMis');
   if(!mine.length){el.innerHTML=`<div class="empty"><div class="emoji">🎟️</div>${frase('sinPicks')}<br><span style="font-size:13px;color:var(--muted2)">Aún no tienes picks.</span><br><button class="btn btn-primary" style="margin-top:14px;width:auto;padding:10px 24px" onclick="showTab('partidos')">⚽ Ver partidos</button></div>`;return;}
   const pend=mine.filter(b=>(b.status||'pending')==='pending');
-  // Auto-seleccionar "Abiertas" cuando hay pendientes y el usuario llega por primera vez
-  if(misF==='todas'&&pend.length)misF='abiertas';
   const won=mine.filter(b=>b.status==='won');
   const lost=mine.filter(b=>b.status==='lost');
   const counts={todas:mine.length,abiertas:pend.length,ganadas:won.length,perdidas:lost.length};
