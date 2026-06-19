@@ -644,26 +644,32 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .lbar-1x2-tag{font-size:10.5px;font-weight:800;letter-spacing:.02em}
 
 /* ── MODAL ADMIN RESULTADO REDISEÑADO ── */
-.adm-banner{padding:10px 12px;border-radius:11px;font-size:12.5px;line-height:1.45;margin-bottom:12px}
+.adm-banner{padding:10px 14px;border-radius:12px;font-size:12.5px;line-height:1.45;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .adm-banner-gold{background:linear-gradient(135deg,rgba(255,219,0,.14),rgba(255,219,0,.06));border:1px solid rgba(255,219,0,.35);color:#fff}
 .adm-banner-red{background:linear-gradient(135deg,rgba(239,68,68,.14),rgba(239,68,68,.06));border:1px solid rgba(239,68,68,.35);color:#fff}
-.adm-sect{background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:13px;margin-bottom:10px}
-.adm-sect-h{font-size:13px;font-weight:800;color:#fff;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.adm-sect-tag{font-size:9.5px;font-weight:800;color:var(--muted2);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.05em}
-.adm-sect-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin-bottom:10px}
-.adm-score-card{display:flex;align-items:center;gap:8px;padding:8px 4px;margin-top:6px}
+.adm-sect{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:16px;margin-bottom:10px}
+.adm-sect-h{font-size:12px;font-weight:800;color:var(--muted2);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.07em}
+.adm-sect-tag{font-size:9px;font-weight:800;color:var(--muted2);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.05em}
+.adm-sect-note{font-size:11.5px;color:var(--muted);line-height:1.4;margin-bottom:12px;margin-top:-8px}
+.adm-score-card{display:flex;align-items:center;gap:6px;padding:4px 0}
 .adm-team{flex:1;text-align:center}
-.adm-team-name{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:5px;justify-content:center}
-.adm-score-ctrl{display:flex;align-items:center;gap:4px;justify-content:center}
-.adm-bump{width:32px;height:42px;border:none;background:rgba(255,255,255,.06);color:#fff;font-size:20px;font-weight:800;border-radius:9px;cursor:pointer;transition:.15s;flex-shrink:0}
-.adm-bump:hover{background:rgba(255,255,255,.12)}
-.adm-bump:active{transform:scale(.92)}
-.adm-score-in{width:54px;height:54px;font-size:28px;font-weight:900;text-align:center;background:rgba(0,0,0,.4);border:2px solid rgba(255,255,255,.12);border-radius:11px;color:#fff;font-variant-numeric:tabular-nums}
-.adm-score-in:focus{outline:none;border-color:var(--green);background:rgba(31,196,58,.06)}
-.adm-score-in-sm{width:100%;height:44px;font-size:20px}
-.adm-dash{font-size:22px;color:var(--muted2);font-weight:900;padding:0 4px;margin-top:22px}
-.adm-mkt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
-.adm-mkt-cell label{display:block;font-size:11.5px;color:var(--muted2);font-weight:700;margin-bottom:5px}
+.adm-team-name{font-size:13px;font-weight:800;color:#fff;margin-bottom:10px;display:flex;align-items:center;gap:6px;justify-content:center}
+.adm-score-ctrl{display:flex;align-items:center;gap:6px;justify-content:center}
+.adm-bump{width:44px;height:52px;border:none;border-radius:12px;cursor:pointer;font-size:24px;font-weight:900;transition:all .12s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.adm-bump.minus{background:rgba(239,68,68,.15);color:#ef4444;border:1.5px solid rgba(239,68,68,.25)}
+.adm-bump.minus:hover{background:rgba(239,68,68,.28);border-color:rgba(239,68,68,.5)}
+.adm-bump.plus{background:rgba(31,196,58,.15);color:#1FC43A;border:1.5px solid rgba(31,196,58,.25)}
+.adm-bump.plus:hover{background:rgba(31,196,58,.28);border-color:rgba(31,196,58,.5)}
+.adm-bump:active{transform:scale(.88)}
+.adm-bump-sm{width:36px;height:40px;font-size:20px;border-radius:10px}
+.adm-score-in{width:72px;height:72px;font-size:36px;font-weight:900;text-align:center;background:rgba(0,0,0,.5);border:2px solid rgba(255,255,255,.1);border-radius:14px;color:#fff;font-variant-numeric:tabular-nums;padding:0}
+.adm-score-in:focus{outline:none;border-color:var(--green);background:rgba(31,196,58,.06);box-shadow:0 0 0 3px rgba(31,196,58,.15)}
+.adm-score-in-sm{width:100%;height:48px;font-size:22px;border-radius:12px}
+.adm-dash{font-size:28px;color:rgba(255,255,255,.2);font-weight:900;flex-shrink:0;margin-top:28px}
+.adm-mkt-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.adm-mkt-cell label{display:block;font-size:11px;color:var(--muted2);font-weight:800;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+.adm-mkt-ctrl{display:flex;align-items:center;gap:6px}
+.adm-mkt-ctrl .adm-score-in-sm{flex:1}
 .adm-pa-grid{display:flex;flex-direction:column;gap:7px;margin:8px 0 10px}
 .adm-pa-chip{display:flex;align-items:center;gap:9px;padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:10px;cursor:pointer;font-size:13px;transition:.15s}
 .adm-pa-chip:hover{background:rgba(255,255,255,.06)}
@@ -1586,7 +1592,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.20';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.21';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4286,20 +4292,20 @@ function openScore(pid){
       <div class="adm-sect-h">⚽ Marcador</div>
       <div class="adm-score-card">
         <div class="adm-team">
-          <div class="adm-team-name">${flagImg(p.local,18)} ${p.local}</div>
+          <div class="adm-team-name">${flagImg(p.local,20)} ${p.local}</div>
           <div class="adm-score-ctrl">
-            <button class="adm-bump" onclick="bumpScore('scoreL',-1)">−</button>
+            <button class="adm-bump minus" onclick="bumpScore('scoreL',-1)">−</button>
             <input class="adm-score-in" id="scoreL" type="tel" inputmode="numeric" maxlength="2" value="${initGl}" oninput="scorePreview(${pid})">
-            <button class="adm-bump" onclick="bumpScore('scoreL',1)">+</button>
+            <button class="adm-bump plus" onclick="bumpScore('scoreL',1)">+</button>
           </div>
         </div>
-        <div class="adm-dash">−</div>
+        <div class="adm-dash">:</div>
         <div class="adm-team">
-          <div class="adm-team-name">${flagImg(p.visita,18)} ${p.visita}</div>
+          <div class="adm-team-name">${flagImg(p.visita,20)} ${p.visita}</div>
           <div class="adm-score-ctrl">
-            <button class="adm-bump" onclick="bumpScore('scoreV',-1)">−</button>
+            <button class="adm-bump minus" onclick="bumpScore('scoreV',-1)">−</button>
             <input class="adm-score-in" id="scoreV" type="tel" inputmode="numeric" maxlength="2" value="${initGv}" oninput="scorePreview(${pid})">
-            <button class="adm-bump" onclick="bumpScore('scoreV',1)">+</button>
+            <button class="adm-bump plus" onclick="bumpScore('scoreV',1)">+</button>
           </div>
         </div>
       </div>
@@ -4309,15 +4315,23 @@ function openScore(pid){
     <!-- ── SECCIÓN 2: MERCADOS SECUNDARIOS ─── -->
     <div class="adm-sect">
       <div class="adm-sect-h">📊 Córners y tarjetas <span class="adm-sect-tag">opcional</span></div>
-      <div class="adm-sect-note">Déjalos vacíos para que las apuestas a estos mercados queden pendientes y liquidarlas después.</div>
+      <div class="adm-sect-note">Vacío = apuestas de ese mercado quedan pendientes para liquidar después.</div>
       <div class="adm-mkt-grid">
         <div class="adm-mkt-cell">
-          <label>⚽ Tiros de esquina</label>
-          <input class="adm-score-in adm-score-in-sm" id="cornersIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${initCorners}">
+          <label>🔄 Tiros de esquina</label>
+          <div class="adm-mkt-ctrl">
+            <button class="adm-bump minus adm-bump-sm" onclick="bumpScore('cornersIn',-1)">−</button>
+            <input class="adm-score-in adm-score-in-sm" id="cornersIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${initCorners}">
+            <button class="adm-bump plus adm-bump-sm" onclick="bumpScore('cornersIn',1)">+</button>
+          </div>
         </div>
         <div class="adm-mkt-cell">
           <label>🟨 Tarjetas (amar+roj)</label>
-          <input class="adm-score-in adm-score-in-sm" id="tarjetasIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${initTarjetas}">
+          <div class="adm-mkt-ctrl">
+            <button class="adm-bump minus adm-bump-sm" onclick="bumpScore('tarjetasIn',-1)">−</button>
+            <input class="adm-score-in adm-score-in-sm" id="tarjetasIn" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${initTarjetas}">
+            <button class="adm-bump plus adm-bump-sm" onclick="bumpScore('tarjetasIn',1)">+</button>
+          </div>
         </div>
       </div>
     </div>
