@@ -1329,5 +1329,178 @@ export default async function handler(req, res) {
     return res.json({ ok: true, tabla_orden });
   }
 
+  // ── ADMIN: SINCRONIZAR MARCADORES + LIQUIDAR DESDE LA API DE FIFA ──
+  // idCompetition=17 (FIFA World Cup), idSeason=285023 (Canadá-México-USA 2026).
+  // IdStage 289273 = fase de grupos. MatchStatus: 0=final, 1=programado, 3=en vivo.
+  // Mapea cada partido FIFA a un partidoId por el par de abreviaciones (local|visita).
+  if (action === "syncFifa") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const FIFA_BASE = "https://api.fifa.com/api/v3";
+    const ID_COMP = "17", ID_SEASON = "285023", ID_STAGE = "289273";
+    let feed;
+    try {
+      const resp = await fetch(`${FIFA_BASE}/calendar/matches?idCompetition=${ID_COMP}&idSeason=${ID_SEASON}&count=200&language=en`, { headers: { Accept: "application/json" } });
+      if (!resp.ok) return res.status(502).json({ error: `FIFA respondió ${resp.status}` });
+      feed = await resp.json();
+    } catch (e) {
+      return res.status(502).json({ error: "No se pudo conectar con FIFA: " + (e?.message || e) });
+    }
+    const matches = Array.isArray(feed?.Results) ? feed.Results : [];
+    if (!matches.length) return res.status(502).json({ error: "FIFA no devolvió partidos" });
+
+    const jugadores     = (await kv.get("jugadores"))  || {};
+    const apuestas      = (await kv.get("apuestas"))   || {};
+    const resultados    = (await kv.get("resultados")) || {};
+    const campeon       = (await kv.get("campeon"))    || null;
+    const especialesMap = await loadEspeciales();
+    const live          = (await kv.get("liveScores")) || {};
+
+    // Par "LOCAL|VISITA" -> partidoId (la fase de grupos hace único cada par)
+    const pairToId = {};
+    for (const p of PARTIDOS) pairToId[p.local + "|" + p.visita] = p.id;
+
+    const statusBefore = {};
+    Object.values(apuestas).forEach(b => { statusBefore[b.id] = b.status || "pending"; });
+
+    const aplicados = [], sinMapear = [];
+    let firstTouched = null;
+
+    for (const mt of matches) {
+      if (String(mt.IdStage) !== ID_STAGE) continue;
+      const home = mt.Home?.Abbreviation, away = mt.Away?.Abbreviation;
+      if (!home || !away) continue;
+      const pid = pairToId[home + "|" + away];
+      if (!pid) { sinMapear.push(`${home} vs ${away}`); continue; }
+      const m = BY_ID[pid];
+      const st = Number(mt.MatchStatus);
+      const hsRaw = mt.HomeTeamScore != null ? mt.HomeTeamScore : mt.Home?.Score;
+      const asRaw = mt.AwayTeamScore != null ? mt.AwayTeamScore : mt.Away?.Score;
+      const hs = hsRaw != null ? Number(hsRaw) : null;
+      const as = asRaw != null ? Number(asRaw) : null;
+
+      if (st === 0 && hs != null && as != null) {
+        // FINAL — réplica de la acción "resultado"
+        const ex = resultados[pid];
+        if (ex && !ex.parcial && ex.gl === hs && ex.gv === as) continue; // ya está idéntico
+        const prevR = resultados[pid] || {};
+        const rEntry = { gl: hs, gv: as };
+        if (prevR.corners  != null) rEntry.corners  = prevR.corners;   // córners se conservan (manual)
+        if (prevR.tarjetas != null) rEntry.tarjetas = prevR.tarjetas;
+        if (m.pa) rEntry.pa = { l: (hs - as) >= 2, v: (as - hs) >= 2 };
+        resultados[pid] = rEntry;
+        if (live[pid]) delete live[pid];
+        if (firstTouched == null) firstTouched = pid;
+        aplicados.push({ partidoId: pid, tipo: "final", label: `${m.local} ${hs}-${as} ${m.visita}` });
+      } else if (st === 3) {
+        // EN VIVO — actualiza liveScores (nunca pisa un final ya guardado)
+        if (resultados[pid] && resultados[pid].gl != null && !resultados[pid].parcial) continue;
+        if (hs == null && as == null) continue;
+        const entry = { ts: Date.now() };
+        if (hs != null) entry.gl = hs;
+        if (as != null) entry.gv = as;
+        if (live[pid]?.corners  != null) entry.corners  = live[pid].corners;
+        if (live[pid]?.tarjetas != null) entry.tarjetas = live[pid].tarjetas;
+        live[pid] = entry;
+        // Auto-PA en vivo (mismo criterio que setLiveScore)
+        if (m.pa && entry.gl != null && entry.gv != null && !resultados[pid]?.pa) {
+          const diff = entry.gl - entry.gv, pf = {};
+          if (diff >= 2) pf.l = true;
+          if (diff <= -2) pf.v = true;
+          if ((pf.l || pf.v) && (!resultados[pid] || resultados[pid].gl == null)) {
+            resultados[pid] = { pa: { l: !!pf.l, v: !!pf.v }, parcial: true };
+          }
+        }
+        if (firstTouched == null) firstTouched = pid;
+        aplicados.push({ partidoId: pid, tipo: "live", label: `${m.local} ${entry.gl ?? "-"}-${entry.gv ?? "-"} ${m.visita} (vivo)` });
+      }
+    }
+
+    if (!aplicados.length) {
+      return res.json({ ok: true, aplicados: [], sinMapear, resultados, liveScores: live, jugadores: publicJugadores(jugadores), apuestas });
+    }
+
+    if (firstTouched != null) await snapshotIfFirstTouch(jugadores, firstTouched);
+    settleAll(jugadores, apuestas, resultados, campeon, especialesMap, live);
+    await kv.set("resultados", resultados);
+    await kv.set("liveScores", live);
+    await kv.set("jugadores", jugadores);
+    await kv.set("apuestas", apuestas);
+
+    // Push a quienes pasaron de pending → won en esta sincronización
+    const ganadores = {};
+    Object.values(apuestas).forEach(b => {
+      if ((statusBefore[b.id] || "pending") === "pending" && b.status === "won" && b.payout)
+        ganadores[b.nombre] = (ganadores[b.nombre] || 0) + b.payout;
+    });
+    const subs = (await kv.get("pushSubs")) || {};
+    for (const [nombre, monto] of Object.entries(ganadores)) {
+      if (!subs[nombre]) continue;
+      try { await sendPush(subs[nombre], { title: "✓ ¡Apuesta cobrada!", body: `Resultados FIFA · +$${monto.toLocaleString()} a tu saldo`, tag: "sync-" + Date.now(), url: "/" }); } catch (e) {}
+    }
+
+    return res.json({ ok: true, aplicados, sinMapear, resultados, liveScores: live, jugadores: publicJugadores(jugadores), apuestas });
+  }
+
+  // ── ADMIN: SINCRONIZAR TARJETAS (FAIR PLAY) DESDE FIFA ──
+  // Recorre los partidos finalizados, suma amarillas/rojas por equipo desde Bookings.
+  // Card: 1=amarilla, 2=roja. Best-effort: si una lectura falla, no reduce datos previos.
+  if (action === "syncFifaCards") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const FIFA_BASE = "https://api.fifa.com/api/v3";
+    const ID_COMP = "17", ID_SEASON = "285023", ID_STAGE = "289273";
+    let feed;
+    try {
+      const resp = await fetch(`${FIFA_BASE}/calendar/matches?idCompetition=${ID_COMP}&idSeason=${ID_SEASON}&count=200&language=en`, { headers: { Accept: "application/json" } });
+      if (!resp.ok) return res.status(502).json({ error: `FIFA respondió ${resp.status}` });
+      feed = await resp.json();
+    } catch (e) {
+      return res.status(502).json({ error: "No se pudo conectar con FIFA: " + (e?.message || e) });
+    }
+    const matches = Array.isArray(feed?.Results) ? feed.Results : [];
+    // IdTeam -> abreviación (de los equipos de fase de grupos)
+    const idToAbbr = {};
+    for (const mt of matches) {
+      if (mt.Home?.IdTeam && mt.Home?.Abbreviation) idToAbbr[mt.Home.IdTeam] = mt.Home.Abbreviation;
+      if (mt.Away?.IdTeam && mt.Away?.Abbreviation) idToAbbr[mt.Away.IdTeam] = mt.Away.Abbreviation;
+    }
+    const finished = matches.filter(mt => String(mt.IdStage) === ID_STAGE && Number(mt.MatchStatus) === 0 && mt.IdMatch);
+    const fp = {};
+    let procesados = 0, fallidos = 0;
+    const BATCH = 8;
+    for (let i = 0; i < finished.length; i += BATCH) {
+      const slice = finished.slice(i, i + BATCH);
+      const datas = await Promise.allSettled(slice.map(mt =>
+        fetch(`${FIFA_BASE}/live/football/${ID_COMP}/${ID_SEASON}/${mt.IdStage}/${mt.IdMatch}?language=en`, { headers: { Accept: "application/json" } }).then(r => r.ok ? r.json() : null)
+      ));
+      for (const d of datas) {
+        if (d.status !== "fulfilled" || !d.value) { fallidos++; continue; }
+        const bookings = Array.isArray(d.value.Bookings) ? d.value.Bookings : [];
+        for (const bk of bookings) {
+          const abbr = idToAbbr[bk.IdTeam];
+          if (!abbr) continue;
+          if (!fp[abbr]) fp[abbr] = { a: 0, r: 0 };
+          if (Number(bk.Card) === 1) fp[abbr].a++;
+          else if (Number(bk.Card) >= 2) fp[abbr].r++;
+        }
+        procesados++;
+      }
+    }
+    // Todos los equipos de grupos tienen entrada (0/0 si sin tarjetas)
+    for (const abbr of Object.values(idToAbbr)) if (!fp[abbr]) fp[abbr] = { a: 0, r: 0 };
+    // Si alguna lectura falló, fusionar con lo previo tomando el máximo (las tarjetas no bajan)
+    let stored = fp;
+    if (fallidos > 0) {
+      const prev = (await kv.get("fairplay")) || {};
+      stored = {};
+      const teams = new Set([...Object.keys(fp), ...Object.keys(prev)]);
+      for (const t of teams) {
+        const n = fp[t] || { a: 0, r: 0 }, o = prev[t] || { a: 0, r: 0 };
+        stored[t] = { a: Math.max(n.a || 0, o.a || 0), r: Math.max(n.r || 0, o.r || 0) };
+      }
+    }
+    await kv.set("fairplay", stored);
+    return res.json({ ok: true, fairplay: stored, procesados, fallidos, totalFinalizados: finished.length });
+  }
+
   return res.status(400).json({ error: "Acción no reconocida" });
 }
