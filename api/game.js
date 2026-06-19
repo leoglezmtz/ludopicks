@@ -377,6 +377,7 @@ export default async function handler(req, res) {
       campeon_odds: CAMPEON, campeon_cierra: CAMPEON_CIERRA, campeon,
       especiales,
       ruleta: RULETA, jackpot, ruletaHist, liveScores, tabla_orden,
+      fairplay: (await kv.get("fairplay")) || {},
       now: Date.now(),
     });
   }
@@ -977,6 +978,16 @@ export default async function handler(req, res) {
     }
 
     return res.json({ ok: true, liveScores: live, jugadores: publicJugadores(jugadoresLs), apuestas: apuestasLs });
+  }
+
+  if (action === "setFairplay") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { equipo, amarillas, rojas } = payload;
+    if (!equipo) return res.status(400).json({ error: "Equipo requerido" });
+    const fp = (await kv.get("fairplay")) || {};
+    fp[equipo] = { a: Math.max(0, Number(amarillas) || 0), r: Math.max(0, Number(rojas) || 0) };
+    await kv.set("fairplay", fp);
+    return res.json({ ok: true, fairplay: fp });
   }
 
   if (action === "aplicarPA") {
