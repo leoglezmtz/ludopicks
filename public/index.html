@@ -1601,7 +1601,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.26';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.27';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3549,8 +3549,10 @@ function calcGroupStandings(grupo){
 }
 function calcAllStandings(){const all={};GRUPOS.forEach(g=>{all[g]=calcGroupStandings(g);});return all;}
 function calcBestThirds(allS){
+  // Desempate oficial FIFA: pts → GD → GF → Fair Play (menor = mejor) → nombre
+  const fpScore=t=>{const fp=(state.fairplay||{})[t]||{};return (fp.a||0)*(-1)+(fp.r||0)*(-3);};
   return GRUPOS.map(g=>{const s=allS[g];return s&&s.length>=3?{...s[2],grupo:g}:null;})
-    .filter(Boolean).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.team.localeCompare(b.team)).slice(0,8);
+    .filter(Boolean).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||fpScore(b.team)-fpScore(a.team)||a.team.localeCompare(b.team)).slice(0,8);
 }
 function buildThirdsMap(thirds){
   const used=new Set(),map={};
