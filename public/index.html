@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.27.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.27.4';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3513,8 +3513,10 @@ function _calcH2H(tiedTeams,partidos){
   partidos.forEach(p=>{
     if(!tset.has(p.local)||!tset.has(p.visita))return;
     const res=state.resultados?.[p.id];
-    if(!res||res.gl==null||res.parcial)return;
-    const gl=+res.gl,gv=+res.gv;
+    let gl=null,gv=null;
+    if(res&&res.gl!=null&&!res.parcial){ gl=+res.gl; gv=+res.gv; }
+    else { const ls=state.liveScores?.[p.id]; if(ls&&ls.gl!=null&&ls.gv!=null){ gl=+ls.gl; gv=+ls.gv; } } // H2H en vivo también
+    if(gl==null||gv==null)return;
     h[p.local].gf+=gl;h[p.local].ga+=gv;
     h[p.visita].gf+=gv;h[p.visita].ga+=gl;
     if(gl>gv)h[p.local].pts+=3;else if(gv>gl)h[p.visita].pts+=3;
@@ -3535,16 +3537,19 @@ function calcGroupStandings(grupo){
   const rows={};
   const partidos=(state.partidos||[]).filter(p=>p.grupo===grupo);
   partidos.forEach(p=>{
-    [p.local,p.visita].forEach(t=>{if(!rows[t])rows[t]={team:t,pj:0,pg:0,pe:0,pp:0,gf:0,ga:0,pts:0};});
+    [p.local,p.visita].forEach(t=>{if(!rows[t])rows[t]={team:t,pj:0,pg:0,pe:0,pp:0,gf:0,ga:0,pts:0,live:false};});
     const res=state.resultados?.[p.id];
-    if(res&&res.gl!=null&&!res.parcial){
-      const gl=+res.gl,gv=+res.gv;
+    let gl=null,gv=null,isLive=false;
+    if(res&&res.gl!=null&&!res.parcial){ gl=+res.gl; gv=+res.gv; }
+    else { const ls=state.liveScores?.[p.id]; if(ls&&ls.gl!=null&&ls.gv!=null){ gl=+ls.gl; gv=+ls.gv; isLive=true; } } // marcador en vivo → provisional
+    if(gl!=null&&gv!=null){
       rows[p.local].pj++;rows[p.visita].pj++;
       rows[p.local].gf+=gl;rows[p.local].ga+=gv;
       rows[p.visita].gf+=gv;rows[p.visita].ga+=gl;
       if(gl>gv){rows[p.local].pg++;rows[p.local].pts+=3;rows[p.visita].pp++;}
       else if(gv>gl){rows[p.visita].pg++;rows[p.visita].pts+=3;rows[p.local].pp++;}
       else{rows[p.local].pe++;rows[p.local].pts++;rows[p.visita].pe++;rows[p.visita].pts++;}
+      if(isLive){rows[p.local].live=true;rows[p.visita].live=true;}
     }
   });
   // Sort with H2H tiebreaker within pts-tied groups
@@ -3646,7 +3651,8 @@ function renderElim(){
     const rows=st.slice(0,4).map((r,i)=>{
       const isT=i===2&&thirds.find(t=>t.team===r.team);
       const cls=i===0?'r1':i===1?'r2':isT?'r3q':'';
-      return `<div class="eg-row ${cls}"><span class="eg-flag">${flagImg(r.team,13)||'🏳️'}</span><span class="eg-name">${teamName(r.team)}</span><span class="eg-pts">${r.pts}</span></div>`;
+      const liveDot=r.live?'<span style="color:#ff3b3b;font-size:9px;margin-right:3px" title="En vivo">🔴</span>':'';
+      return `<div class="eg-row ${cls}"><span class="eg-flag">${flagImg(r.team,13)||'🏳️'}</span><span class="eg-name">${liveDot}${teamName(r.team)}</span><span class="eg-pts">${r.pts}</span></div>`;
     }).join('');
     return `<div class="eg-card"><div class="eg-hdr">Grupo ${g}</div>${rows}</div>`;
   }).join('');
@@ -3698,7 +3704,7 @@ function renderElim(){
 
   document.getElementById('listaElim').innerHTML=`<div style="padding:0 2px 4px">
     <div class="sec-title">📊 Posiciones por grupo</div>
-    <div style="font-size:10px;color:var(--muted2);margin-bottom:10px">🟢 Avanza · 🟡 Posible 3er lugar</div>
+    <div style="font-size:10px;color:var(--muted2);margin-bottom:10px">🟢 Avanza · 🟡 Posible 3er lugar · 🔴 En vivo (provisional)</div>
     <div class="eg-grid">${groupsHtml}</div>
     ${thirdsHtml}
     ${elimHtml}
