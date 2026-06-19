@@ -221,7 +221,7 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
   --rl-glass:rgba(255,255,255,.06); --rl-glass-brd:rgba(255,255,255,.12);
 }
 /* Botón "casino" en el hero */
-.ruleta-btn{position:relative;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(245,194,75,.4);background:linear-gradient(180deg,rgba(245,194,75,.18),rgba(245,194,75,.06));color:var(--rl-gold);font-weight:800;font-size:13px;padding:9px 14px;border-radius:14px;cursor:pointer;box-shadow:0 6px 18px -8px rgba(245,194,75,.6),inset 0 1px 0 rgba(255,255,255,.15);transition:transform .15s ease;margin-top:11px}
+.ruleta-btn{position:relative;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(245,194,75,.4);background:linear-gradient(180deg,rgba(245,194,75,.18),rgba(245,194,75,.06));color:var(--rl-gold);font-weight:800;font-size:13px;padding:8px 11px;border-radius:14px;cursor:pointer;box-shadow:0 6px 18px -8px rgba(245,194,75,.6),inset 0 1px 0 rgba(255,255,255,.15);transition:transform .15s ease;margin-top:0}
 .ruleta-btn:active{transform:scale(.96)}
 .ruleta-btn .rb-ico{font-size:17px}
 .ruleta-btn .rb-tk{display:inline-flex;align-items:center;gap:3px;background:rgba(0,0,0,.32);padding:2px 8px;border-radius:9px;font-size:11.5px;color:#ffe9b0;font-weight:800;margin-left:3px}
@@ -1023,8 +1023,13 @@ select option{background:#161c30;color:#fff}
 .bkm-sc{font-size:11px;font-weight:900;font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:2px}
 .bkm-sc.w{color:var(--gold)}
 /* Records button in top hero */
-.hero-rec-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.8);font-weight:700;font-size:13px;padding:9px 14px;border-radius:14px;cursor:pointer;margin-top:0;transition:all .15s}
+.hero-rec-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.8);font-weight:700;font-size:12.5px;padding:8px 11px;border-radius:14px;cursor:pointer;margin-top:0;transition:all .15s}
 .hero-rec-btn:hover{background:rgba(255,255,255,.13)}
+/* Eliminados chips */
+.el-head{color:rgba(226,75,74,.7)}
+.el-head::after{background:rgba(226,75,74,.18)}
+.el-chip{background:rgba(226,75,74,.05);border-color:rgba(226,75,74,.2)}
+.el-name{color:rgba(226,75,74,.8)}
 </style>
 </head>
 <body>
@@ -1146,7 +1151,7 @@ select option{background:#161c30;color:#fff}
         <div style="font-size:10px;color:rgba(255,255,255,.3);margin-top:2px">Toca para editar avatar</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:11px">
+    <div style="display:flex;align-items:center;gap:7px;flex-wrap:nowrap;margin-top:11px;overflow:hidden">
       <button id="ruletaBtn" class="ruleta-btn" onclick="openRuleta()" style="display:none;margin-top:0" aria-label="Abrir ruleta">
         <span class="rb-pulse"></span>
         <span class="rb-ico">🎰</span>
@@ -1156,7 +1161,7 @@ select option{background:#161c30;color:#fff}
       <button id="recordsTopBtn" class="hero-rec-btn" onclick="showTab('records')" style="display:none" aria-label="Ver Récords">
         <span style="font-size:16px">⭐</span> Récords
       </button>
-      <button onclick="shareLudo()" style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-weight:700;font-size:13px;padding:9px 14px;border-radius:14px;cursor:pointer;margin-top:0;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.13)'" onmouseout="this.style.background='rgba(255,255,255,.07)'" aria-label="Compartir LudoPicks">
+      <button onclick="shareLudo()" style="display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-weight:700;font-size:12.5px;padding:8px 11px;border-radius:14px;cursor:pointer;margin-top:0;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.13)'" onmouseout="this.style.background='rgba(255,255,255,.07)'" aria-label="Compartir LudoPicks">
         <span style="font-size:16px">📲</span> Invitar
       </button>
     </div>
@@ -1560,7 +1565,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.17';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.18';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3440,9 +3445,35 @@ const T3_SLOTS=[
 ];
 // (keep compatibility stubs — no longer used as selectors)
 const BRACKET_R32=BK_L32.concat(BK_R32);
+// Desempate FIFA 2026: H2H → GD general → GF general → Fair Play → Ranking FIFA
+function _calcH2H(tiedTeams,partidos){
+  const tset=new Set(tiedTeams.map(t=>t.team));
+  const h={};tiedTeams.forEach(t=>{h[t.team]={pts:0,gf:0,ga:0};});
+  partidos.forEach(p=>{
+    if(!tset.has(p.local)||!tset.has(p.visita))return;
+    const res=state.resultados?.[p.id];
+    if(!res||res.gl==null||res.parcial)return;
+    const gl=+res.gl,gv=+res.gv;
+    h[p.local].gf+=gl;h[p.local].ga+=gv;
+    h[p.visita].gf+=gv;h[p.visita].ga+=gl;
+    if(gl>gv)h[p.local].pts+=3;else if(gv>gl)h[p.visita].pts+=3;
+    else{h[p.local].pts++;h[p.visita].pts++;}
+  });
+  return h;
+}
+function _sortByH2H(group,partidos){
+  if(group.length<=1)return group;
+  const h=_calcH2H(group,partidos);
+  return [...group].sort((a,b)=>{
+    const ha=h[a.team],hb=h[b.team];
+    return (hb.pts-ha.pts)||((hb.gf-hb.ga)-(ha.gf-ha.ga))||(hb.gf-ha.gf)||
+           (b.gd-a.gd)||(b.gf-a.gf)||a.team.localeCompare(b.team);
+  });
+}
 function calcGroupStandings(grupo){
   const rows={};
-  (state.partidos||[]).filter(p=>p.grupo===grupo).forEach(p=>{
+  const partidos=(state.partidos||[]).filter(p=>p.grupo===grupo);
+  partidos.forEach(p=>{
     [p.local,p.visita].forEach(t=>{if(!rows[t])rows[t]={team:t,pj:0,pg:0,pe:0,pp:0,gf:0,ga:0,pts:0};});
     const res=state.resultados?.[p.id];
     if(res&&res.gl!=null&&!res.parcial){
@@ -3455,8 +3486,17 @@ function calcGroupStandings(grupo){
       else{rows[p.local].pe++;rows[p.local].pts++;rows[p.visita].pe++;rows[p.visita].pts++;}
     }
   });
-  return Object.values(rows).map(r=>({...r,gd:r.gf-r.ga}))
-    .sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||a.team.localeCompare(b.team));
+  // Sort with H2H tiebreaker within pts-tied groups
+  const teams=Object.values(rows).map(r=>({...r,gd:r.gf-r.ga}));
+  teams.sort((a,b)=>b.pts-a.pts);
+  const result=[];
+  let i=0;
+  while(i<teams.length){
+    let j=i;while(j<teams.length&&teams[j].pts===teams[i].pts)j++;
+    result.push(...(j-i>1?_sortByH2H(teams.slice(i,j),partidos):teams.slice(i,j)));
+    i=j;
+  }
+  return result;
 }
 function calcAllStandings(){const all={};GRUPOS.forEach(g=>{all[g]=calcGroupStandings(g);});return all;}
 function calcBestThirds(allS){
@@ -3546,6 +3586,14 @@ function renderElim(){
   const tEmpty=Array.from({length:Math.max(0,8-thirds.length)},()=>`<div class="et3-chip out"><div class="et3-flag">❓</div><div class="et3-name">—</div></div>`).join('');
   const thirdsHtml=`<div class="et3-head">Mejores terceros clasificados</div><div class="et3-grid">${thirds.map(t=>`<div class="et3-chip"><div class="et3-flag">${flagImg(t.team,18)||'🏳️'}</div><div class="et3-name">${teamName(t.team)}</div><div class="et3-pts">${t.pts}pts·${t.grupo}</div></div>`).join('')}${tEmpty}</div>`;
 
+  // Eliminados: terceros fuera + cuartos de grupo
+  const qualSet=new Set(thirds.map(t=>t.team));
+  const worstThirds=GRUPOS.map(g=>allS[g]?.[2]).filter(t=>t&&!qualSet.has(t.team));
+  const fourths=GRUPOS.map(g=>allS[g]?.[3]).filter(Boolean);
+  const elimTeams=[...worstThirds,...fourths];
+  const elimEmpty=Array.from({length:Math.max(0,16-elimTeams.length)},()=>`<div class="et3-chip el-chip out" style="opacity:.15"><div class="et3-flag">—</div></div>`).join('');
+  const elimHtml=elimTeams.length?`<div class="et3-head el-head">Eliminados (proyectado)</div><div class="et3-grid" style="grid-template-columns:repeat(6,1fr);gap:4px">${elimTeams.map(t=>`<div class="et3-chip el-chip" style="padding:5px 2px"><div class="et3-flag" style="font-size:14px">${flagImg(t.team,14)||'🏳️'}</div><div class="et3-name el-name" style="font-size:8px">${teamName(t.team).slice(0,8)}</div></div>`).join('')}${elimEmpty}</div>`:'';
+
   // Bracket labels row
   const LBLS=['R32','R16','QF','SF','FINAL','SF','QF','R16','R32'];
   const WIDS=[108,108,108,108,118,108,108,108,108];
@@ -3584,6 +3632,7 @@ function renderElim(){
     <div style="font-size:10px;color:var(--muted2);margin-bottom:10px">🟢 Avanza · 🟡 Posible 3er lugar</div>
     <div class="eg-grid">${groupsHtml}</div>
     ${thirdsHtml}
+    ${elimHtml}
     <div class="sec-title" style="margin-bottom:8px">⚽ Llaves eliminatorias</div>
     <div style="font-size:10px;color:var(--muted2);margin-bottom:6px">Proyectado según posiciones actuales · desliza →</div>
     ${lblRow}
