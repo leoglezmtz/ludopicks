@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.29.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.29.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3256,8 +3256,12 @@ function playerBetCard(b){
     const p=byId(b.partidoId);
     sel=`<span style="font-weight:700;font-size:14px">${teamFlag(p.local,13)} vs ${teamFlag(p.visita,13)}</span><div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea,b.mercado)} · ${b.momio}x</div>`;
   }
-  const gan=st==='won'?` → +$${Math.round(b.monto*((b.tipo==='parlay'?b.momioTotal:b.momio)-1)).toLocaleString()}`:'';
-  return `<div class="info-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:10px"><div style="flex:1">${sel}</div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800">$${b.monto.toLocaleString()}</div>${tag}<div style="font-size:11px;color:var(--green)">${gan}</div></div></div></div>`;
+  const factor=b.tipo==='parlay'?b.momioTotal:b.momio;
+  const ganVal=Math.round(b.monto*(factor-1));
+  const gan=st==='won'?`<div style="font-size:11px;color:var(--green)">→ +$${ganVal.toLocaleString()}</div>`
+           :st==='pending'?`<div style="font-size:11px;color:var(--gold)">→ posible +$${ganVal.toLocaleString()}</div>`
+           :'';
+  return `<div class="info-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:10px"><div style="flex:1">${sel}</div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800">$${b.monto.toLocaleString()}</div>${tag}${gan}</div></div></div>`;
 }
 // ── LIGUILLA: apuesta al campeón + fase final (próximamente) ───
 function renderRecords(){
