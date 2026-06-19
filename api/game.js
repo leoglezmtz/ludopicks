@@ -954,6 +954,40 @@ export default async function handler(req, res) {
         } catch (e) {}
       }
     }
+    // ── AUTO-PA: si el partido tiene pa:true y un equipo llegó a +2, aplicar automáticamente ──
+    const glN = entry.gl ?? live[partidoId]?.gl;
+    const gvN = entry.gv ?? live[partidoId]?.gv;
+    if (m.pa && glN != null && gvN != null && !r?.pa) {
+      const diff = glN - gvN;
+      const autoPA = {};
+      if (diff >= 2) autoPA.l = true;
+      if (diff <= -2) autoPA.v = true;
+      if (autoPA.l || autoPA.v) {
+        const resultadosPA = (await kv.get("resultados")) || {};
+        if (!resultadosPA[partidoId] || resultadosPA[partidoId].gl == null) {
+          const statusBeforePA = {};
+          Object.values(apuestasLs).forEach(b => { statusBeforePA[b.id] = b.status || "pending"; });
+          await snapshotIfFirstTouch(jugadoresLs, partidoId);
+          resultadosPA[partidoId] = { pa: { l: !!autoPA.l, v: !!autoPA.v }, parcial: true };
+          settleAll(jugadoresLs, apuestasLs, resultadosPA, campeonLs, especialesLs, live);
+          await kv.set("resultados", resultadosPA);
+          await kv.set("jugadores", jugadoresLs);
+          await kv.set("apuestas", apuestasLs);
+          // Push a quienes ganaron por auto-PA
+          const subsPA = (await kv.get("pushSubs")) || {};
+          const acumPA = {};
+          Object.values(apuestasLs).forEach(b => {
+            if ((statusBeforePA[b.id] || "pending") === "pending" && b.status === "won" && b.payout)
+              acumPA[b.nombre] = (acumPA[b.nombre] || 0) + b.payout;
+          });
+          for (const [nombre, monto] of Object.entries(acumPA)) {
+            if (!subsPA[nombre]) continue;
+            try { await sendPush(subsPA[nombre], { title: `⚡ ¡Cobraste por PA en ${m.local} vs ${m.visita}!`, body: `Pago anticipado automático · +$${monto.toLocaleString()} a tu saldo`, tag: "pa-" + partidoId, url: "/" }); } catch (e) {}
+          }
+        }
+      }
+    }
+
     return res.json({ ok: true, liveScores: live, jugadores: publicJugadores(jugadoresLs), apuestas: apuestasLs });
   }
 
