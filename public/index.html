@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.27.4';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.27.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3507,6 +3507,9 @@ const BRACKET_R32=BK_L32.concat(BK_R32);
 // Desempate FIFA 2026: H2H → GD general → GF general → Fair Play → Ranking FIFA
 // Fair Play / conduct score oficial: -1 amarilla, -3 roja. Mayor (menos negativo) = mejor.
 function fpScore(team){const fp=(state.fairplay||{})[team]||{};return -(fp.a||0)-3*(fp.r||0);}
+// Proxy del Ranking FIFA (último desempate antes del sorteo): momios de campeón.
+// Menor momio = equipo más fuerte = mejor ranking. Mayor rankProxy = mejor.
+function rankProxy(team){const o=(state.campeon_odds||{})[team];return o?-o:-9999;}
 function _calcH2H(tiedTeams,partidos){
   const tset=new Set(tiedTeams.map(t=>t.team));
   const h={};tiedTeams.forEach(t=>{h[t.team]={pts:0,gf:0,ga:0};});
@@ -3530,7 +3533,7 @@ function _sortByH2H(group,partidos){
   return [...group].sort((a,b)=>{
     const ha=h[a.team],hb=h[b.team];
     return (hb.pts-ha.pts)||((hb.gf-hb.ga)-(ha.gf-ha.ga))||(hb.gf-ha.gf)||
-           (b.gd-a.gd)||(b.gf-a.gf)||(fpScore(b.team)-fpScore(a.team))||a.team.localeCompare(b.team);
+           (b.gd-a.gd)||(b.gf-a.gf)||(fpScore(b.team)-fpScore(a.team))||(rankProxy(b.team)-rankProxy(a.team))||a.team.localeCompare(b.team);
   });
 }
 function calcGroupStandings(grupo){
@@ -3575,7 +3578,7 @@ function calcAllStandings(){const all={};GRUPOS.forEach(g=>{all[g]=calcGroupStan
 function calcBestThirds(allS){
   // Desempate oficial FIFA: pts → GD → GF → Fair Play → nombre
   return GRUPOS.map(g=>{const s=allS[g];return s&&s.length>=3?{...s[2],grupo:g}:null;})
-    .filter(Boolean).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||fpScore(b.team)-fpScore(a.team)||a.team.localeCompare(b.team)).slice(0,8);
+    .filter(Boolean).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||fpScore(b.team)-fpScore(a.team)||rankProxy(b.team)-rankProxy(a.team)||a.team.localeCompare(b.team)).slice(0,8);
 }
 function buildThirdsMap(thirds){
   const used=new Set(),map={};
