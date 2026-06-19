@@ -78,10 +78,12 @@ const PICKS_1X2 = ["local", "empate", "visita"];
 
 
 
-function publicJugadores(jugadores) {
+function publicJugadores(jugadores, solicitante) {
   const out = {};
   for (const [nombre, j] of Object.entries(jugadores)) {
-    out[nombre] = { nombre: j.nombre, saldo: j.saldo, creado: j.creado, avatar: j.avatar || null, tickets: j.tickets || 0, doble: !!j.doble, saldoDia: j.saldoDia != null ? j.saldoDia : j.saldo };
+    const base = { nombre: j.nombre, saldo: j.saldo, creado: j.creado, avatar: j.avatar || null, tickets: j.tickets || 0, doble: !!j.doble, saldoDia: j.saldoDia != null ? j.saldoDia : j.saldo };
+    if (nombre === solicitante && j.regalos && j.regalos.length) base.regalos = j.regalos;
+    out[nombre] = base;
   }
   return out;
 }
@@ -367,7 +369,7 @@ export default async function handler(req, res) {
     const liveScores = (await kv.get("liveScores")) || {};
     const tabla_orden = (await kv.get("tabla_orden")) || {};
     return res.json({
-      jugadores: publicJugadores(jugadores), apuestas, resultados, rankPrev,
+      jugadores: publicJugadores(jugadores, req.query.nombre || null), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
       lineas_ou: LINEAS_OU, linea_default: LINEA_DEFAULT,
       lineas_corners: LINEAS_CORNERS, linea_corners_default: LINEA_CORNERS_DEFAULT, momios_corners: MOMIOS_CORNERS,
@@ -748,22 +750,35 @@ export default async function handler(req, res) {
     const cant = Math.max(1, Math.min(99999, Math.floor(Number(cantidad) || 1)));
     if (!Array.isArray(destinatarios) || !destinatarios.length) return res.status(400).json({ error: "Sin destinatarios" });
     const jugadores = (await kv.get("jugadores")) || {};
+    const pushTitle = (titulo || "🎁 ¡Tienes un regalo!").trim();
+    const pushBody = (descripcion || (kind === "tickets" ? `🎟️ +${cant} ticket${cant !== 1 ? "s" : ""} de ruleta — ábrela para reclamarlo` : `💵 +$${cant.toLocaleString()} de feria — ábrela para reclamarlo`)).trim();
+    const subs = (await kv.get("pushSubs")) || {};
     for (const nom of destinatarios) {
       const j = jugadores[nom]; if (!j) continue;
-      if (kind === "tickets") j.tickets = (j.tickets || 0) + cant;
-      else j.saldo += cant;
+      // Guardar como regalo pendiente en lugar de aplicar directo
+      if (!j.regalos) j.regalos = [];
+      j.regalos.push({ kind, cantidad: cant, titulo: pushTitle, ts: Date.now() });
+      // Push siempre al enviar regalo
+      if (subs[nom]) { try { await sendPush(subs[nom], { title: pushTitle, body: pushBody, tag: "regalo-" + Date.now(), url: "/" }); } catch (e) {} }
     }
     await kv.set("jugadores", jugadores);
-    // Push si hay título o descripción
-    if ((titulo || descripcion) && (titulo || "").trim() + (descripcion || "").trim()) {
-      const subs = (await kv.get("pushSubs")) || {};
-      const pushTitle = (titulo || "🎁 LudoPicks").trim();
-      const pushBody = (descripcion || (kind === "tickets" ? `🎟️ +${cant} ticket${cant !== 1 ? "s" : ""} de ruleta` : `💵 +$${cant.toLocaleString()} de feria`)).trim();
-      for (const nom of destinatarios) {
-        if (subs[nom]) { try { await sendPush(subs[nom], { title: pushTitle, body: pushBody, tag: "regalo-" + Date.now(), url: "/" }); } catch (e) {} }
-      }
-    }
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
+  }
+
+  if (action === "reclamarRegalos") {
+    const { nombre, pin } = payload;
+    const jugadores = (await kv.get("jugadores")) || {};
+    const j = jugadores[nombre];
+    if (!j || String(j.pin) !== String(pin)) return res.status(403).json({ error: "No autorizado" });
+    const regalos = j.regalos || [];
+    if (!regalos.length) return res.json({ ok: true, jugadores: publicJugadores(jugadores, nombre) });
+    for (const r of regalos) {
+      if (r.kind === "tickets") j.tickets = (j.tickets || 0) + r.cantidad;
+      else j.saldo += r.cantidad;
+    }
+    j.regalos = [];
+    await kv.set("jugadores", jugadores);
+    return res.json({ ok: true, reclamados: regalos, jugadores: publicJugadores(jugadores, nombre) });
   }
 
   // ── APOSTAR PARLAY (permite 1X2 + O/U del mismo partido) ───────────
