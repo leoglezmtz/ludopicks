@@ -1203,6 +1203,7 @@ select option{background:#161c30;color:#fff}
         <button class="fbtn" id="atab-notif" onclick="setAdminTab('notif',this)">📣 Push</button>
         <button class="fbtn" id="atab-casino" onclick="setAdminTab('casino',this)">🎰 Casino</button>
         <button class="fbtn" id="atab-tablas" onclick="setAdminTab('tablas',this)">📋 Tablas</button>
+        <button class="fbtn" id="atab-fairplay" onclick="setAdminTab('fairplay',this)">🟨 Fair Play</button>
       </div>
       <div id="admin-content-wrap">
       <div id="admin-resultados"><div class="filters" id="adminFilters"></div><div id="listaAdmin"></div></div>
@@ -1322,6 +1323,14 @@ select option{background:#161c30;color:#fff}
           <div id="tablaAdminBody"></div>
         </div>
       </div>
+      <div id="admin-fairplay" style="display:none">
+  <div class="sec-title">🟨 Tarjetas por equipo (Fair Play)</div>
+  <div class="info-card" style="padding:10px 10px 14px">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">Amarilla = −1 pt · Roja = −3 pts · Sirven para desempatar los mejores 3ros lugares.</div>
+    <div id="fpGruposSel" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+    <div id="fpEquiposList"></div>
+  </div>
+</div>
       <button class="btn btn-danger btn-sm" style="width:100%;margin-top:16px" onclick="resetTodo()">⚠️ Reset total</button>
       </div>
     </div>
@@ -1592,7 +1601,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.25';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.26';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2396,6 +2405,8 @@ function setAdminTab(name,btn){
   document.getElementById('admin-especiales').style.display=name==='especiales'?'block':'none';
   document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
   document.getElementById('admin-tablas').style.display=name==='tablas'?'block':'none';
+  document.getElementById('admin-fairplay').style.display=name==='fairplay'?'block':'none';
+  if(name==='fairplay') renderFairPlayAdmin();
   if(name==='saldos'){const sel=document.getElementById('adjJugador');if(sel)sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
     const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}
     // Inicializar panel unificado
@@ -5273,6 +5284,48 @@ setInterval(()=>{
 
 init();
 setTimeout(hideSplash,6000); // salvaguarda: nunca dejar el splash pegado
+
+// ── FAIR PLAY ADMIN ──────────────────────────────────────────
+const FP_GRUPOS = {
+  A:['MEX','KOR','CZE','RSA'], B:['CAN','SUI','BIH','QAT'],
+  C:['SCO','BRA','MAR','HAI'], D:['USA','AUS','TUR','PAR'],
+  E:['GER','CIV','ECU','CUW'], F:['SWE','NED','JPN','TUN'],
+  G:['BEL','IRN','NZL','EGY'], H:['URU','ESP','KSA','CPV'],
+  I:['FRA','NOR','SEN','IRQ'], J:['ARG','AUT','JOR','ALG'],
+  K:['COL','COD','POR','UZB'], L:['ENG','GHA','PAN','CRO']
+};
+let fpGrupoSel='A';
+function renderFairPlayAdmin(){
+  const fp=state.fairplay||{};
+  const gSel=document.getElementById('fpGruposSel');
+  if(gSel)gSel.innerHTML=Object.keys(FP_GRUPOS).map(g=>`<button class="fbtn${fpGrupoSel===g?' on':''}" onclick="fpSelGrupo('${g}')">${g}</button>`).join('');
+  const list=document.getElementById('fpEquiposList');
+  if(!list)return;
+  const teams=FP_GRUPOS[fpGrupoSel]||[];
+  list.innerHTML=teams.map(cod=>{
+    const d=fp[cod]||{a:0,r:0};
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.07)">
+      <span style="font-size:13px;font-weight:700;min-width:40px">${cod}</span>
+      <span style="font-size:11px;color:var(--muted);flex:1">${teamName(cod)}</span>
+      <label style="font-size:11px;color:#FFDB00;display:flex;align-items:center;gap:4px">🟨
+        <input type="number" min="0" max="20" value="${d.a}" id="fp_a_${cod}" style="width:44px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#fff;font-size:13px;font-weight:700;text-align:center;padding:3px">
+      </label>
+      <label style="font-size:11px;color:#ef4444;display:flex;align-items:center;gap:4px">🟥
+        <input type="number" min="0" max="5" value="${d.r}" id="fp_r_${cod}" style="width:44px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#fff;font-size:13px;font-weight:700;text-align:center;padding:3px">
+      </label>
+      <button class="btn btn-sm" style="padding:5px 10px;font-size:11px" onclick="saveFairPlay('${cod}')">✓</button>
+    </div>`;
+  }).join('');
+}
+function fpSelGrupo(g){fpGrupoSel=g;renderFairPlayAdmin();}
+async function saveFairPlay(cod){
+  const a=parseInt(document.getElementById('fp_a_'+cod)?.value)||0;
+  const r=parseInt(document.getElementById('fp_r_'+cod)?.value)||0;
+  const res=await api({action:'setFairplay',payload:{adminKey,equipo:cod,amarillas:a,rojas:r}});
+  if(res.error)return toast('Error: '+res.error);
+  state.fairplay=res.fairplay;
+  toast(`${cod} actualizado · 🟨${a} 🟥${r}`);
+}
 </script>
 </body>
 </html>
