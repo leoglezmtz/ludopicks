@@ -1210,15 +1210,15 @@ select option{background:#161c30;color:#fff}
         <div class="info-card" style="padding:11px 12px;margin-bottom:12px;border:1px solid rgba(31,196,58,.28)">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
             <div style="flex:1;min-width:160px">
-              <div style="font-weight:800;font-size:13px;color:#fff">🌐 Sincronizar con FIFA</div>
-              <div style="font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:2px">Jala marcadores y tarjetas reales del Mundial y liquida apuestas. <b>Córners no</b> (la API no los da).</div>
+              <div style="font-weight:800;font-size:13px;color:#fff">🌐 Sincronizar Mundial (FIFA + ESPN)</div>
+              <div style="font-size:10.5px;color:var(--muted);line-height:1.45;margin-top:2px">Marcadores y tarjetas de FIFA · <b>córners de ESPN</b> · liquida apuestas solo.</div>
               <div id="fifaSyncStatus" style="font-size:10px;color:var(--muted2);margin-top:4px"></div>
             </div>
-            <button class="btn btn-primary" id="btnSyncFifa" style="width:auto;padding:9px 14px;font-size:12.5px;white-space:nowrap" onclick="syncFifaNow(false)">🔄 Sincronizar ahora</button>
+            <button class="btn btn-primary" id="btnSyncFifa" style="width:auto;padding:9px 14px;font-size:12.5px;white-space:nowrap" onclick="syncFifaNow()">🔄 Sincronizar ahora</button>
           </div>
           <label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:11.5px;color:var(--muted);cursor:pointer">
-            <input type="checkbox" id="fifaAutoChk" onchange="toggleAutoSync(this)" style="width:15px;height:15px;accent-color:var(--green)">
-            Auto-sincronizar cada 2 min mientras tenga esta pestaña abierta
+            <input type="checkbox" id="fifaAutoChk" checked onchange="toggleAutoSync(this)" style="width:15px;height:15px;accent-color:var(--green)">
+            Auto-sync activo · marcadores cada 10s, córners/tarjetas cada 2 min
           </label>
         </div>
         <div class="filters" id="adminFilters"></div><div id="listaAdmin"></div></div>
@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.27.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.27.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2160,6 +2160,8 @@ async function manualRefresh(){
   if(currentTab==='partidos')renderPartidos(true);
   if(currentTab==='ranking')renderRanking();
   if(currentTab==='mis')renderMis();
+  if(currentTab==='elim')renderElim();
+  if(currentTab==='especiales')renderEspeciales();
   if(currentTab==='admin'&&isAdmin){renderAdmin();renderAdminUsers();}
   toast('Actualizado ✓');
 }
@@ -5279,6 +5281,8 @@ async function poll(){
   if(currentTab==='partidos'&&newRes.length)renderPartidos(true); // solo si hay resultados nuevos (evita recargar banderas)
   if(currentTab==='ranking')renderRanking();
   if(currentTab==='mis')renderMis();
+  if(currentTab==='elim')renderElim();          // tablas de grupos + bracket en vivo
+  if(currentTab==='especiales')renderEspeciales();
   if(currentTab==='admin'&&isAdmin)renderAdmin();
 }
 setInterval(poll,20000);
@@ -5345,74 +5349,90 @@ async function saveFairPlay(cod){
   toast(`${cod} actualizado · 🟨${a} 🟥${r}`);
 }
 
-// ── SINCRONIZACIÓN CON FIFA ──────────────────────────────────
-let fifaSyncing=false, fifaAutoTimer=null;
-async function syncFifaNow(silent){
-  if(fifaSyncing)return;
+// ── SINCRONIZACIÓN CON FIFA (marcadores) + ESPN (córners/tarjetas) ──
+// Cadencias separadas: marcadores son 1 llamada ligera (rápido); córners/tarjetas
+// hacen ~30-70 llamadas (pesado) → cada 5 min para no quemar las APIs no oficiales.
+let fifaSyncing=false, scoresTimer=null, statsTimer=null;
+const SCORES_MS=10000, STATS_MS=120000;
+
+function stampSync(extra,sinMapear){
+  const stat=document.getElementById('fifaSyncStatus');if(!stat)return;
+  const hora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  let s=`Última: ${hora}`;
+  if(extra)s+=` · ${extra}`;
+  if(sinMapear&&sinMapear.length)s+=` · ⚠ ${sinMapear.length} sin mapear`;
+  stat.textContent=s;
+}
+// Marcadores + liquidación (ligero, FIFA)
+async function syncScores(silent){
+  if(fifaSyncing)return null;
   fifaSyncing=true;
-  const btn=document.getElementById('btnSyncFifa');
-  const stat=document.getElementById('fifaSyncStatus');
-  if(btn){btn.disabled=true;btn.textContent='⏳ Sincronizando…';}
   try{
     const r=await api({action:'syncFifa',payload:{adminKey}});
-    if(r.error){ if(!silent)toast('FIFA: '+r.error); if(stat)stat.textContent='⚠ '+r.error; return; }
-    // Tarjetas (best-effort, no rompe nada si falla)
-    let fpTxt='';
-    try{
-      const rc=await api({action:'syncFifaCards',payload:{adminKey}});
-      if(rc&&!rc.error&&rc.fairplay){
-        const eq=Object.keys(rc.fairplay).length;
-        fpTxt=` · 🟨 ${rc.procesados||0}/${rc.totalFinalizados||0} partidos`;
-        if(rc.fallidos)fpTxt+=` (${rc.fallidos} sin leer)`;
+    if(r&&!r.error){
+      await loadState();
+      if(isAdmin)renderAdmin();
+      const aplic=r.aplicados||[];
+      const fin=aplic.filter(a=>a.tipo==='final').length;
+      const vivo=aplic.filter(a=>a.tipo==='live').length;
+      stampSync(aplic.length?`${fin} final${fin!==1?'es':''}${vivo?` · ${vivo} vivo`:''}`:'sin cambios',r.sinMapear);
+      if(!silent){
+        if(!aplic.length)toast('✓ FIFA: sin cambios');
+        else toast(`🔄 ${fin} final${fin!==1?'es':''}${vivo?` + ${vivo} vivo`:''} actualizado${aplic.length!==1?'s':''}`);
       }
-    }catch(e){}
-    await loadState();
-    if(isAdmin)renderAdmin();
-    const fpPanel=document.getElementById('admin-fairplay');
-    if(fpPanel&&fpPanel.style.display==='block')renderFairPlayAdmin();
-    const aplic=r.aplicados||[];
-    const fin=aplic.filter(a=>a.tipo==='final').length;
-    const vivo=aplic.filter(a=>a.tipo==='live').length;
-    const hora=new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-    if(stat){
-      let s=`Última: ${hora}`;
-      if(aplic.length)s+=` · ${fin} final${fin!==1?'es':''}${vivo?` · ${vivo} en vivo`:''}`;
-      else s+=' · sin cambios';
-      s+=fpTxt;
-      if((r.sinMapear||[]).length)s+=` · ⚠ ${r.sinMapear.length} sin mapear`;
-      stat.textContent=s;
-    }
-    if(!silent){
-      if(!aplic.length)toast('✓ FIFA: sin cambios nuevos');
-      else toast(`🔄 FIFA: ${fin} final${fin!==1?'es':''}${vivo?` + ${vivo} en vivo`:''} actualizado${aplic.length!==1?'s':''}`);
-    }
-  }catch(e){ if(!silent)toast('Error de red al sincronizar'); }
-  finally{
-    fifaSyncing=false;
-    if(btn){btn.disabled=false;btn.textContent='🔄 Sincronizar ahora';}
-  }
+    }else if(r&&r.error&&!silent)toast('FIFA: '+r.error);
+    return r;
+  }catch(e){ if(!silent)toast('Error de red (marcadores)'); return null; }
+  finally{ fifaSyncing=false; }
+}
+// Córners + tarjetas (pesado, ESPN)
+async function syncStats(silent){
+  try{
+    const r=await api({action:'syncEspnStats',payload:{adminKey}});
+    if(r&&!r.error){
+      if(r.fairplay)state.fairplay=r.fairplay;
+      if(r.resultados)state.resultados=r.resultados;
+      if(r.apuestas)state.apuestas=r.apuestas;
+      if(r.jugadores)state.jugadores=r.jugadores;
+      const fpPanel=document.getElementById('admin-fairplay');
+      if(fpPanel&&fpPanel.style.display==='block')renderFairPlayAdmin();
+      if(isAdmin)renderAdmin();
+      if(!silent){
+        const cn=r.cornersAplicados||0;
+        toast(cn?`🚩 ${cn} partido${cn!==1?'s':''} con córners liquidados`:'✓ ESPN: córners y tarjetas al día');
+      }
+    }else if(r&&r.error&&!silent)toast('ESPN: '+r.error);
+    return r;
+  }catch(e){ if(!silent)toast('Error de red (córners)'); return null; }
+}
+// Botón manual: sincronización completa
+async function syncFifaNow(){
+  const btn=document.getElementById('btnSyncFifa');
+  if(btn){btn.disabled=true;btn.textContent='⏳ Sincronizando…';}
+  await syncScores(false);
+  await syncStats(false);
+  if(btn){btn.disabled=false;btn.textContent='🔄 Sincronizar ahora';}
+}
+function startAuto(){
+  stopAuto();
+  scoresTimer=setInterval(()=>syncScores(true),SCORES_MS);
+  statsTimer=setInterval(()=>syncStats(true),STATS_MS);
+  syncScores(true).then(()=>syncStats(true));
+}
+function stopAuto(){
+  if(scoresTimer)clearInterval(scoresTimer);scoresTimer=null;
+  if(statsTimer)clearInterval(statsTimer);statsTimer=null;
 }
 function toggleAutoSync(cb){
-  if(cb.checked){
-    if(fifaAutoTimer)clearInterval(fifaAutoTimer);
-    fifaAutoTimer=setInterval(()=>syncFifaNow(true),120000);
-    localStorage.setItem('fifaAuto','1');
-    toast('Auto-sync activado · cada 2 min');
-    syncFifaNow(true);
-  }else{
-    if(fifaAutoTimer)clearInterval(fifaAutoTimer);
-    fifaAutoTimer=null;
-    localStorage.removeItem('fifaAuto');
-    toast('Auto-sync desactivado');
-  }
+  if(cb.checked){ localStorage.removeItem('fifaAutoOff'); startAuto(); toast('Auto-sync activo · marcadores 10s, córners 5 min'); }
+  else{ localStorage.setItem('fifaAutoOff','1'); stopAuto(); toast('Auto-sync desactivado'); }
 }
-// Restaurar auto-sync si estaba activo (solo admin)
+// Encendido por defecto (solo admin); se apaga solo si el admin lo apaga.
 function initFifaAuto(){
   if(!isAdmin)return;
-  if(localStorage.getItem('fifaAuto')==='1'){
-    const cb=document.getElementById('fifaAutoChk');
-    if(cb){cb.checked=true; if(fifaAutoTimer)clearInterval(fifaAutoTimer); fifaAutoTimer=setInterval(()=>syncFifaNow(true),120000);}
-  }
+  const off=localStorage.getItem('fifaAutoOff')==='1';
+  const cb=document.getElementById('fifaAutoChk');if(cb)cb.checked=!off;
+  if(!off&&!scoresTimer)startAuto();
 }
 </script>
 </body>
