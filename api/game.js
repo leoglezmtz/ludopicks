@@ -365,6 +365,7 @@ export default async function handler(req, res) {
     const jackpot    = (await kv.get("jackpot")) ?? RULETA.jackpotSemilla;
     const ruletaHist = (await kv.get("ruletaHist")) || [];
     const liveScores = (await kv.get("liveScores")) || {};
+    const tabla_orden = (await kv.get("tabla_orden")) || {};
     return res.json({
       jugadores: publicJugadores(jugadores), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
@@ -373,7 +374,7 @@ export default async function handler(req, res) {
       lineas_tarjetas: LINEAS_TARJETAS, linea_tarjetas_default: LINEA_TARJETAS_DEFAULT, momios_tarjetas: MOMIOS_TARJETAS,
       campeon_odds: CAMPEON, campeon_cierra: CAMPEON_CIERRA, campeon,
       especiales,
-      ruleta: RULETA, jackpot, ruletaHist, liveScores,
+      ruleta: RULETA, jackpot, ruletaHist, liveScores, tabla_orden,
       now: Date.now(),
     });
   }
@@ -1248,6 +1249,20 @@ export default async function handler(req, res) {
     await kv.set("resultados", {});
     await kv.set("rankPrev", { pos: {}, saldo: {} });
     return res.json({ ok: true });
+  }
+
+  if (action === "setTablaOrden") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const { grupo, orden } = payload;
+    if (!grupo) return res.status(400).json({ error: "Datos inválidos" });
+    const tabla_orden = (await kv.get("tabla_orden")) || {};
+    if (!orden || orden.length === 0) {
+      delete tabla_orden[grupo];
+    } else {
+      tabla_orden[grupo] = orden;
+    }
+    await kv.set("tabla_orden", tabla_orden);
+    return res.json({ ok: true, tabla_orden });
   }
 
   return res.status(400).json({ error: "Acción no reconocida" });

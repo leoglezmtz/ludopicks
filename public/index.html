@@ -1195,6 +1195,7 @@ select option{background:#161c30;color:#fff}
         <button class="fbtn" id="atab-usuarios" onclick="setAdminTab('usuarios',this)">👥 Jugadores</button>
         <button class="fbtn" id="atab-notif" onclick="setAdminTab('notif',this)">📣 Push</button>
         <button class="fbtn" id="atab-casino" onclick="setAdminTab('casino',this)">🎰 Casino</button>
+        <button class="fbtn" id="atab-tablas" onclick="setAdminTab('tablas',this)">📋 Tablas</button>
       </div>
       <div id="admin-content-wrap">
       <div id="admin-resultados"><div class="filters" id="adminFilters"></div><div id="listaAdmin"></div></div>
@@ -1305,6 +1306,14 @@ select option{background:#161c30;color:#fff}
         </div>
         <div class="sec-title">Apuestas especiales activas</div>
         <div id="espAdminList"></div>
+      </div>
+      <div id="admin-tablas" style="display:none">
+        <div class="sec-title">📋 Ajustar orden de grupos</div>
+        <div class="info-card" style="padding:10px 10px 14px">
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Mueve equipos ↑/↓ para corregir el orden si hay un desajuste con la tabla oficial FIFA.</div>
+          <div id="tablaAdminGrupos" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px"></div>
+          <div id="tablaAdminBody"></div>
+        </div>
       </div>
       <button class="btn btn-danger btn-sm" style="width:100%;margin-top:16px" onclick="resetTodo()">⚠️ Reset total</button>
       </div>
@@ -1565,7 +1574,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.18';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.19';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2364,6 +2373,7 @@ function setAdminTab(name,btn){
   document.getElementById('admin-casino').style.display=name==='casino'?'block':'none';
   document.getElementById('admin-especiales').style.display=name==='especiales'?'block':'none';
   document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
+  document.getElementById('admin-tablas').style.display=name==='tablas'?'block':'none';
   if(name==='saldos'){const sel=document.getElementById('adjJugador');if(sel)sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
     const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}
     // Inicializar panel unificado
@@ -2373,6 +2383,7 @@ function setAdminTab(name,btn){
   if(name==='usuarios')renderAdminUsers();
   if(name==='casino')renderCasino();
   if(name==='especiales')renderEspAdmin();
+  if(name==='tablas'){_tablaEditOrden=[];renderTablaAdminPanel();}
 }
 function renderFilters(id,active,cb){
   const grupos=['Todos',...new Set(state.partidos.map(p=>'Gr.'+p.grupo))];
@@ -3496,6 +3507,13 @@ function calcGroupStandings(grupo){
     result.push(...(j-i>1?_sortByH2H(teams.slice(i,j),partidos):teams.slice(i,j)));
     i=j;
   }
+  const override=(state.tabla_orden||{})[grupo];
+  if(override&&override.length){
+    const byTeam={};result.forEach(r=>byTeam[r.team]=r);
+    const ordered=override.map(t=>byTeam[t]).filter(Boolean);
+    const remaining=result.filter(r=>!override.includes(r.team));
+    return [...ordered,...remaining];
+  }
   return result;
 }
 function calcAllStandings(){const all={};GRUPOS.forEach(g=>{all[g]=calcGroupStandings(g);});return all;}
@@ -4035,6 +4053,60 @@ function casinoStats(){
   const neto=totGanadoCasa-totPagado;
   return {cats,totApostado,totGanadoCasa,totPagado,neto,totPend,totExp,nTot,nLiq,nPend};
 }
+// ── ADMIN: ajuste manual de orden de grupos ──────────────────────
+let _tablaEditGrupo='A';
+let _tablaEditOrden=[];
+function renderTablaAdminPanel(){
+  const gEl=document.getElementById('tablaAdminGrupos');
+  if(!gEl)return;
+  const overrides=state.tabla_orden||{};
+  gEl.innerHTML=(['A','B','C','D','E','F','G','H','I','J','K','L']).map(g=>`<button class="fbtn${g===_tablaEditGrupo?' on':''}" onclick="selectTablaGrupo('${g}')">${g}${overrides[g]?'⚠️':''}</button>`).join('');
+  renderTablaAdminBody();
+}
+function selectTablaGrupo(g){
+  _tablaEditGrupo=g;
+  _tablaEditOrden=[];
+  renderTablaAdminPanel();
+}
+function renderTablaAdminBody(){
+  const el=document.getElementById('tablaAdminBody');
+  if(!el)return;
+  const standings=calcGroupStandings(_tablaEditGrupo);
+  if(!_tablaEditOrden.length) _tablaEditOrden=standings.map(r=>r.team);
+  const override=(state.tabla_orden||{})[_tablaEditGrupo];
+  const byTeam={};standings.forEach(r=>byTeam[r.team]=r);
+  el.innerHTML=`
+    ${override?`<div style="font-size:11.5px;color:var(--gold);background:rgba(255,219,0,.08);border:1px solid rgba(255,219,0,.2);border-radius:8px;padding:6px 10px;margin-bottom:10px">⚠️ Orden manual activo para Grupo ${_tablaEditGrupo}</div>`:''}
+    <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:12px">
+      ${_tablaEditOrden.map((t,i)=>{const r=byTeam[t]||{};return`<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border-radius:8px;padding:7px 10px">
+        <span style="width:16px;color:var(--muted);font-size:11px;font-weight:700">${i+1}</span>
+        ${flagImg(t,22)}
+        <span style="flex:1;font-size:13.5px">${teamName(t)}</span>
+        <span style="font-size:11px;color:var(--muted);margin-right:4px">${r.pts!=null?r.pts+'pts':''}</span>
+        <button class="btn btn-sm btn-ghost" style="padding:3px 8px;font-size:14px;line-height:1" onclick="tablaMove(${i},-1)"${i===0?' disabled':''}>↑</button>
+        <button class="btn btn-sm btn-ghost" style="padding:3px 8px;font-size:14px;line-height:1" onclick="tablaMove(${i},1)"${i===_tablaEditOrden.length-1?' disabled':''}>↓</button>
+      </div>`;}).join('')}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" style="flex:1;font-size:13px;padding:10px" onclick="doGuardarTabla()">💾 Guardar orden</button>
+      ${override?`<button class="btn btn-ghost" style="font-size:13px;padding:10px" onclick="doResetTabla()">↺ Auto</button>`:''}
+    </div>`;
+}
+function tablaMove(idx,dir){
+  const ni=idx+dir;
+  if(ni<0||ni>=_tablaEditOrden.length)return;
+  [_tablaEditOrden[idx],_tablaEditOrden[ni]]=[_tablaEditOrden[ni],_tablaEditOrden[idx]];
+  renderTablaAdminBody();
+}
+async function doGuardarTabla(){
+  const r=await api({action:'setTablaOrden',payload:{adminKey,grupo:_tablaEditGrupo,orden:[..._tablaEditOrden]}});
+  if(r.ok){state.tabla_orden=r.tabla_orden;renderTablaAdminPanel();toast('Orden guardado ✓');}
+}
+async function doResetTabla(){
+  const r=await api({action:'setTablaOrden',payload:{adminKey,grupo:_tablaEditGrupo,orden:[]}});
+  if(r.ok){state.tabla_orden=r.tabla_orden;_tablaEditOrden=[];renderTablaAdminPanel();toast('Orden restablecido ✓');}
+}
+
 function renderCasino(){
   const s=casinoStats();
   const money=n=>(n<0?'−$':'$')+Math.abs(Math.round(n)).toLocaleString();
