@@ -1507,16 +1507,15 @@ export default async function handler(req, res) {
       }
     }
 
-    // Fair play: si hubo lecturas fallidas, fusionar con lo previo (las tarjetas no bajan)
-    let storedFp = fp;
-    if (fallidos > 0) {
-      const prev = (await kv.get("fairplay")) || {};
-      storedFp = {};
-      const tset = new Set([...Object.keys(fp), ...Object.keys(prev)]);
-      for (const t of tset) {
-        const n = fp[t] || { a: 0, r: 0 }, o = prev[t] || { a: 0, r: 0 };
-        storedFp[t] = { a: Math.max(n.a || 0, o.a || 0), r: Math.max(n.r || 0, o.r || 0) };
-      }
+    // Fair play: SIEMPRE fusionar con lo previo tomando el máximo. Las tarjetas solo
+    // suben durante el torneo, así que esto nunca borra datos buenos si ESPN devuelve
+    // una lectura vacía/incompleta (causa del borrado a cero que vimos antes).
+    const prev = (await kv.get("fairplay")) || {};
+    const storedFp = {};
+    const tset = new Set([...Object.keys(fp), ...Object.keys(prev)]);
+    for (const t of tset) {
+      const n = fp[t] || { a: 0, r: 0 }, o = prev[t] || { a: 0, r: 0 };
+      storedFp[t] = { a: Math.max(n.a || 0, o.a || 0), r: Math.max(n.r || 0, o.r || 0) };
     }
     await kv.set("fairplay", storedFp);
 
