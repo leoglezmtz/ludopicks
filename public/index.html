@@ -1592,7 +1592,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.24';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.25';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4372,15 +4372,15 @@ async function saveLiveScore(pid){
   const corners=document.getElementById('cornersIn').value.trim();
   const tarjetas=document.getElementById('tarjetasIn').value.trim();
   if(!gl&&!gv&&!corners&&!tarjetas)return toast('Mete al menos un dato para actualizar en vivo');
+  const prevApuestas=state.apuestas||{};
   const r=await api({action:'setLiveScore',payload:{adminKey,partidoId:pid,gl:gl||null,gv:gv||null,corners:corners||null,tarjetas:tarjetas||null}});
   if(r.error)return toast(r.error);
   state.liveScores=r.liveScores;
-  // Actualizar también jugadores y apuestas si hubo insta-liquidación
   if(r.jugadores)state.jugadores=r.jugadores;
   if(r.apuestas)state.apuestas=r.apuestas;
-  // Contar apuestas recién cobradas (las que ahora son 'won' por live)
-  const recienPagadas=r.apuestas?Object.values(r.apuestas).filter(b=>b.status==='won'&&((b.tipo!=='parlay'&&b.partidoId===pid)||(b.tipo==='parlay'&&b.legs.some(l=>l.partidoId===pid)))).length:0;
-  const msgPagos=recienPagadas>0?` · ${recienPagadas} apuesta${recienPagadas!==1?'s':''} cobrada${recienPagadas!==1?'s':''}`:'';
+  // Contar solo las apuestas que cambiaron a 'won' con ESTA actualización
+  const recienPagadas=r.apuestas?Object.values(r.apuestas).filter(b=>b.status==='won'&&(prevApuestas[b.id]?.status||'pending')!=='won').length:0;
+  const msgPagos=recienPagadas>0?` · ${recienPagadas} apuesta${recienPagadas!==1?'s':''} cobrada${recienPagadas!==1?'s':''} ahora`:'';
   toast(`🔴 Marcador actualizado${msgPagos}`);
   renderAdmin();
   try{refreshHero();}catch(e){}
