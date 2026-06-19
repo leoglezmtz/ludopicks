@@ -783,13 +783,17 @@ export default async function handler(req, res) {
 
   if (action === "ajustarSaldo") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { nombre, delta } = payload;
-    if (!nombre || delta === undefined) return res.status(400).json({ error: "Faltan datos" });
+    const { nombre, delta, setSaldo } = payload;
+    if (!nombre) return res.status(400).json({ error: "Faltan datos" });
     const jugadores = (await kv.get("jugadores")) || {};
     const j = jugadores[nombre];
     if (!j) return res.status(404).json({ error: "Jugador no encontrado" });
-    j.saldo = (j.saldo || 0) + Number(delta);
+    j.saldo = setSaldo !== undefined ? Number(setSaldo) : (j.saldo || 0) + Number(delta || 0);
+    // Actualizar rankPrev para que el delta no se muestre
+    const rankPrev = (await kv.get("rankPrev")) || {};
+    if (rankPrev.saldo) rankPrev.saldo[nombre] = j.saldo;
     await kv.set("jugadores", jugadores);
+    await kv.set("rankPrev", rankPrev);
     return res.json({ ok: true, nombre, saldo: j.saldo, jugadores: publicJugadores(jugadores) });
   }
 
