@@ -374,24 +374,41 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .vap-leg-st{font-weight:900;font-size:12px;text-align:center;min-width:14px}
 
 /* ── RECORDS / HALL OF FAME ── */
-#listaRecords{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:start}
-#listaRecords .rec-section-title{grid-column:1/-1}
-.rec-section-title{font-size:11px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 6px;padding-left:2px}
-.rec-section-title:first-child{margin-top:4px}
-.rec-card{display:flex;align-items:center;gap:10px;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:12px 11px;min-width:0;overflow:hidden}
-.rec-card.rec-empty{opacity:.55}
-.rec-ico{font-size:26px;flex-shrink:0;filter:drop-shadow(0 2px 8px rgba(255,219,0,.3))}
-.rec-body{flex:1;min-width:0}
-.rec-title{font-size:10.5px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.04em;line-height:1.3}
-.rec-val{font-size:18px;font-weight:900;color:#fff;letter-spacing:-.5px;margin-top:2px;line-height:1;word-break:break-word}
-.rec-sub{font-size:11px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rec-av{width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,255,255,.15)}
-.rec-av svg{width:100%;height:100%;display:block}
-.rec-av-ghost{border-color:rgba(255,255,255,.08)}
-.rec-expandable .rec-body{min-width:0}
-.rec-toggle{background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:11px;font-weight:700;padding:4px 9px;border-radius:8px;cursor:pointer;margin-top:7px;transition:.15s}
-.rec-toggle:hover{color:#fff;border-color:rgba(255,255,255,.3)}
+#listaRecords{display:flex;flex-direction:column;gap:0;padding-bottom:12px}
+/* Category divider */
+.rec-cat{display:flex;align-items:center;gap:10px;margin:22px 0 10px}
+.rec-cat:first-child{margin-top:6px}
+.rec-cat-lbl{font-size:10.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+.rec-cat::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+/* ─ MILESTONE cards (full-width, gold accent) ─ */
+.rec-ms{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,rgba(255,219,0,.07),rgba(255,255,255,.02));border:1px solid rgba(255,219,0,.2);border-left:3px solid rgba(255,219,0,.55);border-radius:15px;padding:15px 16px;margin-bottom:8px;min-width:0;overflow:hidden}
+.rec-ms.pending{background:rgba(255,255,255,.025);border-color:rgba(255,255,255,.07);border-left-color:rgba(255,255,255,.14);opacity:.58}
+.rec-ms-ico{font-size:30px;flex-shrink:0;filter:drop-shadow(0 2px 12px rgba(255,219,0,.45))}
+.rec-ms-body{flex:1;min-width:0}
+.rec-ms-lbl{font-size:9.5px;font-weight:800;color:rgba(255,219,0,.65);text-transform:uppercase;letter-spacing:.08em}
+.rec-ms-val{font-size:23px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:2px;word-break:break-word}
+.rec-ms-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.rec-ms-av{width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid rgba(255,219,0,.35)}
+.rec-ms-av.ghost{border-color:rgba(255,255,255,.1);opacity:.55}
+.rec-ms-av svg,.rec-ms-av img{width:100%;height:100%;display:block}
+/* ─ STAT grid + cards ─ */
+.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.rec-card{display:flex;flex-direction:column;background:var(--glass);border:1px solid var(--glass-brd);border-radius:14px;padding:13px 12px 11px;min-width:0;overflow:hidden;position:relative}
+.rec-card.empty{opacity:.4}
+.rec-card-ico{position:absolute;top:10px;right:10px;font-size:18px;opacity:.4;line-height:1;pointer-events:none}
+.rec-card-lbl{font-size:9.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;line-height:1.3;padding-right:24px}
+.rec-card-val{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1;margin-top:5px;word-break:break-word}
+.rec-card-sub{font-size:10px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-card-footer{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)}
+.rec-card-av{width:20px;height:20px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid rgba(255,255,255,.22)}
+.rec-card-av.ghost{border-color:rgba(255,255,255,.08);opacity:.5}
+.rec-card-av svg,.rec-card-av img{width:100%;height:100%;display:block}
+.rec-card-name{font-size:11.5px;font-weight:700;color:var(--gold);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-card-name.dim{color:var(--muted2)}
+.rec-toggle{background:none;border:none;color:var(--muted);font-size:10px;font-weight:800;padding:2px 0 0;cursor:pointer;letter-spacing:.02em;text-align:left;margin-top:5px}
+.rec-toggle:hover{color:var(--gold)}
 .rec-detail{margin-top:8px}
+/* ─ Bet breakdown ─ */
 .rec-breakdown{background:rgba(0,0,0,.28);border-radius:12px;padding:10px 12px;font-size:12.5px}
 .rec-bd-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;color:rgba(255,255,255,.75)}
 .rec-bd-row:not(:last-child){border-bottom:1px solid rgba(255,255,255,.06)}
@@ -402,6 +419,13 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .rec-leg-teams{font-size:11px;color:var(--muted);flex-shrink:0}
 .rec-leg-pick{font-size:12px;font-weight:700;color:#fff;flex:1;text-align:center}
 .rec-leg-momio{font-size:12px;font-weight:800;color:var(--gold);flex-shrink:0}
+/* ─ Badges ─ */
+.rec-badges{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.rec-badge{display:flex;align-items:center;gap:9px;padding:10px 11px;border-radius:12px;min-width:0;overflow:hidden}
+.rec-badge-ico{font-size:20px;flex-shrink:0}
+.rec-badge-body{min-width:0;flex:1}
+.rec-badge-name{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-badge-desc{font-size:10px;color:var(--muted2)}
 
 /* PA notice inside expanded match body */
 .pa-notice{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--gold);background:rgba(255,219,0,.09);border:1px solid rgba(255,219,0,.2);border-radius:10px;padding:8px 11px;margin-bottom:9px}
@@ -903,9 +927,6 @@ select option{background:#161c30;color:#fff}
   #listaPartidos .daylabel,#listaPartidos .filters,
   #listaPartidos #especialBanner,#listaPartidos #installCard,#listaPartidos #countdownBox{grid-column:1/-1}
   .filters{grid-column:1/-1}
-
-  /* Récords: ampliar gap en desktop */
-  #listaRecords{gap:11px}
 
   /* Especiales: 2 columnas */
   #listaEspeciales{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:start}
@@ -1474,7 +1495,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.12';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.13';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3186,44 +3207,67 @@ function renderRecords(){
     }
   }
 
-  // ── Helper: genera la tarjeta con desglose opcional ─────────
+  // ── Helpers de tarjetas ──────────────────────────────────────
+  const ghostSvg=`<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="rgba(255,255,255,.1)"/><circle cx="20" cy="14" r="7.5" fill="rgba(255,255,255,.25)"/><ellipse cx="20" cy="36" rx="13" ry="9" fill="rgba(255,255,255,.25)"/></svg>`;
+
+  // Milestone card (ancho completo, borde dorado)
+  function ms(emoji,titulo,valor,sub,winner,empty){
+    const av=winner?jugList.find(j=>j.nombre===winner):null;
+    const avEl=av?`<div class="rec-ms-av">${buildAvSvg(av.avatar)}</div>`:`<div class="rec-ms-av ghost">${ghostSvg}</div>`;
+    return `<div class="rec-ms${empty?' pending':''}">
+      <div class="rec-ms-ico">${emoji}</div>
+      <div class="rec-ms-body">
+        <div class="rec-ms-lbl">${titulo}</div>
+        <div class="rec-ms-val">${valor}</div>
+        ${sub?`<div class="rec-ms-sub">${sub}</div>`:''}
+      </div>
+      ${avEl}
+    </div>`;
+  }
+
+  // Stat card (grid 2 columnas)
   function rec(emoji,titulo,valor,sub,winner,empty,betObj,stColor){
-    const ghostAv=`<div class="rec-av rec-av-ghost"><svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="20" fill="rgba(255,255,255,.09)"/><circle cx="20" cy="14" r="7.5" fill="rgba(255,255,255,.22)"/><ellipse cx="20" cy="36" rx="13" ry="9" fill="rgba(255,255,255,.22)"/></svg></div>`;
-    if(empty)return `<div class="rec-card rec-empty"><div class="rec-ico">${emoji}</div><div class="rec-body"><div class="rec-title">${titulo}</div><div class="rec-val" style="font-size:13px;color:var(--muted2)">Pendiente</div></div>${ghostAv}</div>`;
+    if(empty)return `<div class="rec-card empty">
+      <div class="rec-card-ico">${emoji}</div>
+      <div class="rec-card-lbl">${titulo}</div>
+      <div class="rec-card-val" style="font-size:16px;color:var(--muted2)">—</div>
+      <div class="rec-card-footer"><div class="rec-card-av ghost">${ghostSvg}</div><span class="rec-card-name dim">Pendiente</span></div>
+    </div>`;
     const av=winner?jugList.find(j=>j.nombre===winner):null;
     const bd=betObj?betBreakdown(betObj,stColor||'var(--green)'):'';
-    const hasDetail=!!bd;
     const uid='rec'+Math.random().toString(36).slice(2,7);
-    return `<div class="rec-card${hasDetail?' rec-expandable':''}">
-      <div class="rec-ico">${emoji}</div>
-      <div class="rec-body">
-        <div class="rec-title">${titulo}</div>
-        <div class="rec-val">${valor}</div>
-        ${sub?`<div class="rec-sub">${sub}</div>`:''}
-        ${hasDetail?`<button class="rec-toggle" onclick="recToggle('${uid}')">Ver apuesta ▾</button><div class="rec-detail" id="${uid}" hidden>${bd}</div>`:''}
-      </div>
-      ${av?`<div class="rec-av" title="${winner}">${buildAvSvg(av.avatar,32)}</div>`:''}
+    return `<div class="rec-card">
+      <div class="rec-card-ico">${emoji}</div>
+      <div class="rec-card-lbl">${titulo}</div>
+      <div class="rec-card-val">${valor}</div>
+      ${sub?`<div class="rec-card-sub">${sub}</div>`:''}
+      ${winner?`<div class="rec-card-footer"><div class="rec-card-av">${av?buildAvSvg(av.avatar):ghostSvg}</div><span class="rec-card-name">${winner}</span></div>`:''}
+      ${bd?`<button class="rec-toggle" onclick="recToggle('${uid}')">Ver apuesta ▾</button><div class="rec-detail" id="${uid}" hidden>${bd}</div>`:''}
     </div>`;
   }
 
   el.innerHTML=`
-    <div class="rec-section-title">🏆 Hitos del torneo</div>
-    ${rec('💰','Primero al millón',millonero?`$${Math.round(millonero.saldo).toLocaleString()}`:'$1,000,000',millonero?`¡${millonero.nombre} lo logró!`:'¿Quién llegará?',millonero?.nombre,!millonero)}
-    ${rec('💎','Primero a los 5 millones',cincoM?`$${Math.round(cincoM.saldo).toLocaleString()}`:'$5,000,000',cincoM?`¡${cincoM.nombre}!`:'¿El nuevo millonario?',cincoM?.nombre,!cincoM)}
-    ${rec('👑','Primero a los 10 millones',diezM?`$${Math.round(diezM.saldo).toLocaleString()}`:'$10,000,000',diezM?`¡Leyenda: ${diezM.nombre}!`:'La cima absoluta',diezM?.nombre,!diezM)}
-    <div class="rec-section-title">💪 Apuestas</div>
-    ${rec('🤑','Apuesta más grande',mayorApuesta.monto?`$${mayorApuesta.monto.toLocaleString()}`:'—',mayorApuesta.nombre||null,mayorApuesta.nombre||null,!mayorApuesta.monto,mayorApuesta.monto?mayorApuesta:null,'var(--green)')}
-    ${rec('⚡','Mejor multiplicador ganado',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?(mejorMul.b.tipo==='parlay'?`Parlay ${mejorMul.b.legs.length} patas · ${mejorMul.b.nombre}`:`Simple · ${mejorMul.b.nombre}`):null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)')}
-    ${rec('💸','Mayor ganancia en una apuesta',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:' —',mayorGan.b?mayorGan.b.nombre:null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)')}
-    ${rec('😱','Mayor pérdida en una apuesta',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',mayorPerd.b?mayorPerd.b.nombre:null,mayorPerd.b?.nombre,!mayorPerd.b,mayorPerd.b,'var(--rl)')}
-    ${rec('🔥','Mayor racha ganadora',mejorRacha?`${mejorRacha[1].max} seguidas`:'—',mejorRacha?mejorRacha[0]:null,mejorRacha?.[0],!mejorRacha,null)}
-    ${rec('🥶','Peor racha perdedora',peorRacha?`${peorRacha[1].max} seguidas`:'—',peorRacha?peorRacha[0]:null,peorRacha?.[0],!peorRacha,null)}
-    ${rec('🎯','Mejor % de acierto',mejorPct?`${Math.round(mejorPct.pct*100)}%`:'—',mejorPct?`${mejorPct.w}/${mejorPct.t} ganadas · ${mejorPct.nombre}`:null,mejorPct?.nombre,!mejorPct,null)}
-    ${rec('💀','Peor % de acierto',peorPct?`${Math.round(peorPct.pct*100)}%`:'—',peorPct?`${peorPct.w}/${peorPct.t} ganadas · ${peorPct.nombre}`:null,peorPct?.nombre,!peorPct,null)}
-    ${rec('🃏','Jugador más activo',masApuestas?`${masApuestas[1]} apuestas`:'—',masApuestas?masApuestas[0]:null,masApuestas?.[0],!masApuestas,null)}
-    <div class="rec-section-title">📊 Globales</div>
-    ${rec('🏦','Mayor saldo actual',lider?`$${Math.round(lider.saldo).toLocaleString()}`:'—',null,lider?.nombre,!lider,null)}
-    ${rec('🎯','Total apostado en el torneo',`$${totalTorneo.toLocaleString()}`,`entre ${jugList.length} jugadores`,null,!totalTorneo,null)}
+    <div class="rec-cat"><span class="rec-cat-lbl">🏆 Hitos del torneo</span></div>
+    ${ms('💰','Primero al millón',millonero?`$${Math.round(millonero.saldo).toLocaleString()}`:'$1,000,000',millonero?`¡${millonero.nombre} lo logró!`:'¿Quién llegará primero?',millonero?.nombre,!millonero)}
+    ${ms('💎','Primero a los 5 millones',cincoM?`$${Math.round(cincoM.saldo).toLocaleString()}`:'$5,000,000',cincoM?`¡${cincoM.nombre}!`:'¿El nuevo millonario?',cincoM?.nombre,!cincoM)}
+    ${ms('👑','Primero a los 10 millones',diezM?`$${Math.round(diezM.saldo).toLocaleString()}`:'$10,000,000',diezM?`¡Leyenda: ${diezM.nombre}!`:'La cima absoluta',diezM?.nombre,!diezM)}
+    <div class="rec-cat"><span class="rec-cat-lbl">💪 Apuestas</span></div>
+    <div class="rec-grid">
+      ${rec('🤑','Apuesta más grande',mayorApuesta.monto?`$${mayorApuesta.monto.toLocaleString()}`:'—',null,mayorApuesta.nombre||null,!mayorApuesta.monto,null)}
+      ${rec('⚡','Mejor multiplicador',mejorMul.b?mejorMul.mul.toFixed(2)+'x':'—',mejorMul.b?mejorMul.b.tipo==='parlay'?`Parlay ${mejorMul.b.legs.length} patas`:null:null,mejorMul.b?.nombre,!mejorMul.b,mejorMul.b,'var(--green)')}
+      ${rec('💸','Mayor ganancia',mayorGan.b?`+$${Math.round(mayorGan.b.monto*(mayorGan.b.tipo==='parlay'?mayorGan.b.momioTotal:mayorGan.b.momio)-mayorGan.b.monto).toLocaleString()}`:'—',null,mayorGan.b?.nombre,!mayorGan.b,mayorGan.b,'var(--green)')}
+      ${rec('😱','Mayor pérdida',mayorPerd.b?`−$${mayorPerd.m.toLocaleString()}`:'—',null,mayorPerd.b?.nombre,!mayorPerd.b,mayorPerd.b,'var(--rl)')}
+      ${rec('🔥','Racha ganadora',mejorRacha?`${mejorRacha[1].max} seguidas`:'—',null,mejorRacha?.[0],!mejorRacha,null)}
+      ${rec('🥶','Racha perdedora',peorRacha?`${peorRacha[1].max} seguidas`:'—',null,peorRacha?.[0],!peorRacha,null)}
+      ${rec('🎯','Mejor % acierto',mejorPct?`${Math.round(mejorPct.pct*100)}%`:'—',mejorPct?`${mejorPct.w}/${mejorPct.t} picks`:null,mejorPct?.nombre,!mejorPct,null)}
+      ${rec('💀','Peor % acierto',peorPct?`${Math.round(peorPct.pct*100)}%`:'—',peorPct?`${peorPct.w}/${peorPct.t} picks`:null,peorPct?.nombre,!peorPct,null)}
+      ${rec('🃏','Más activo',masApuestas?`${masApuestas[1]} apuestas`:'—',null,masApuestas?.[0],!masApuestas,null)}
+    </div>
+    <div class="rec-cat"><span class="rec-cat-lbl">📊 Globales</span></div>
+    <div class="rec-grid">
+      ${rec('🏦','Mayor saldo',lider?`$${Math.round(lider.saldo).toLocaleString()}`:'—',null,lider?.nombre,!lider,null)}
+      ${rec('💰','Total apostado',`$${totalTorneo.toLocaleString()}`,`${jugList.length} jugadores`,null,!totalTorneo,null)}
+    </div>
   `;
   // ── Badges personales (solo visibles al jugador) ──────────────
   if(me&&!isAdmin){
@@ -3241,12 +3285,12 @@ function renderRecords(){
       {done:isLiderNow,            ico:'👑', name:'El rey del grupo',    desc:'Vas primero en el ranking'},
       {done:myBets.length>=20,     ico:'🃏', name:'Apostador compulsivo',desc:'20 apuestas colocadas'},
     ];
-    const badgeHtml=badges.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:${b.done?'rgba(255,219,0,.1)':'rgba(255,255,255,.04)'};border:1px solid ${b.done?'rgba(255,219,0,.35)':'rgba(255,255,255,.07)'};opacity:${b.done?1:.45}">
-      <span style="font-size:22px;filter:${b.done?'none':'grayscale(1)'}">${b.ico}</span>
-      <div><div style="font-size:13px;font-weight:700;color:${b.done?'var(--gold)':'var(--muted)'}">${b.name}</div><div style="font-size:11px;color:var(--muted2)">${b.desc}</div></div>
-      ${b.done?'<span style="margin-left:auto;font-size:10px;font-weight:800;color:var(--gold);background:rgba(255,219,0,.15);padding:2px 8px;border-radius:10px">✓</span>':''}
+    const badgeHtml=badges.map(b=>`<div class="rec-badge" style="background:${b.done?'rgba(255,219,0,.1)':'rgba(255,255,255,.04)'};border:1px solid ${b.done?'rgba(255,219,0,.35)':'rgba(255,255,255,.07)'};opacity:${b.done?1:.42}">
+      <span class="rec-badge-ico" style="filter:${b.done?'none':'grayscale(1)'}">${b.ico}</span>
+      <div class="rec-badge-body"><div class="rec-badge-name" style="color:${b.done?'var(--gold)':'var(--muted)'}">${b.name}</div><div class="rec-badge-desc">${b.desc}</div></div>
+      ${b.done?'<span style="font-size:9px;font-weight:800;color:var(--gold);flex-shrink:0">✓</span>':''}
     </div>`).join('');
-    el.innerHTML+=`<div class="rec-section-title" style="grid-column:1/-1;margin-top:4px">🏅 Tus logros</div><div style="grid-column:1/-1;display:flex;flex-direction:column;gap:7px">${badgeHtml}</div>`;
+    el.innerHTML+=`<div class="rec-cat" style="margin-top:18px"><span class="rec-cat-lbl">🏅 Tus logros</span></div><div class="rec-badges">${badgeHtml}</div>`;
   }
 }
 function recToggle(id){
