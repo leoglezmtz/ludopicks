@@ -1216,10 +1216,10 @@ select option{background:#161c30;color:#fff}
             </div>
             <button class="btn btn-primary" id="btnSyncFifa" style="width:auto;padding:9px 14px;font-size:12.5px;white-space:nowrap" onclick="syncFifaNow()">🔄 Sincronizar ahora</button>
           </div>
-          <label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:11.5px;color:var(--muted);cursor:pointer">
-            <input type="checkbox" id="fifaAutoChk" checked onchange="toggleAutoSync(this)" style="width:15px;height:15px;accent-color:var(--green)">
-            Auto-sync activo · marcadores cada 10s, córners/tarjetas cada 2 min
-          </label>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:11.5px;color:var(--muted)">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0"></span>
+            Sincronización automática <b style="color:var(--green)">siempre activa</b> · marcadores 10s · córners y tarjetas 2 min
+          </div>
         </div>
         <div class="filters" id="adminFilters"></div><div id="listaAdmin"></div></div>
       <div id="admin-saldos" style="display:none">
@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.28.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.29.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -5425,8 +5425,9 @@ async function syncStats(silent){
       if(fpPanel&&fpPanel.style.display==='block')renderFairPlayAdmin();
       if(isAdmin)renderAdmin();
       if(!silent){
-        const cn=r.cornersAplicados||0;
-        toast(cn?`🚩 ${cn} partido${cn!==1?'s':''} con córners liquidados`:'✓ ESPN: córners y tarjetas al día');
+        const cn=r.cornersAplicados||0,tj=r.tarjetasAplicadas||0,lv=r.liveTocados||0;
+        const parts=[];if(cn)parts.push(`${cn} córner${cn!==1?'s':''}`);if(tj)parts.push(`${tj} tarjeta${tj!==1?'s':''}`);if(lv)parts.push(`${lv} en vivo`);
+        toast(parts.length?`🚩 ${parts.join(' · ')}`:'✓ ESPN: córners y tarjetas al día');
       }
     }else if(r&&r.error&&!silent)toast('ESPN: '+r.error);
     return r;
@@ -5450,16 +5451,11 @@ function stopAuto(){
   if(scoresTimer)clearInterval(scoresTimer);scoresTimer=null;
   if(statsTimer)clearInterval(statsTimer);statsTimer=null;
 }
-function toggleAutoSync(cb){
-  if(cb.checked){ localStorage.removeItem('fifaAutoOff'); startAuto(); toast('Auto-sync activo · marcadores 10s, córners 5 min'); }
-  else{ localStorage.setItem('fifaAutoOff','1'); stopAuto(); toast('Auto-sync desactivado'); }
-}
-// Encendido por defecto (solo admin); se apaga solo si el admin lo apaga.
+// Sincronización SIEMPRE activa (no opcional). Solo admin, mientras la app esté abierta.
 function initFifaAuto(){
   if(!isAdmin)return;
-  const off=localStorage.getItem('fifaAutoOff')==='1';
-  const cb=document.getElementById('fifaAutoChk');if(cb)cb.checked=!off;
-  if(!off&&!scoresTimer)startAuto();
+  localStorage.removeItem('fifaAutoOff');   // limpiar preferencia vieja
+  if(!scoresTimer)startAuto();
 }
 </script>
 </body>
