@@ -1468,7 +1468,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.26.6';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.26.7';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2615,7 +2615,7 @@ function openSlip(){
   const j=state.jugadores[me];const isParlay=betslip.length>1;const min=state.apuesta_min||100;
   let legs='';
   betslip.forEach(s=>{const p=byId(s.partidoId);
-    legs+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${teamFlag(p.local,13)} vs ${teamFlag(p.visita,13)}</div><div class="sl-pick">${pickLabel(p,s.pick,s.linea)} · ${s.momio}x</div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}',${s.linea})">×</button></div>`;});
+    legs+=`<div class="slip-leg"><div class="sl-info"><div class="sl-match">${teamFlag(p.local,13)} vs ${teamFlag(p.visita,13)}</div><div class="sl-pick">${pickLabel(p,s.pick,s.linea,s.mercado)} · ${s.momio}x</div></div><button class="sl-x" onclick="removeSlip(${s.partidoId},'${s.pick}',${s.linea})">×</button></div>`;});
   const tot=slipMomioTotal();
   document.getElementById('mTitle').innerHTML=isParlay?`Ticket <span class="parlay-tag">Parlay</span>`:'Tu apuesta';
   document.getElementById('mBody').innerHTML=`${legs}
@@ -2703,9 +2703,9 @@ async function cancelBet(betId){
 
 // ── MIS PICKS ─────────────────────────────────────────────────
 function betTicketText(b){
-  if(b.tipo==='parlay'){const legs=b.legs.map(l=>{const p=byId(l.partidoId);return pickLabel(p,l.pick,l.linea)+' ('+p.local+' v '+p.visita+')';}).join(' + ');
+  if(b.tipo==='parlay'){const legs=b.legs.map(l=>{const p=byId(l.partidoId);return pickLabel(p,l.pick,l.linea,l.mercado)+' ('+p.local+' v '+p.visita+')';}).join(' + ');
     return `🎯 Mi parlay en LudoPicks (${b.momioTotal.toFixed(2)}x):\n${legs}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momioTotal).toLocaleString()}\nhttps://ludopicks.vercel.app`;}
-  const p=byId(b.partidoId);return `🎯 Mi pick en LudoPicks:\n${pickLabel(p,b.pick,b.linea)} en ${p.local} vs ${p.visita} @${b.momio}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momio).toLocaleString()}\nhttps://ludopicks.vercel.app`;
+  const p=byId(b.partidoId);return `🎯 Mi pick en LudoPicks:\n${pickLabel(p,b.pick,b.linea,b.mercado)} en ${p.local} vs ${p.visita} @${b.momio}\n$${b.monto.toLocaleString()} → posible $${Math.round(b.monto*b.momio).toLocaleString()}\nhttps://ludopicks.vercel.app`;
 }
 function legResIcon(l){
   const r=state.resultados[l.partidoId];
@@ -3090,10 +3090,10 @@ function playerBetCard(b){
   }else if(b.tipo==='especial'){
     sel=`<span style="font-weight:700;font-size:14px">${b.opcionEmoji||'🎨'} ${b.opcionLabel||b.opcion}</span><div style="font-size:12px;color:var(--muted);margin-top:3px">Especial · ${b.momio}x</div>`;
   }else if(b.tipo==='parlay'){
-    sel=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span><div style="margin-top:6px">`+b.legs.map(l=>{const p=byId(l.partidoId);return `<div style="font-size:12px;color:var(--muted);padding:1px 0">${teamFlag(p.local,11)} v ${teamFlag(p.visita,11)} · ${pickLabel(p,l.pick,l.linea)} (${l.momio}x)</div>`;}).join('')+'</div>';
+    sel=`<span class="parlay-tag">Parlay ${b.legs.length} · ${b.momioTotal.toFixed(2)}x</span><div style="margin-top:6px">`+b.legs.map(l=>{const p=byId(l.partidoId);return `<div style="font-size:12px;color:var(--muted);padding:1px 0">${teamFlag(p.local,11)} v ${teamFlag(p.visita,11)} · ${pickLabel(p,l.pick,l.linea,l.mercado)} (${l.momio}x)</div>`;}).join('')+'</div>';
   }else{
     const p=byId(b.partidoId);
-    sel=`<span style="font-weight:700;font-size:14px">${teamFlag(p.local,13)} vs ${teamFlag(p.visita,13)}</span><div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea)} · ${b.momio}x</div>`;
+    sel=`<span style="font-weight:700;font-size:14px">${teamFlag(p.local,13)} vs ${teamFlag(p.visita,13)}</span><div style="font-size:12px;color:var(--muted);margin-top:3px">${pickLabel(p,b.pick,b.linea,b.mercado)} · ${b.momio}x</div>`;
   }
   const gan=st==='won'?` → +$${Math.round(b.monto*((b.tipo==='parlay'?b.momioTotal:b.momio)-1)).toLocaleString()}`:'';
   return `<div class="info-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:10px"><div style="flex:1">${sel}</div><div style="text-align:right;flex-shrink:0"><div style="font-weight:800">$${b.monto.toLocaleString()}</div>${tag}<div style="font-size:11px;color:var(--green)">${gan}</div></div></div></div>`;
@@ -3154,7 +3154,7 @@ function renderRecords(){
     if(b.tipo==='parlay'){
       const legs=b.legs.map(l=>{
         const p=byId(l.partidoId);if(!p)return '';
-        return `<div class="rec-leg"><span class="rec-leg-teams">${flagImg(p.local,11)} ${p.local} vs ${p.visita} ${flagImg(p.visita,11)}</span><span class="rec-leg-pick">${pickLabel(p,l.pick,l.linea)}</span><span class="rec-leg-momio">${l.momio}x</span></div>`;
+        return `<div class="rec-leg"><span class="rec-leg-teams">${flagImg(p.local,11)} ${p.local} vs ${p.visita} ${flagImg(p.visita,11)}</span><span class="rec-leg-pick">${pickLabel(p,l.pick,l.linea,l.mercado)}</span><span class="rec-leg-momio">${l.momio}x</span></div>`;
       }).join('');
       return `<div class="rec-breakdown">
         <div class="rec-bd-row"><span>Apostado</span><span>$${b.monto.toLocaleString()}</span></div>
@@ -3165,7 +3165,7 @@ function renderRecords(){
     }else{
       const p=byId(b.partidoId);
       const matchStr=p?`${flagImg(p.local,11)} ${p.local} vs ${p.visita} ${flagImg(p.visita,11)}`:'';
-      const pickStr=p?pickLabel(p,b.pick,b.linea):b.pick;
+      const pickStr=p?pickLabel(p,b.pick,b.linea,b.mercado):b.pick;
       return `<div class="rec-breakdown">
         <div class="rec-bd-row"><span>${matchStr}</span></div>
         <div class="rec-bd-row"><span>Pick: <b>${pickStr}</b></span><span>${b.momio}x</span></div>
