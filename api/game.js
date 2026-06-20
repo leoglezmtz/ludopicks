@@ -1486,7 +1486,7 @@ export default async function handler(req, res) {
         const c = stat("wonCorners"); if (c != null && !isNaN(c)) corners += c;
         const y = stat("yellowCards"), r = stat("redCards");
         const yy = (y != null && !isNaN(y)) ? y : 0, rr = (r != null && !isNaN(r)) ? r : 0;
-        cards += yy + rr; perTeam.push({ abbr: t.team?.abbreviation, yy, rr });
+        cards += yy + 2 * rr; perTeam.push({ abbr: t.team?.abbreviation, yy, rr });
       }
       return { corners, cards, perTeam };
     };
