@@ -1313,6 +1313,15 @@ select option{background:#161c30;color:#fff}
         </details>
 
         <details class="adm-fold">
+          <summary class="adm-fold-h">🔍 Corregir parlays correlacionados <span class="adm-fold-hint">reembolso + push</span></summary>
+          <div class="adm-fold-body">
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Busca parlays pendientes con combinaciones inválidas (BTTS Sí + Over 1.5, ganador + Over 0.5) y los anula devolviendo el dinero. Envía push a los afectados.</div>
+            <button class="btn btn-sm" style="background:var(--gold);color:#2b1d00;width:100%" onclick="doCorregirParlays(this)">🔍 Buscar y corregir</button>
+            <div id="corregirResult" style="margin-top:10px"></div>
+          </div>
+        </details>
+
+        <details class="adm-fold">
           <summary class="adm-fold-h">🔄 Recotizar apuestas pendientes <span class="adm-fold-hint">avanzado</span></summary>
           <div class="adm-fold-body">
             <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Actualiza el momio de las apuestas <b>pendientes</b> a los momios actuales del catálogo. Las ya liquidadas no se tocan. No cambia saldos — solo afecta cuánto pagarán al liquidarse.</div>
@@ -1653,7 +1662,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.31.4';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.31.5';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2134,7 +2143,7 @@ function enterApp(){
   const sb=document.getElementById('switchBtn');
   if(sb)sb.style.display=(isAdmin||me==='Leonidas')?'block':'none';
   refreshHero();renderSlipBar();
-  if(!isAdmin){checkNotifStatus();setTimeout(()=>{ if(maybeShowGiftClaim())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
+  if(!isAdmin){checkNotifStatus();setTimeout(checkCancelledBets,1200);setTimeout(()=>{ if(maybeShowGiftClaim())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
 }
 async function switchMode(){
   if(isAdmin){
@@ -2191,6 +2200,34 @@ function maybeToastTickets(){
   const jp=state.jackpot||0;
   setTimeout(()=>toast(`🎟️ Tienes ${tk} ticket${tk>1?'s':''} de ruleta hoy${jp>0?' · JP $'+Math.round(jp/1000)+'K':''} 🎰`,4500),3500);
 }
+function checkCancelledBets(){
+  if(!me||!state.apuestas)return;
+  const seenKey='ludo_seen_cancels';
+  const seen=new Set(JSON.parse(localStorage.getItem(seenKey)||'[]'));
+  const nuevas=Object.values(state.apuestas).filter(b=>
+    b.nombre===me&&b.status==='cancelled'&&b.cancelMsg&&!seen.has(b.id)
+  );
+  if(!nuevas.length)return;
+  nuevas.forEach(b=>seen.add(b.id));
+  localStorage.setItem(seenKey,JSON.stringify([...seen]));
+  const total=nuevas.reduce((s,b)=>s+b.monto,0);
+  const n=nuevas.length;
+  document.getElementById('mTitle').textContent='↩️ Parlay'+(n>1?'s anulados':' anulado');
+  document.getElementById('mBody').innerHTML=`
+    <div style="text-align:center;padding:4px 0 10px">
+      <div style="font-size:36px;margin-bottom:10px">↩️</div>
+      <div style="font-size:13.5px;color:rgba(255,255,255,.7);line-height:1.6;margin-bottom:14px">
+        ${n===1?'Un parlay tuyo fue anulado':'Varios de tus parlays fueron anulados'} porque contenía${n>1?'n':''} una combinación correlacionada — picks donde uno garantizaba el otro sin riesgo adicional.
+      </div>
+      <div style="background:rgba(93,202,165,.12);border:1px solid rgba(93,202,165,.28);border-radius:13px;padding:13px;margin-bottom:14px">
+        <div style="font-size:24px;font-weight:900;color:var(--green)">+$${total.toLocaleString()}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">reembolsado a tu saldo</div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.38);margin-bottom:14px;line-height:1.5">Puedes apostar esos picks por separado. Solo no se pueden combinar en un parlay porque uno garantiza el resultado del otro.</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="closeModal()">Entendido ✓</button>`;
+  document.getElementById('overlay').style.display='flex';
+}
 async function manualRefresh(){
   const btn=document.getElementById('refreshBtn');btn.classList.remove('spin');void btn.offsetWidth;btn.classList.add('spin');
   await loadState();refreshHero();
@@ -2200,6 +2237,7 @@ async function manualRefresh(){
   if(currentTab==='elim')renderElim();
   if(currentTab==='especiales')renderEspeciales();
   if(currentTab==='admin'&&isAdmin){renderAdmin();renderAdminUsers();}
+  if(!isAdmin)checkCancelledBets();
   toast('Actualizado ✓');
 }
 
@@ -4976,6 +5014,26 @@ async function doSetCampeon(){
   if(r.error)return toast(r.error);
   state.jugadores=r.jugadores;state.apuestas=r.apuestas;state.campeon=r.campeon;
   toast(eq?`🏆 ${teamName(eq)} es campeón`:'Campeón revertido');
+}
+async function doCorregirParlays(btn){
+  btn.disabled=true;btn.textContent='⏳ Buscando...';
+  const r=await api({action:'corregirParlaysCorrelacionados',payload:{adminKey}});
+  btn.disabled=false;btn.textContent='🔍 Buscar y corregir';
+  const el=document.getElementById('corregirResult');
+  if(r.error){el.innerHTML=`<div style="color:var(--rl);font-size:12px">${r.error}</div>`;return;}
+  if(!r.afectados||r.afectados.length===0){
+    el.innerHTML=`<div style="color:var(--green);font-size:12px">✅ No hay parlays correlacionados pendientes.</div>`;
+    return;
+  }
+  if(r.jugadores)state.jugadores=r.jugadores;
+  if(r.apuestas)state.apuestas=r.apuestas;
+  refreshHero();
+  // Agrupar por jugador para mostrar resumen limpio
+  const por={};
+  r.afectados.forEach(a=>{if(!por[a.nombre])por[a.nombre]={monto:0,n:0};por[a.nombre].monto+=a.monto;por[a.nombre].n++;});
+  el.innerHTML=`<div style="color:var(--gold);font-size:12.5px;font-weight:700;margin-bottom:6px">↩️ ${r.afectados.length} parlay(s) anulado(s) y reembolsado(s)</div>`+
+    Object.entries(por).map(([nombre,info])=>`<div style="font-size:12px;color:rgba(255,255,255,.7);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.07)">• <b>${nombre}</b>: ${info.n} parlay${info.n>1?'s':''} · +$${info.monto.toLocaleString()} devuelto(s)</div>`).join('');
+  toast(`↩️ ${r.afectados.length} parlay(s) corregido(s)`);
 }
 async function doRecotizar(){
   if(!confirm('¿Recotizar todas las apuestas pendientes con los momios actuales? Las apuestas vigentes cambiarán su posible ganancia.'))return;

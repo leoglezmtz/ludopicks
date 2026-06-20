@@ -1327,6 +1327,47 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
+  if (action === "corregirParlaysCorrelacionados") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const jugadores = (await kv.get("jugadores")) || {};
+    const apuestas  = (await kv.get("apuestas"))  || {};
+    const pushSubs  = (await kv.get("pushSubs"))   || {};
+
+    const afectados = [];
+    for (const [id, b] of Object.entries(apuestas)) {
+      if (b.tipo !== "parlay" || (b.status && b.status !== "pending")) continue;
+      const razon = validarIncongruenciasParlay(b.legs);
+      if (!razon) continue;
+      // Anular y reembolsar
+      b.status = "cancelled";
+      b.cancelledAt = Date.now();
+      b.cancelMsg = razon;
+      b.payout = 0;
+      const j = jugadores[b.nombre];
+      if (j) { j.saldo += b.monto; afectados.push({ nombre: b.nombre, betId: id, monto: b.monto, razon }); }
+    }
+
+    if (afectados.length === 0) return res.json({ ok: true, afectados: [] });
+
+    await kv.set("jugadores", jugadores);
+    await kv.set("apuestas", apuestas);
+
+    // Push a cada jugador afectado (una vez por jugador, aunque tenga varios parlays)
+    const notifPor = {};
+    for (const a of afectados) {
+      if (!notifPor[a.nombre]) notifPor[a.nombre] = { monto: 0, n: 0 };
+      notifPor[a.nombre].monto += a.monto;
+      notifPor[a.nombre].n++;
+    }
+    await Promise.allSettled(Object.entries(notifPor).map(([nombre, info]) => {
+      const sub = pushSubs[nombre]; if (!sub) return;
+      const plural = info.n > 1 ? `${info.n} parlays anulados` : "Un parlay anulado";
+      return sendPush(sub, { title: `↩️ ${plural}`, body: `Contenía combinación correlacionada. Te devolvimos $${info.monto.toLocaleString()}.`, tag: "correccion-parlay", url: "/" });
+    }));
+
+    return res.json({ ok: true, afectados, jugadores: publicJugadores(jugadores), apuestas });
+  }
+
   if (action === "setTablaOrden") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     const { grupo, orden } = payload;
