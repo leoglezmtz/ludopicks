@@ -983,16 +983,21 @@ select option{background:#161c30;color:#fff}
   .sd-clear{background:none;border:none;color:var(--muted2);font-size:12px;font-weight:700;cursor:pointer;margin-top:8px;width:100%;text-align:center;padding:4px}
 }
 /* ── ELIMINATORIAS / BRACKET ── */
-.eg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
-.eg-card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px;padding:9px 11px;min-width:0;overflow:hidden}
-.eg-hdr{font-size:9.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-.eg-row{display:flex;align-items:center;gap:5px;padding:2.5px 0;font-size:11.5px;color:rgba(255,255,255,.38)}
-.eg-row.r1{color:#fff;font-weight:700;border-left:2px solid var(--green);padding-left:4px;margin-left:-2px}
-.eg-row.r2{color:rgba(255,255,255,.82);font-weight:600;border-left:2px solid rgba(93,202,165,.35);padding-left:4px;margin-left:-2px}
+.eg-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:20px}
+.eg-card{background:var(--glass);border:1px solid var(--glass-brd);border-radius:13px;padding:8px 11px 10px;min-width:0;overflow:hidden}
+.eg-hdr{font-size:9.5px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.eg-row{display:grid;grid-template-columns:1fr 20px 30px 22px 28px 26px;align-items:center;gap:3px;padding:3px 0;font-size:11.5px;color:rgba(255,255,255,.42)}
+.eg-row>span:not(.eg-name){text-align:center;font-size:10.5px;font-variant-numeric:tabular-nums}
+.eg-row.eg-head{color:var(--muted2);font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--glass-brd);padding-bottom:5px;margin-bottom:2px}
+.eg-row.eg-head>span:not(.eg-name){font-size:8.5px}
+.eg-row.eg-head .eg-name{color:#fff;font-size:11px;font-weight:800;letter-spacing:.08em}
+.eg-row.r1{color:#fff;font-weight:700;border-left:2px solid var(--green);padding-left:5px;margin-left:-3px}
+.eg-row.r2{color:rgba(255,255,255,.82);font-weight:600;border-left:2px solid rgba(93,202,165,.35);padding-left:5px;margin-left:-3px}
 .eg-row.r3q{color:rgba(255,219,0,.85);font-weight:600}
 .eg-flag{font-size:12px;flex-shrink:0;line-height:1}
-.eg-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
-.eg-pts{font-size:12px;font-weight:900;flex-shrink:0;min-width:20px;text-align:right}
+.eg-name{min-width:0;display:flex;align-items:center;gap:5px;font-size:11px}
+.eg-tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.eg-pts{font-size:12.5px;font-weight:900;color:#fff}
 .et3-head{font-size:9.5px;font-weight:800;color:rgba(255,219,0,.7);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .et3-head::after{content:'';flex:1;height:1px;background:rgba(255,219,0,.2)}
 .et3-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:20px}
@@ -1616,7 +1621,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.31.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.31.3';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3779,15 +3784,18 @@ function renderElim(){
   const groupsHtml=GRUPOS.map(g=>{
     const st=allS[g];if(!st||!st.length)return '';
     const V=groupVerdicts(g);
+    const head=`<div class="eg-row eg-head"><span class="eg-name">Grupo ${g}</span><span title="Partidos jugados">PJ</span><span title="Diferencia de goles">DG</span><span title="Goles a favor">GF</span><span title="Puntaje de tarjetas (fair play)">🟨</span><span>PTS</span></div>`;
     const rows=st.slice(0,4).map((r,i)=>{
       const isT=i===2&&thirds.find(t=>t.team===r.team);
       const cls=i===0?'r1':i===1?'r2':isT?'r3q':'';
-      const liveDot=r.live?'<span style="color:#ff3b3b;font-size:9px;margin-right:3px" title="En vivo">🔴</span>':'';
+      const liveDot=r.live?'<span style="color:#ff3b3b;font-size:9px;margin-right:2px" title="En vivo">🔴</span>':'';
       const v=V[r.team]||{};
-      const badge=v.first?'<span title="1° de grupo asegurado" style="margin-left:4px">⭐</span>':v.top2?'<span title="Clasificado a 16avos" style="margin-left:4px">✅</span>':v.elim?'<span title="Eliminado del Mundial" style="margin-left:4px">❌</span>':'';
-      return `<div class="eg-row ${cls}"><span class="eg-flag">${flagImg(r.team,13)||'🏳️'}</span><span class="eg-name">${liveDot}${teamName(r.team)}${badge}</span><span class="eg-pts">${r.pts}</span></div>`;
+      const badge=v.first?'<span title="1° de grupo asegurado">⭐</span>':v.top2?'<span title="Clasificado a 16avos">✅</span>':v.elim?'<span title="Eliminado del Mundial">❌</span>':'';
+      const dg=(r.gd>0?'+':'')+r.gd;
+      const fp=fpScore(r.team);
+      return `<div class="eg-row ${cls}"><span class="eg-name"><span class="eg-flag">${flagImg(r.team,13)||'🏳️'}</span><span class="eg-tn">${liveDot}${teamName(r.team)}</span>${badge}</span><span>${r.pj}</span><span>${dg}</span><span>${r.gf}</span><span>${fp}</span><span class="eg-pts">${r.pts}</span></div>`;
     }).join('');
-    return `<div class="eg-card"><div class="eg-hdr">Grupo ${g}</div>${rows}</div>`;
+    return `<div class="eg-card">${head}${rows}</div>`;
   }).join('');
 
   // Mejores terceros
