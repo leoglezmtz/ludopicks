@@ -1039,9 +1039,41 @@ select option{background:#161c30;color:#fff}
 .hero-rec-btn:hover{background:rgba(255,255,255,.13)}
 /* Eliminados chips */
 .el-head{color:rgba(226,75,74,.7)}
+.elim-el-grid{grid-template-columns:repeat(6,1fr);gap:4px}
 .el-head::after{background:rgba(226,75,74,.18)}
 .el-chip{background:rgba(226,75,74,.05);border-color:rgba(226,75,74,.2)}
 .el-name{color:rgba(226,75,74,.8)}
+@media(min-width:900px){
+  /* Elimis grupos: 2 columnas, stats más anchos y legibles */
+  .eg-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+  .eg-card{padding:10px 14px 12px}
+  .eg-row{grid-template-columns:1fr 28px 36px 28px 34px 32px;gap:5px;font-size:12px;padding:4px 0}
+  .eg-row>span:not(.eg-name){font-size:11px}
+  .eg-row.eg-head .eg-name{font-size:12px}
+  .eg-row.eg-head>span:not(.eg-name){font-size:9.5px}
+  .eg-name{font-size:12px;gap:6px}
+  .eg-flag{font-size:13px}
+  .eg-pts{font-size:13px}
+  /* Mejores terceros: 8 chips en 1 fila */
+  .et3-grid{grid-template-columns:repeat(8,1fr);gap:8px}
+  .et3-chip{padding:9px 6px}
+  .et3-name{font-size:10.5px}
+  .et3-pts{font-size:10px}
+  /* Leyenda en línea */
+  .elim-legend{display:flex;flex-wrap:wrap;gap:0 20px}
+  .elim-legend>div{white-space:nowrap}
+  /* Eliminados: 16 chips en 2 filas de 8 */
+  .elim-el-grid{grid-template-columns:repeat(8,1fr);gap:6px}
+  .elim-el-grid .et3-chip{padding:7px 4px}
+}
+@media(min-width:1400px){
+  /* 3 grupos por fila en pantallas muy anchas */
+  .eg-grid{grid-template-columns:repeat(3,1fr)}
+  .eg-row{grid-template-columns:1fr 26px 34px 26px 32px 30px}
+  /* Mejores terceros y eliminados: fila única */
+  .et3-grid{grid-template-columns:repeat(8,1fr)}
+  .elim-el-grid{grid-template-columns:repeat(16,1fr)}
+}
 </style>
 </head>
 <body>
@@ -1621,7 +1653,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.31.3';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.31.4';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3808,7 +3840,7 @@ function renderElim(){
   const fourths=GRUPOS.map(g=>allS[g]?.[3]).filter(Boolean);
   const elimTeams=[...worstThirds,...fourths];
   const elimEmpty=Array.from({length:Math.max(0,16-elimTeams.length)},()=>`<div class="et3-chip el-chip out" style="opacity:.15"><div class="et3-flag">—</div></div>`).join('');
-  const elimHtml=elimTeams.length?`<div class="et3-head el-head">Eliminados (proyectado)</div><div class="et3-grid" style="grid-template-columns:repeat(6,1fr);gap:4px">${elimTeams.map(t=>`<div class="et3-chip el-chip" style="padding:5px 2px"><div class="et3-flag" style="font-size:14px">${flagImg(t.team,14)||'🏳️'}</div><div class="et3-name el-name" style="font-size:8px">${teamName(t.team).slice(0,8)}</div></div>`).join('')}${elimEmpty}</div>`:'';
+  const elimHtml=elimTeams.length?`<div class="et3-head el-head">Eliminados (proyectado)</div><div class="et3-grid elim-el-grid">${elimTeams.map(t=>`<div class="et3-chip el-chip"><div class="et3-flag">${flagImg(t.team,14)||'🏳️'}</div><div class="et3-name el-name">${teamName(t.team).slice(0,10)}</div></div>`).join('')}${elimEmpty}</div>`:'';
 
   // Bracket labels row
   const LBLS=['R32','R16','QF','SF','FINAL','SF','QF','R16','R32'];
@@ -3845,8 +3877,10 @@ function renderElim(){
 
   document.getElementById('listaElim').innerHTML=`<div style="padding:0 2px 4px">
     <div class="sec-title">📊 Posiciones por grupo</div>
-    <div style="font-size:10px;color:var(--muted2);margin-bottom:4px">🟢 Avanza · 🟡 Posible 3er lugar · 🔴 En vivo (provisional)</div>
-    <div style="font-size:10px;color:var(--muted2);margin-bottom:10px">⭐ 1° asegurado · ✅ Clasificado (matemático) · ❌ Eliminado (matemático)</div>
+    <div class="elim-legend" style="font-size:10px;color:var(--muted2);margin-bottom:10px;gap:0 16px">
+      <div>🟢 Avanza · 🟡 Posible 3er lugar · 🔴 En vivo (provisional)</div>
+      <div>⭐ 1° asegurado · ✅ Clasificado (matemático) · ❌ Eliminado (matemático)</div>
+    </div>
     <div class="eg-grid">${groupsHtml}</div>
     ${thirdsHtml}
     ${elimHtml}
