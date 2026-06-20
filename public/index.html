@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.30.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.31.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2444,6 +2444,20 @@ function setAdminF(g){adminF=g;renderAdmin();}
 
 // ── COUNTDOWN ─────────────────────────────────────────────────
 function nextMatch(){return state.partidos.filter(p=>!state.resultados[p.id]&&p.kickoff>eNow()).sort((a,b)=>a.kickoff-b.kickoff)[0];}
+// Favorito y probabilidad implícita (de momios 1X2, quitando el margen).
+function matchFav(p){
+  const m=p&&p.momios; if(!m||!m.local||!m.visita)return null;
+  const pL=1/m.local, pE=1/(m.empate||99), pV=1/m.visita, s=pL+pE+pV;
+  const nl=pL/s, nv=pV/s, mx=Math.max(nl,nv);
+  if(mx<0.42) return `📊 Parejo · ${teamName(nl>=nv?p.local:p.visita)} ${Math.round(mx*100)}%`;
+  return `📊 ${teamName(nl>=nv?p.local:p.visita)} ${Math.round(mx*100)}% favorito`;
+}
+// Forma reciente de un equipo: últimos resultados finales (🟢 gana · ⚪ empata · 🔴 pierde).
+function teamForm(team,max){
+  const ms=(state.partidos||[]).filter(p=>(p.local===team||p.visita===team)&&state.resultados?.[p.id]&&state.resultados[p.id].gl!=null&&!state.resultados[p.id].parcial).sort((a,b)=>a.kickoff-b.kickoff);
+  const dots=ms.map(p=>{const r=state.resultados[p.id];const gf=p.local===team?+r.gl:+r.gv,ga=p.local===team?+r.gv:+r.gl;return gf>ga?'🟢':gf<ga?'🔴':'⚪';});
+  return dots.slice(-(max||3)).join('')||'—';
+}
 function fmtCountdown(ms){
   if(ms<=0)return '¡Ya!';
   const s=Math.floor(ms/1000),d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),ss=s%60;
@@ -2477,7 +2491,10 @@ function renderCountdown(){
   cdRenderedId=n.id;
   const insTxt=matchInsight(n);
   const insHtml=`<div id="cdInsight" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:5px;line-height:1.3${insTxt?'':';display:none'}">${insTxt}</div>`;
-  box.innerHTML=`<div class="countdown" onclick="goToMatch(${n.id})" role="button" tabindex="0" style="cursor:pointer" aria-label="Ir a apostar por ${n.local} vs ${n.visita}"><div><div class="cd-label">Próximo partido · toca para apostar</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div>${insHtml}</div><div class="cd-time"><span id="cdTimeText">${fmtCountdown(ms)}</span><small>${n.fecha} · ${n.hora}</small></div></div>`;
+  const fav=matchFav(n), fL=teamForm(n.local,3), fV=teamForm(n.visita,3);
+  const metaBits=[];if(fav)metaBits.push(fav);if(fL!=='—'||fV!=='—')metaBits.push(`${fL} vs ${fV}`);
+  const metaHtml=metaBits.length?`<div style="font-size:10.5px;color:var(--muted2);margin-top:4px">${metaBits.join('  ·  ')}</div>`:'';
+  box.innerHTML=`<div class="countdown" onclick="goToMatch(${n.id})" role="button" tabindex="0" style="cursor:pointer" aria-label="Ir a apostar por ${n.local} vs ${n.visita}"><div><div class="cd-label">Próximo partido · toca para apostar</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div>${insHtml}${metaHtml}</div><div class="cd-time"><span id="cdTimeText">${fmtCountdown(ms)}</span><small>${n.fecha} · ${n.hora}</small></div></div>`;
 }
 // Lleva al usuario a la ficha del partido y la expande para apostar.
 function goToMatch(pid){
@@ -3681,6 +3698,13 @@ function _ptsFrom(grupo,resMap){
     if(r.gl>r.gv)pts[p.local]+=3;else if(r.gv>r.gl)pts[p.visita]+=3;else{pts[p.local]++;pts[p.visita]++;}});
   return pts;
 }
+// Puntos actuales del grupo (finales) + hipotéticos. Para posiciones provisionales.
+function _grpPts(grupo,extra){
+  const rm={};
+  _grpMatches(grupo).forEach(p=>{const r=state.resultados?.[p.id];if(r&&r.gl!=null&&!r.parcial)rm[p.id]={gl:+r.gl,gv:+r.gv};});
+  (extra||[]).forEach(e=>{rm[e.id]={gl:e.gl,gv:e.gv};});
+  return _ptsFrom(grupo,rm);
+}
 // Veredictos de TODOS los equipos del grupo en una sola pasada. extra: hipotéticos {id,gl,gv}.
 function groupVerdicts(grupo,extra){
   const ms=_grpMatches(grupo);
@@ -3724,6 +3748,14 @@ function matchInsight(p){
   if(!base[Vt].top2&&winV[Vt].top2)c.push([3,`✅ Si gana, ${teamName(Vt)} clasifica`]);
   if(base[L].top2)c.push([4,`✅ ${teamName(L)} ya está clasificado`]);
   if(base[Vt].top2)c.push([4,`✅ ${teamName(Vt)} ya está clasificado`]);
+  // Capa provisional: liderato del grupo si gana (lenguaje claramente no-definitivo).
+  const topOther=(pmap,team)=>Math.max(0,...Object.entries(pmap).filter(([t])=>t!==team).map(([,v])=>v));
+  const pL=_grpPts(g,[{id:p.id,gl:1,gv:0}]), pV=_grpPts(g,[{id:p.id,gl:0,gv:1}]);
+  const oL=topOther(pL,L), oV=topOther(pV,Vt);
+  if(pL[L]>oL)c.push([5,`🔼 Si gana, ${teamName(L)} se pone líder del grupo (provisional)`]);
+  else if(pL[L]===oL&&pL[L]>0)c.push([6,`🔼 Si gana, ${teamName(L)} alcanza la cima del grupo (provisional)`]);
+  if(pV[Vt]>oV)c.push([5,`🔼 Si gana, ${teamName(Vt)} se pone líder del grupo (provisional)`]);
+  else if(pV[Vt]===oV&&pV[Vt]>0)c.push([6,`🔼 Si gana, ${teamName(Vt)} alcanza la cima del grupo (provisional)`]);
   c.sort((a,b)=>a[0]-b[0]);
   return c.length?c[0][1]:'';
 }
