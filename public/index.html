@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.29.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.30.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2470,10 +2470,14 @@ function renderCountdown(){
   if(cdRenderedId===n.id){
     const t=document.getElementById('cdTimeText');
     if(t)t.textContent=fmtCountdown(ms);
+    const ins=document.getElementById('cdInsight');
+    if(ins){const tx=matchInsight(n);ins.textContent=tx;ins.style.display=tx?'block':'none';}
     return;
   }
   cdRenderedId=n.id;
-  box.innerHTML=`<div class="countdown" onclick="goToMatch(${n.id})" role="button" tabindex="0" style="cursor:pointer" aria-label="Ir a apostar por ${n.local} vs ${n.visita}"><div><div class="cd-label">Próximo partido · toca para apostar</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div></div><div class="cd-time"><span id="cdTimeText">${fmtCountdown(ms)}</span><small>${n.fecha} · ${n.hora}</small></div></div>`;
+  const insTxt=matchInsight(n);
+  const insHtml=`<div id="cdInsight" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:5px;line-height:1.3${insTxt?'':';display:none'}">${insTxt}</div>`;
+  box.innerHTML=`<div class="countdown" onclick="goToMatch(${n.id})" role="button" tabindex="0" style="cursor:pointer" aria-label="Ir a apostar por ${n.local} vs ${n.visita}"><div><div class="cd-label">Próximo partido · toca para apostar</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div>${insHtml}</div><div class="cd-time"><span id="cdTimeText">${fmtCountdown(ms)}</span><small>${n.fecha} · ${n.hora}</small></div></div>`;
 }
 // Lleva al usuario a la ficha del partido y la expande para apostar.
 function goToMatch(pid){
@@ -3665,6 +3669,65 @@ function bkFinHtml(allS,thirdsMap,winMap){
   return `<div class="bk-col bk-col-fin">${bkCard(BK_FIN,h,a,act?state.resultados?.[act.id]:null,true)}</div>`;
 }
 
+// ── ESCENARIOS DE CLASIFICACIÓN (matemático, SOLO resultados finales) ──────
+// Enumera todos los resultados posibles de los partidos restantes de un grupo y
+// determina, sin equivocarse: 1° asegurado, clasificación directa (top-2) asegurada,
+// y eliminación (no puede salir del 4°, único lugar que nunca avanza).
+function _grpMatches(grupo){ return (state.partidos||[]).filter(p=>p.grupo===grupo); }
+function _ptsFrom(grupo,resMap){
+  const pts={}; const ms=_grpMatches(grupo);
+  ms.forEach(p=>{pts[p.local]=pts[p.local]||0;pts[p.visita]=pts[p.visita]||0;});
+  ms.forEach(p=>{const r=resMap[p.id];if(!r||r.gl==null)return;
+    if(r.gl>r.gv)pts[p.local]+=3;else if(r.gv>r.gl)pts[p.visita]+=3;else{pts[p.local]++;pts[p.visita]++;}});
+  return pts;
+}
+// Veredictos de TODOS los equipos del grupo en una sola pasada. extra: hipotéticos {id,gl,gv}.
+function groupVerdicts(grupo,extra){
+  const ms=_grpMatches(grupo);
+  const teams=[...new Set(ms.flatMap(p=>[p.local,p.visita]))];
+  const base={};
+  ms.forEach(p=>{const r=state.resultados?.[p.id];if(r&&r.gl!=null&&!r.parcial)base[p.id]={gl:+r.gl,gv:+r.gv};});
+  (extra||[]).forEach(e=>{base[e.id]={gl:e.gl,gv:e.gv};});
+  const rem=ms.filter(p=>!base[p.id]);
+  const V={};teams.forEach(t=>V[t]={first:true,top2:true,elim:true});
+  const total=Math.pow(3,rem.length);
+  if(rem.length>9)return V; // salvaguarda (no debería pasar en grupos de 4)
+  for(let mask=0;mask<total;mask++){
+    const res={...base};let m=mask;
+    for(const p of rem){const k=m%3;m=Math.floor(m/3);
+      res[p.id]=k===0?{gl:1,gv:0}:k===1?{gl:0,gv:0}:{gl:0,gv:1};}
+    const pts=_ptsFrom(grupo,res);
+    for(const t of teams){
+      const myP=pts[t];let strictAbove=0,atOrAbove=0;
+      for(const u of teams){if(u===t)continue;if(pts[u]>myP)strictAbove++;if(pts[u]>=myP)atOrAbove++;}
+      if(atOrAbove!==0)V[t].first=false;   // 1° asegurado: nadie puede igualar/superar
+      if(atOrAbove>1)V[t].top2=false;      // top-2 asegurado: a lo más 1 igual/encima
+      if(strictAbove<3)V[t].elim=false;    // eliminado: SIEMPRE 3 estrictamente encima (4° fijo)
+    }
+  }
+  return V;
+}
+// Frase corta para la pill del próximo partido (o '' si no hay nada notable).
+function matchInsight(p){
+  if(!p||!p.grupo)return '';
+  const g=p.grupo,L=p.local,Vt=p.visita;
+  const base=groupVerdicts(g);
+  if(!base[L]||!base[Vt])return '';
+  const winL=groupVerdicts(g,[{id:p.id,gl:1,gv:0}]);
+  const winV=groupVerdicts(g,[{id:p.id,gl:0,gv:1}]);
+  const c=[];
+  if(!base[L].elim&&winV[L].elim)c.push([1,`🔻 Si pierde, ${teamName(L)} queda eliminado`]);
+  if(!base[Vt].elim&&winL[Vt].elim)c.push([1,`🔻 Si pierde, ${teamName(Vt)} queda eliminado`]);
+  if(!base[L].first&&winL[L].first)c.push([2,`🥇 Si gana, ${teamName(L)} termina 1° del grupo`]);
+  if(!base[Vt].first&&winV[Vt].first)c.push([2,`🥇 Si gana, ${teamName(Vt)} termina 1° del grupo`]);
+  if(!base[L].top2&&winL[L].top2)c.push([3,`✅ Si gana, ${teamName(L)} clasifica`]);
+  if(!base[Vt].top2&&winV[Vt].top2)c.push([3,`✅ Si gana, ${teamName(Vt)} clasifica`]);
+  if(base[L].top2)c.push([4,`✅ ${teamName(L)} ya está clasificado`]);
+  if(base[Vt].top2)c.push([4,`✅ ${teamName(Vt)} ya está clasificado`]);
+  c.sort((a,b)=>a[0]-b[0]);
+  return c.length?c[0][1]:'';
+}
+
 function renderElim(){
   const allS=calcAllStandings();
   const thirds=calcBestThirds(allS);
@@ -3674,11 +3737,14 @@ function renderElim(){
   // Grupos grid
   const groupsHtml=GRUPOS.map(g=>{
     const st=allS[g];if(!st||!st.length)return '';
+    const V=groupVerdicts(g);
     const rows=st.slice(0,4).map((r,i)=>{
       const isT=i===2&&thirds.find(t=>t.team===r.team);
       const cls=i===0?'r1':i===1?'r2':isT?'r3q':'';
       const liveDot=r.live?'<span style="color:#ff3b3b;font-size:9px;margin-right:3px" title="En vivo">🔴</span>':'';
-      return `<div class="eg-row ${cls}"><span class="eg-flag">${flagImg(r.team,13)||'🏳️'}</span><span class="eg-name">${liveDot}${teamName(r.team)}</span><span class="eg-pts">${r.pts}</span></div>`;
+      const v=V[r.team]||{};
+      const badge=v.first?'<span title="1° de grupo asegurado" style="margin-left:4px">⭐</span>':v.top2?'<span title="Clasificado a 16avos" style="margin-left:4px">✅</span>':v.elim?'<span title="Eliminado del Mundial" style="margin-left:4px">❌</span>':'';
+      return `<div class="eg-row ${cls}"><span class="eg-flag">${flagImg(r.team,13)||'🏳️'}</span><span class="eg-name">${liveDot}${teamName(r.team)}${badge}</span><span class="eg-pts">${r.pts}</span></div>`;
     }).join('');
     return `<div class="eg-card"><div class="eg-hdr">Grupo ${g}</div>${rows}</div>`;
   }).join('');
@@ -3730,7 +3796,8 @@ function renderElim(){
 
   document.getElementById('listaElim').innerHTML=`<div style="padding:0 2px 4px">
     <div class="sec-title">📊 Posiciones por grupo</div>
-    <div style="font-size:10px;color:var(--muted2);margin-bottom:10px">🟢 Avanza · 🟡 Posible 3er lugar · 🔴 En vivo (provisional)</div>
+    <div style="font-size:10px;color:var(--muted2);margin-bottom:4px">🟢 Avanza · 🟡 Posible 3er lugar · 🔴 En vivo (provisional)</div>
+    <div style="font-size:10px;color:var(--muted2);margin-bottom:10px">⭐ 1° asegurado · ✅ Clasificado (matemático) · ❌ Eliminado (matemático)</div>
     <div class="eg-grid">${groupsHtml}</div>
     ${thirdsHtml}
     ${elimHtml}
