@@ -794,22 +794,6 @@ export default async function handler(req, res) {
     return res.json({ ok: true, reclamados: regalos, jugadores: publicJugadores(jugadores, nombre) });
   }
 
-  if (action === "ajustarSaldo") {
-    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { nombre, delta, setSaldo } = payload;
-    if (!nombre) return res.status(400).json({ error: "Faltan datos" });
-    const jugadores = (await kv.get("jugadores")) || {};
-    const j = jugadores[nombre];
-    if (!j) return res.status(404).json({ error: "Jugador no encontrado" });
-    j.saldo = setSaldo !== undefined ? Number(setSaldo) : (j.saldo || 0) + Number(delta || 0);
-    // Actualizar rankPrev para que el delta no se muestre
-    const rankPrev = (await kv.get("rankPrev")) || {};
-    if (rankPrev.saldo) rankPrev.saldo[nombre] = j.saldo;
-    await kv.set("jugadores", jugadores);
-    await kv.set("rankPrev", rankPrev);
-    return res.json({ ok: true, nombre, saldo: j.saldo, jugadores: publicJugadores(jugadores) });
-  }
-
   // ── APOSTAR PARLAY (permite 1X2 + O/U del mismo partido) ───────────
   if (action === "apostarParlay") {
     const { nombre, legs, monto } = payload;
@@ -1165,6 +1149,18 @@ export default async function handler(req, res) {
       if (subs[nombre]) await sendPush(subs[nombre], { title: '💰 LudoPicks', body: mensaje.trim(), tag: 'saldo-' + Date.now(), url: '/' });
     }
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
+  }
+
+  if (action === "corregirNegativos") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const jugadores = (await kv.get("jugadores")) || {};
+    const corregidos = [];
+    for (const j of Object.values(jugadores)) {
+      if (j.saldo < 0) { corregidos.push({ nombre: j.nombre, saldoAntes: j.saldo }); j.saldo = 0; }
+    }
+    if (corregidos.length === 0) return res.json({ ok: true, corregidos: [] });
+    await kv.set("jugadores", jugadores);
+    return res.json({ ok: true, corregidos, jugadores: publicJugadores(jugadores) });
   }
 
   if (action === "bonusTodos") {
