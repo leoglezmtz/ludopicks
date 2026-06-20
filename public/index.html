@@ -1616,7 +1616,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.31.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.31.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3713,6 +3713,10 @@ function groupVerdicts(grupo,extra){
   ms.forEach(p=>{const r=state.resultados?.[p.id];if(r&&r.gl!=null&&!r.parcial)base[p.id]={gl:+r.gl,gv:+r.gv};});
   (extra||[]).forEach(e=>{base[e.id]={gl:e.gl,gv:e.gv};});
   const rem=ms.filter(p=>!base[p.id]);
+  // Head-to-head YA JUGADO (bloqueado): h2hWin[A][B]=true si A le ganó a B en un partido FINAL.
+  // Es sólido para desempates porque no depende de marcadores futuros.
+  const h2hWin={};teams.forEach(t=>h2hWin[t]={});
+  ms.forEach(p=>{const r=state.resultados?.[p.id];if(r&&r.gl!=null&&!r.parcial){if(+r.gl>+r.gv)h2hWin[p.local][p.visita]=true;else if(+r.gv>+r.gl)h2hWin[p.visita][p.local]=true;}});
   const V={};teams.forEach(t=>V[t]={first:true,top2:true,elim:true});
   const total=Math.pow(3,rem.length);
   if(rem.length>9)return V; // salvaguarda (no debería pasar en grupos de 4)
@@ -3722,11 +3726,16 @@ function groupVerdicts(grupo,extra){
       res[p.id]=k===0?{gl:1,gv:0}:k===1?{gl:0,gv:0}:{gl:0,gv:1};}
     const pts=_ptsFrom(grupo,res);
     for(const t of teams){
-      const myP=pts[t];let strictAbove=0,atOrAbove=0;
-      for(const u of teams){if(u===t)continue;if(pts[u]>myP)strictAbove++;if(pts[u]>=myP)atOrAbove++;}
-      if(atOrAbove!==0)V[t].first=false;   // 1° asegurado: nadie puede igualar/superar
-      if(atOrAbove>1)V[t].top2=false;      // top-2 asegurado: a lo más 1 igual/encima
-      if(strictAbove<3)V[t].elim=false;    // eliminado: SIEMPRE 3 estrictamente encima (4° fijo)
+      const myP=pts[t];
+      const tied=teams.filter(u=>u!==t&&pts[u]===myP);
+      const strictA=teams.filter(u=>u!==t&&pts[u]>myP).length;
+      // Empate a puntos: si es 2-way y el H2H ya jugado favorece a t, t va encima (no cuenta).
+      // couldBeAbove = clasificación (pesimista, sólido). defAbove = eliminación (sólido).
+      const couldBeAbove=strictA+tied.filter(o=>!(tied.length===1&&h2hWin[t][o])).length;
+      const defAbove=strictA+tied.filter(o=>tied.length===1&&h2hWin[o][t]).length;
+      if(couldBeAbove!==0)V[t].first=false;   // 1° asegurado: nadie puede quedar encima
+      if(couldBeAbove>1)V[t].top2=false;      // top-2 asegurado: a lo más 1 encima
+      if(defAbove<3)V[t].elim=false;          // eliminado: SIEMPRE 3 definitivamente encima
     }
   }
   return V;
