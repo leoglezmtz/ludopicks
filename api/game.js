@@ -162,6 +162,7 @@ function validarIncongruenciasParlay(legs) {
     const btts = plegs.find(l => esBtts(l.pick));
     const ouLinea = ou ? Number(ou.linea) : null;
 
+    // ── Combinaciones IMPOSIBLES (matemáticamente contradictorias) ──
     if (btts && btts.pick === "si" && ou && ou.pick === "under" && ouLinea <= 1.5) {
       return `Imposible en ${matchName}: "Ambos anotan: Sí" requiere al menos 2 goles, pero "Under ${ouLinea}" requiere máximo 1.`;
     }
@@ -175,6 +176,17 @@ function validarIncongruenciasParlay(legs) {
     }
     if (r1x2 && r1x2.pick === "empate" && btts && btts.pick === "no" && ou && ou.pick === "over") {
       return `Imposible en ${matchName}: "Empate + Ambos anotan: No" obliga a 0-0, pero "Over ${ouLinea}" requiere goles.`;
+    }
+
+    // ── Combinaciones CORRELACIONADAS (una implica la otra → momios inválidos) ──
+    // "Ambos anotan: Sí" garantiza ≥2 goles → Over ≤1.5 queda asegurado sin riesgo adicional.
+    if (btts && btts.pick === "si" && ou && ou.pick === "over" && ouLinea <= 1.5) {
+      return `Parlay inválido en ${matchName}: "Ambos anotan: Sí" garantiza al menos 2 goles, así que "Over ${ouLinea}" no agrega riesgo real al parlay. Juégalos por separado.`;
+    }
+    // Ganador (no empate) + Over ≤0.5: si alguien gana siempre hay ≥1 gol → Over 0.5 garantizado.
+    if (r1x2 && (r1x2.pick === "local" || r1x2.pick === "visita") && ou && ou.pick === "over" && ouLinea <= 0.5) {
+      const ganador = r1x2.pick === "local" ? m.local : m.visita;
+      return `Parlay inválido en ${matchName}: si ${ganador} gana, siempre habrá al menos 1 gol, así que "Over ${ouLinea}" no agrega riesgo real. Juégalos por separado.`;
     }
   }
   return null;
