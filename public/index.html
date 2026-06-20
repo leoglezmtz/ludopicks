@@ -1662,7 +1662,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.31.5';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.31.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4875,11 +4875,23 @@ async function renderAdminUsers(){
   const users=r.users||[];
   let html='';
   if(!users.length)html='<div class="empty"><div class="emoji">👥</div>No hay jugadores.</div>';
-  else{html='<div class="info-card">';
-    users.forEach(u=>{html+=`<div class="user-row"><div class="user-av">${buildAvSvg(u.avatar,36)}</div><div class="user-info"><div class="user-name">${u.nombre}</div><div class="user-saldo">$${Math.round(u.saldo).toLocaleString()} · PIN: ${u.pin}</div></div><div class="user-actions">
-      <button class="ua-btn" onclick="adminRenombrar('${u.nombre.replace(/'/g,"\\'")}')">✏️</button>
-      <button class="ua-btn" onclick="adminResetPin('${u.nombre.replace(/'/g,"\\'")}')">🔑</button>
-      <button class="ua-btn danger" onclick="adminBorrar('${u.nombre.replace(/'/g,"\\'")}')">🗑️</button></div></div>`;});
+  else{
+    const negativos=users.filter(u=>u.saldo<0);
+    if(negativos.length){
+      html+=`<div style="background:rgba(226,75,74,.1);border:1px solid rgba(226,75,74,.35);border-radius:12px;padding:10px 14px;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:800;color:var(--rl);margin-bottom:6px">⚠️ Saldo negativo (${negativos.length} jugador${negativos.length>1?'es':''})</div>
+        ${negativos.map(u=>`<div style="font-size:12px;color:rgba(255,255,255,.7);padding:2px 0"><b>${u.nombre}</b>: <span style="color:var(--rl)">$${Math.round(u.saldo).toLocaleString()}</span> · En juego: $${Math.round(u.enJuego).toLocaleString()}</div>`).join('')}
+        <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4">Probable causa: pago de apuesta ganada → resultado revertido → claw-back superó saldo disponible. Usa "Ajuste manual" para corregir si corresponde.</div>
+      </div>`;
+    }
+    html+='<div class="info-card">';
+    users.forEach(u=>{
+      const neg=u.saldo<0;
+      html+=`<div class="user-row"><div class="user-av">${buildAvSvg(u.avatar,36)}</div><div class="user-info"><div class="user-name">${u.nombre}${neg?'<span style="color:var(--rl);font-size:10px;margin-left:5px">⚠️ negativo</span>':''}</div><div class="user-saldo" style="${neg?'color:var(--rl)':''}">$${Math.round(u.saldo).toLocaleString()}${u.enJuego?` <span style="font-size:10px;color:var(--muted)">(+$${Math.round(u.enJuego).toLocaleString()} en juego)</span>`:''} · PIN: ${u.pin}</div></div><div class="user-actions">
+        <button class="ua-btn" onclick="adminRenombrar('${u.nombre.replace(/'/g,"\\'")}')">✏️</button>
+        <button class="ua-btn" onclick="adminResetPin('${u.nombre.replace(/'/g,"\\'")}')">🔑</button>
+        <button class="ua-btn danger" onclick="adminBorrar('${u.nombre.replace(/'/g,"\\'")}')">🗑️</button></div></div>`;
+    });
     html+='</div>';}
   document.getElementById('listaUsuariosAdmin').innerHTML=html;
 }

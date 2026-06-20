@@ -473,7 +473,7 @@ export default async function handler(req, res) {
         if (bKey === mktKey) { saldoDisp += b.monto; prevKey = k; break; }
       }
     }
-    if (mInt > saldoDisp) return res.status(400).json({ error: "Saldo insuficiente" });
+    if (saldoDisp < 0 || mInt > saldoDisp) return res.status(400).json({ error: "Saldo insuficiente" });
     if (prevKey) delete apuestas[prevKey];
 
     j.saldo = saldoDisp - mInt;
@@ -501,7 +501,7 @@ export default async function handler(req, res) {
     const prevKey = Object.keys(apuestas).find(k => apuestas[k].tipo === "campeon" && apuestas[k].nombre === nombre && (apuestas[k].status || "pending") === "pending");
     let saldoDisp = j.saldo;
     if (prevKey) { saldoDisp += apuestas[prevKey].monto; delete apuestas[prevKey]; }
-    if (mInt > saldoDisp) return res.status(400).json({ error: "Saldo insuficiente" });
+    if (saldoDisp < 0 || mInt > saldoDisp) return res.status(400).json({ error: "Saldo insuficiente" });
     j.saldo = saldoDisp - mInt;
     const id = "b" + Date.now() + Math.random().toString(36).slice(2, 6);
     apuestas[id] = { id, tipo: "campeon", nombre, equipo, monto: mInt, momio, status: "pending", payout: 0, ts: Date.now() };
@@ -821,7 +821,7 @@ export default async function handler(req, res) {
     if (!Array.isArray(legs) || legs.length < 2) return res.status(400).json({ error: "Un parlay necesita 2+ selecciones" });
     const mInt = Math.floor(Number(monto));
     if (!mInt || mInt < APUESTA_MIN) return res.status(400).json({ error: `Mínimo $${APUESTA_MIN}` });
-    if (mInt > j.saldo) return res.status(400).json({ error: "Saldo insuficiente" });
+    if (j.saldo < 0 || mInt > j.saldo) return res.status(400).json({ error: "Saldo insuficiente" });
 
     const vistos = new Set();
     let momioTotal = 1;
@@ -1243,7 +1243,18 @@ export default async function handler(req, res) {
   if (action === "adminGetUsers") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     const jugadores = (await kv.get("jugadores")) || {};
-    const users = Object.values(jugadores).map(j => ({ nombre: j.nombre, pin: j.pin, saldo: j.saldo, creado: j.creado, avatar: j.avatar || null }));
+    const apuestas  = (await kv.get("apuestas"))  || {};
+    // Calcular saldo en juego por jugador (apuestas pendientes)
+    const enJuego = {};
+    for (const b of Object.values(apuestas)) {
+      if ((b.status || "pending") === "pending" && b.nombre) {
+        enJuego[b.nombre] = (enJuego[b.nombre] || 0) + (b.monto || 0);
+      }
+    }
+    const users = Object.values(jugadores).map(j => ({
+      nombre: j.nombre, pin: j.pin, saldo: j.saldo,
+      enJuego: enJuego[j.nombre] || 0, creado: j.creado, avatar: j.avatar || null
+    }));
     return res.json({ ok: true, users });
   }
 
