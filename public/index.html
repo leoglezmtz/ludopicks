@@ -1671,7 +1671,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.31.7';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.32.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2212,7 +2212,7 @@ function maybeToastTickets(){
 function checkCancelledBets(){
   if(!me||!state.apuestas)return;
   const seenKey='ludo_seen_cancels';
-  const seen=new Set(JSON.parse(localStorage.getItem(seenKey)||'[]'));
+  let seen;try{seen=new Set(JSON.parse(localStorage.getItem(seenKey)||'[]'));}catch{seen=new Set();}
   const nuevas=Object.values(state.apuestas).filter(b=>
     b.nombre===me&&b.status==='cancelled'&&b.cancelMsg&&!seen.has(b.id)
   );
@@ -4889,14 +4889,14 @@ async function renderAdminUsers(){
     if(negativos.length){
       html+=`<div style="background:rgba(226,75,74,.1);border:1px solid rgba(226,75,74,.35);border-radius:12px;padding:10px 14px;margin-bottom:10px">
         <div style="font-size:12px;font-weight:800;color:var(--rl);margin-bottom:6px">⚠️ Saldo negativo (${negativos.length} jugador${negativos.length>1?'es':''})</div>
-        ${negativos.map(u=>`<div style="font-size:12px;color:rgba(255,255,255,.7);padding:2px 0"><b>${u.nombre}</b>: <span style="color:var(--rl)">$${Math.round(u.saldo).toLocaleString()}</span> · En juego: $${Math.round(u.enJuego).toLocaleString()}</div>`).join('')}
+        ${negativos.map(u=>`<div style="font-size:12px;color:rgba(255,255,255,.7);padding:2px 0"><b>${esc(u.nombre)}</b>: <span style="color:var(--rl)">$${Math.round(u.saldo).toLocaleString()}</span> · En juego: $${Math.round(u.enJuego).toLocaleString()}</div>`).join('')}
         <div style="font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.4">Probable causa: pago de apuesta ganada → resultado revertido → claw-back superó saldo disponible. Usa "Ajuste manual" para corregir si corresponde.</div>
       </div>`;
     }
     html+='<div class="info-card">';
     users.forEach(u=>{
       const neg=u.saldo<0;
-      html+=`<div class="user-row"><div class="user-av">${buildAvSvg(u.avatar,36)}</div><div class="user-info"><div class="user-name">${u.nombre}${neg?'<span style="color:var(--rl);font-size:10px;margin-left:5px">⚠️ negativo</span>':''}</div><div class="user-saldo" style="${neg?'color:var(--rl)':''}">$${Math.round(u.saldo).toLocaleString()}${u.enJuego?` <span style="font-size:10px;color:var(--muted)">(+$${Math.round(u.enJuego).toLocaleString()} en juego)</span>`:''} · PIN: ${u.pin}</div></div><div class="user-actions">
+      html+=`<div class="user-row"><div class="user-av">${buildAvSvg(u.avatar,36)}</div><div class="user-info"><div class="user-name">${esc(u.nombre)}${neg?'<span style="color:var(--rl);font-size:10px;margin-left:5px">⚠️ negativo</span>':''}</div><div class="user-saldo" style="${neg?'color:var(--rl)':''}">$${Math.round(u.saldo).toLocaleString()}${u.enJuego?` <span style="font-size:10px;color:var(--muted)">(+$${Math.round(u.enJuego).toLocaleString()} en juego)</span>`:''} · PIN: ${u.pin}</div></div><div class="user-actions">
         <button class="ua-btn" onclick="adminRenombrar('${u.nombre.replace(/'/g,"\\'")}')">✏️</button>
         <button class="ua-btn" onclick="adminResetPin('${u.nombre.replace(/'/g,"\\'")}')">🔑</button>
         <button class="ua-btn danger" onclick="adminBorrar('${u.nombre.replace(/'/g,"\\'")}')">🗑️</button></div></div>`;
@@ -5053,7 +5053,7 @@ async function doCorregirParlays(btn){
   const por={};
   r.afectados.forEach(a=>{if(!por[a.nombre])por[a.nombre]={monto:0,n:0};por[a.nombre].monto+=a.monto;por[a.nombre].n++;});
   el.innerHTML=`<div style="color:var(--gold);font-size:12.5px;font-weight:700;margin-bottom:6px">↩️ ${r.afectados.length} parlay(s) anulado(s) y reembolsado(s)</div>`+
-    Object.entries(por).map(([nombre,info])=>`<div style="font-size:12px;color:rgba(255,255,255,.7);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.07)">• <b>${nombre}</b>: ${info.n} parlay${info.n>1?'s':''} · +$${info.monto.toLocaleString()} devuelto(s)</div>`).join('');
+    Object.entries(por).map(([nombre,info])=>`<div style="font-size:12px;color:rgba(255,255,255,.7);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.07)">• <b>${esc(nombre)}</b>: ${info.n} parlay${info.n>1?'s':''} · +$${info.monto.toLocaleString()} devuelto(s)</div>`).join('');
   toast(`↩️ ${r.afectados.length} parlay(s) corregido(s)`);
 }
 async function doCorregirNegativos(btn){
@@ -5069,7 +5069,7 @@ async function doCorregirNegativos(btn){
   if(r.jugadores)state.jugadores=r.jugadores;
   refreshHero();renderAdminUsers();
   el.innerHTML=`<div style="color:var(--gold);font-size:12.5px;font-weight:700;margin-bottom:6px">✅ ${r.corregidos.length} jugador(es) corregido(s)</div>`+
-    r.corregidos.map(c=>`<div style="font-size:12px;color:rgba(255,255,255,.7);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.07)">• <b>${c.nombre}</b>: $${c.saldoAntes.toLocaleString()} → $0</div>`).join('');
+    r.corregidos.map(c=>`<div style="font-size:12px;color:rgba(255,255,255,.7);padding:3px 0;border-bottom:1px solid rgba(255,255,255,.07)">• <b>${esc(c.nombre)}</b>: $${c.saldoAntes.toLocaleString()} → $0</div>`).join('');
   toast(`✅ Saldos negativos corregidos`);
 }
 async function doRecotizar(){
@@ -5099,6 +5099,7 @@ async function resetTodo(){
 }
 
 // ── HELPERS ───────────────────────────────────────────────────
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeModal(){document.getElementById('overlay').style.display='none';}
 function modalOpen(){return document.getElementById('overlay').style.display==='flex'||document.getElementById('ruletaOv').classList.contains('show');}
 function shareText(text){

@@ -312,6 +312,7 @@ function settleAll(jugadores, apuestas, resultados, campeon, especiales, liveSco
   especiales = especiales || {};
   liveScores = liveScores || {};
   for (const b of Object.values(apuestas)) {
+    if (b.status === "cancelled") continue;
     let ns;
     if (b.tipo === "campeon") {
       ns = !campeon ? "pending" : (b.equipo === campeon ? "won" : "lost");
@@ -329,7 +330,7 @@ function settleAll(jugadores, apuestas, resultados, campeon, especiales, liveSco
     const j = jugadores[b.nombre];
     if (!j) { b.status = ns; continue; }
     if (old === ns) continue;
-    if (old === "won") j.saldo -= (b.payout || 0);           // revierte pago anterior
+    if (old === "won") j.saldo = Math.max(0, j.saldo - (b.payout || 0)); // revierte pago anterior
     if (ns === "won") {
       const factor = b.tipo === "parlay" ? b.momioTotal : b.momio;
       const pay = Math.round(b.monto * factor);
@@ -370,16 +371,19 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method === "GET") {
-    const jugadores  = await grantTicketsAllIfNeeded(); // concede tickets diarios automáticamente
-    const apuestas   = (await kv.get("apuestas"))   || {};
-    const resultados = (await kv.get("resultados")) || {};
-    const rankPrev   = (await kv.get("rankPrev"))   || {};
-    const campeon    = (await kv.get("campeon"))    || null;
-    const especiales = await loadEspeciales();
-    const jackpot    = (await kv.get("jackpot")) ?? RULETA.jackpotSemilla;
-    const ruletaHist = (await kv.get("ruletaHist")) || [];
-    const liveScores = (await kv.get("liveScores")) || {};
-    const tabla_orden = (await kv.get("tabla_orden")) || {};
+    const jugadores  = await grantTicketsAllIfNeeded(); // concede tickets diarios (puede escribir KV)
+    const [apuestas, resultados, rankPrev, campeon, especiales, jackpot, ruletaHist, liveScores, tabla_orden, fairplay] = await Promise.all([
+      kv.get("apuestas").then(v => v || {}),
+      kv.get("resultados").then(v => v || {}),
+      kv.get("rankPrev").then(v => v || {}),
+      kv.get("campeon").then(v => v || null),
+      loadEspeciales(),
+      kv.get("jackpot").then(v => v ?? RULETA.jackpotSemilla),
+      kv.get("ruletaHist").then(v => v || []),
+      kv.get("liveScores").then(v => v || {}),
+      kv.get("tabla_orden").then(v => v || {}),
+      kv.get("fairplay").then(v => v || {}),
+    ]);
     return res.json({
       jugadores: publicJugadores(jugadores, req.query.nombre || null), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
@@ -388,8 +392,7 @@ export default async function handler(req, res) {
       lineas_tarjetas: LINEAS_TARJETAS, linea_tarjetas_default: LINEA_TARJETAS_DEFAULT, momios_tarjetas: MOMIOS_TARJETAS,
       campeon_odds: CAMPEON, campeon_cierra: CAMPEON_CIERRA, campeon,
       especiales,
-      ruleta: RULETA, jackpot, ruletaHist, liveScores, tabla_orden,
-      fairplay: (await kv.get("fairplay")) || {},
+      ruleta: RULETA, jackpot, ruletaHist, liveScores, tabla_orden, fairplay,
       now: Date.now(),
     });
   }
@@ -434,9 +437,11 @@ export default async function handler(req, res) {
   // ── APOSTAR (simple: 1X2 u over/under con línea) ───────────────────
   if (action === "apostar") {
     const { nombre, partidoId, pick, monto, linea, mercado: subMkt } = payload;
-    const jugadores  = (await kv.get("jugadores"))  || {};
-    const apuestas   = (await kv.get("apuestas"))   || {};
-    const resultados = (await kv.get("resultados")) || {};
+    const [jugadores, apuestas, resultados] = await Promise.all([
+      kv.get("jugadores").then(v => v || {}),
+      kv.get("apuestas").then(v => v || {}),
+      kv.get("resultados").then(v => v || {}),
+    ]);
     const j = jugadores[nombre];
     if (!j) return res.status(400).json({ error: "Jugador no existe" });
     const m = BY_ID[partidoId];
@@ -797,9 +802,11 @@ export default async function handler(req, res) {
   // ── APOSTAR PARLAY (permite 1X2 + O/U del mismo partido) ───────────
   if (action === "apostarParlay") {
     const { nombre, legs, monto } = payload;
-    const jugadores  = (await kv.get("jugadores"))  || {};
-    const apuestas   = (await kv.get("apuestas"))   || {};
-    const resultados = (await kv.get("resultados")) || {};
+    const [jugadores, apuestas, resultados] = await Promise.all([
+      kv.get("jugadores").then(v => v || {}),
+      kv.get("apuestas").then(v => v || {}),
+      kv.get("resultados").then(v => v || {}),
+    ]);
     const j = jugadores[nombre];
     if (!j) return res.status(400).json({ error: "Jugador no existe" });
     if (!Array.isArray(legs) || legs.length < 2) return res.status(400).json({ error: "Un parlay necesita 2+ selecciones" });
@@ -1138,17 +1145,25 @@ export default async function handler(req, res) {
   if (action === "ajustarSaldo") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     const { nombre, monto, mensaje } = payload;
-    const jugadores = (await kv.get("jugadores")) || {};
-    if (!jugadores[nombre]) return res.status(400).json({ error: "Jugador no existe" });
     const delta = Math.round(Number(monto));
-    jugadores[nombre].saldo = Math.max(0, jugadores[nombre].saldo + delta);
-    await kv.set("jugadores", jugadores);
-    // Push opcional al jugador (típicamente al regalarle dinero)
+    if (isNaN(delta)) return res.status(400).json({ error: "Monto inválido" });
+    const [jugadores, rankPrev] = await Promise.all([
+      kv.get("jugadores").then(v => v || {}),
+      kv.get("rankPrev").then(v => v || {}),
+    ]);
+    if (!jugadores[nombre]) return res.status(400).json({ error: "Jugador no existe" });
+    const saldoAntes = jugadores[nombre].saldo;
+    jugadores[nombre].saldo = saldoAntes + delta;
+    if (rankPrev.saldo) rankPrev.saldo[nombre] = jugadores[nombre].saldo;
+    const saves = [kv.set("jugadores", jugadores), kv.set("rankPrev", rankPrev)];
     if (mensaje && mensaje.trim()) {
-      const subs = (await kv.get("pushSubs")) || {};
-      if (subs[nombre]) await sendPush(subs[nombre], { title: '💰 LudoPicks', body: mensaje.trim(), tag: 'saldo-' + Date.now(), url: '/' });
+      saves.push(kv.get("pushSubs").then(subs => {
+        if (subs && subs[nombre]) return sendPush(subs[nombre], { title: '💰 LudoPicks', body: mensaje.trim(), tag: 'saldo-' + Date.now(), url: '/' });
+      }));
     }
-    return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
+    await Promise.all(saves);
+    const aplicado = jugadores[nombre].saldo - saldoAntes;
+    return res.json({ ok: true, aplicado, jugadores: publicJugadores(jugadores) });
   }
 
   if (action === "corregirNegativos") {
@@ -1166,14 +1181,23 @@ export default async function handler(req, res) {
   if (action === "bonusTodos") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
     const monto = Math.round(Number(payload.monto));
+    if (isNaN(monto)) return res.status(400).json({ error: "Monto inválido" });
     const mensaje = payload.mensaje;
-    const jugadores = (await kv.get("jugadores")) || {};
-    for (const j of Object.values(jugadores)) j.saldo = Math.max(0, j.saldo + monto);
-    await kv.set("jugadores", jugadores);
-    if (mensaje && mensaje.trim()) {
-      const subs = (await kv.get("pushSubs")) || {};
-      await broadcastPush(subs, { title: '💰 LudoPicks', body: mensaje.trim(), tag: 'bonus-' + Date.now(), url: '/' });
+    const [jugadores, rankPrev] = await Promise.all([
+      kv.get("jugadores").then(v => v || {}),
+      kv.get("rankPrev").then(v => v || {}),
+    ]);
+    for (const j of Object.values(jugadores)) {
+      j.saldo = Math.max(0, j.saldo + monto);
+      if (rankPrev.saldo) rankPrev.saldo[j.nombre] = j.saldo;
     }
+    const saves = [kv.set("jugadores", jugadores), kv.set("rankPrev", rankPrev)];
+    if (mensaje && mensaje.trim()) {
+      saves.push(kv.get("pushSubs").then(subs => {
+        if (subs) return broadcastPush(subs, { title: '💰 LudoPicks', body: mensaje.trim(), tag: 'bonus-' + Date.now(), url: '/' });
+      }));
+    }
+    await Promise.all(saves);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
 
@@ -1336,9 +1360,11 @@ export default async function handler(req, res) {
 
   if (action === "corregirParlaysCorrelacionados") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const jugadores = (await kv.get("jugadores")) || {};
-    const apuestas  = (await kv.get("apuestas"))  || {};
-    const pushSubs  = (await kv.get("pushSubs"))   || {};
+    const [jugadores, apuestas, pushSubs] = await Promise.all([
+      kv.get("jugadores").then(v => v || {}),
+      kv.get("apuestas").then(v => v || {}),
+      kv.get("pushSubs").then(v => v || {}),
+    ]);
 
     const afectados = [];
     for (const [id, b] of Object.entries(apuestas)) {
