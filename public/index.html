@@ -1209,21 +1209,6 @@ select option{background:#161c30;color:#fff}
         <span style="font-size:16px">📲</span> Invitar
       </button>
     </div>
-    <div id="pushBanner" style="display:none;margin-top:10px">
-      <div style="background:linear-gradient(135deg,rgba(239,159,39,.16),rgba(239,159,39,.07));border:1.5px solid rgba(239,159,39,.38);border-radius:14px;padding:12px 14px;position:relative">
-        <button onclick="dismissPushBanner()" style="position:absolute;top:7px;right:10px;background:none;border:none;color:rgba(255,255,255,.35);font-size:15px;cursor:pointer;line-height:1;padding:0" aria-label="Cerrar">✕</button>
-        <div style="display:flex;align-items:center;gap:10px;padding-right:18px">
-          <div style="font-size:28px">🔔</div>
-          <div>
-            <div style="font-size:13px;font-weight:800;color:#FAC775;margin-bottom:2px">¡Activa las notificaciones!</div>
-            <div style="font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.4">Entérate de bonos, resultados y premios al instante — sin tener que abrir la app.</div>
-          </div>
-        </div>
-        <button onclick="activarNotifs()" style="width:100%;margin-top:10px;padding:9px;background:rgba(239,159,39,.28);border:1.5px solid rgba(239,159,39,.55);border-radius:10px;color:#FAC775;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.3px">
-          🔔 Activar notificaciones
-        </button>
-      </div>
-    </div>
   </div>
   <nav class="nav">
     <button id="tab-partidos" class="on" onclick="showTab('partidos')"><i class="ti ti-ballpen"></i>Partidos</button>
@@ -1235,7 +1220,7 @@ select option{background:#161c30;color:#fff}
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
   <div class="body">
-    <div id="tabc-partidos" class="tabc"><div id="especialBanner"></div><div id="installCard"></div><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
+    <div id="tabc-partidos" class="tabc"><div id="pushBannerSlot"></div><div id="especialBanner"></div><div id="installCard"></div><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
     <div id="tabc-mis" class="tabc"><div id="listaMis"></div></div>
     <div id="tabc-ranking" class="tabc"><div id="listaRanking"></div></div>
     <div id="tabc-records" class="tabc"><div id="listaRecords"></div></div>
@@ -1606,28 +1591,42 @@ function urlBase64ToUint8(b64){
   const raw=atob(p);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
 // Verifica el estado del permiso y muestra/oculta el banner
+function renderPushBanner(show){
+  const slot=document.getElementById('pushBannerSlot');
+  if(!slot)return;
+  if(!show){slot.innerHTML='';return;}
+  slot.innerHTML=`<div style="background:linear-gradient(135deg,rgba(239,159,39,.16),rgba(239,159,39,.07));border:1.5px solid rgba(239,159,39,.38);border-radius:14px;padding:12px 14px;position:relative;margin-bottom:10px">
+    <button onclick="dismissPushBanner()" style="position:absolute;top:7px;right:10px;background:none;border:none;color:rgba(255,255,255,.35);font-size:15px;cursor:pointer;line-height:1;padding:0" aria-label="Cerrar">✕</button>
+    <div style="display:flex;align-items:center;gap:10px;padding-right:18px">
+      <div style="font-size:28px">🔔</div>
+      <div>
+        <div style="font-size:13px;font-weight:800;color:#FAC775;margin-bottom:2px">¡Activa las notificaciones!</div>
+        <div style="font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.4">Entérate de bonos, resultados y premios al instante — sin tener que abrir la app.</div>
+      </div>
+    </div>
+    <button onclick="activarNotifs()" style="width:100%;margin-top:10px;padding:9px;background:rgba(239,159,39,.28);border:1.5px solid rgba(239,159,39,.55);border-radius:10px;color:#FAC775;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.3px">🔔 Activar notificaciones</button>
+  </div>`;
+}
 async function checkNotifStatus(){
-  const banner=document.getElementById('pushBanner');
-  if(!banner)return;
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)){banner.style.display='none';return;}
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){renderPushBanner(false);return;}
   const dismissed=Number(localStorage.getItem('ludo_push_dismiss')||0);
-  if(Date.now()-dismissed < 3*24*60*60*1000){banner.style.display='none';return;}
+  if(Date.now()-dismissed < 3*24*60*60*1000){renderPushBanner(false);return;}
   const perm=Notification.permission;
   if(perm==='granted'){
     try{
       const sw=await navigator.serviceWorker.ready;
       const sub=await sw.pushManager.getSubscription();
-      banner.style.display=sub?'none':'block';
-    }catch{banner.style.display='none';}
+      renderPushBanner(!sub);
+    }catch{renderPushBanner(false);}
   } else if(perm==='denied'){
-    banner.style.display='none';
+    renderPushBanner(false);
   } else {
-    banner.style.display='block';
+    renderPushBanner(true);
   }
 }
 function dismissPushBanner(){
   localStorage.setItem('ludo_push_dismiss', Date.now());
-  document.getElementById('pushBanner').style.display='none';
+  renderPushBanner(false);
 }
 function maybeShowPushPromo(){
   if(!('serviceWorker' in navigator)||!('PushManager' in window))return false;
@@ -1660,7 +1659,7 @@ async function activarNotifs(){
     let sub=await sw.pushManager.getSubscription();
     if(!sub)sub=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8(VAPID_PUB)});
     await api({action:'saveSub',payload:{nombre:me,pin:myPin,sub:sub.toJSON()}});
-    document.getElementById('pushBanner').style.display='none';
+    renderPushBanner(false);
     localStorage.setItem('ludo_push_dismiss','0');
     toast('🔔 ¡Notificaciones activadas! Te avisamos cuando ganes.');
   }catch(e){toast('No se pudieron activar: '+e.message);}
@@ -1708,7 +1707,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.32.4';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.32.5';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
