@@ -1348,6 +1348,37 @@ export default async function handler(req, res) {
     return res.json({ ok: true, enviadas: Object.keys(subs).length });
   }
 
+  // ── CRON: push pre-partido (llamado por GitHub Actions cada 5 min) ──
+  if (action === "cronPush") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const now = Date.now();
+    const TARGET = 30 * 60 * 1000; // 30 min antes del kickoff
+    const SLACK  =  6 * 60 * 1000; // ±6 min — cubre retrasos del cron
+    const upcoming = PARTIDOS.filter(p => {
+      const diff = p.kickoff - now;
+      return diff >= TARGET - SLACK && diff <= TARGET + SLACK;
+    });
+    if (!upcoming.length) return res.json({ ok: true, sent: 0 });
+    const [subs, cronSent] = await Promise.all([
+      kv.get("pushSubs").then(v => v || {}),
+      kv.get("cronPushSent").then(v => v || {}),
+    ]);
+    let sentCount = 0;
+    for (const p of upcoming) {
+      if (cronSent[p.id]) continue;
+      await broadcastPush(subs, {
+        title: `⚽ ¡En 30 min! ${p.local} vs ${p.visita}`,
+        body: `Cierra tus apuestas antes del pitazo — ¡entra a LudoPicks! 🎯`,
+        tag: `prematch-${p.id}`,
+        url: '/',
+      });
+      cronSent[p.id] = now;
+      sentCount++;
+    }
+    if (sentCount > 0) await kv.set("cronPushSent", cronSent);
+    return res.json({ ok: true, sent: sentCount, matches: upcoming.map(p => `${p.local}vs${p.visita}`) });
+  }
+
   // ── RESET ──────────────────────────────────────────────────────────
   if (action === "reset") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });

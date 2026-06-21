@@ -1,0 +1,25 @@
+name: Pre-match push notification
+
+on:
+  schedule:
+    # Cada 5 minutos — detecta partidos que arrancan en ~30 min
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # permite correrlo manualmente desde GitHub
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar push pre-partido
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://ludopicks.vercel.app/api/game" \
+            -H "Content-Type: application/json" \
+            -d "{\"action\":\"cronPush\",\"payload\":{\"adminKey\":\"${{ secrets.ADMIN_KEY }}\"}}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -1)
+          echo "HTTP $HTTP_CODE — $BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Error: respuesta no-200"
+            exit 1
+          fi
