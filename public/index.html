@@ -259,7 +259,7 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .rl-tab.on{background:rgba(255,255,255,.10);color:var(--rl-ink)}
 
 /* Ruleta */
-.rl-wheel-wrap{position:relative;width:min(300px,82vw);aspect-ratio:1;margin:14px auto 6px}
+.rl-wheel-wrap{position:relative;width:min(300px,82vw);aspect-ratio:1;margin:14px auto 6px;touch-action:none;user-select:none;cursor:grab}
 .rl-wheel-glow{position:absolute;inset:-22px;border-radius:50%;background:radial-gradient(circle,rgba(39,212,155,.22),transparent 65%);filter:blur(6px);animation:rlBreathe 3.4s ease-in-out infinite;z-index:0}
 @keyframes rlBreathe{50%{opacity:.55;transform:scale(1.04)}}
 .rl-rim{position:absolute;inset:0;border-radius:50%;z-index:1;padding:11px;background:radial-gradient(circle at 50% 35%,#4a5d80,#1a2840 70%);box-shadow:0 18px 40px -16px rgba(0,0,0,.9),inset 0 2px 6px rgba(255,255,255,.18),inset 0 -6px 16px rgba(0,0,0,.6)}
@@ -268,7 +268,7 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 @keyframes rlBlink{50%{opacity:.35}}
 .rl-wheel{position:absolute;inset:11px;border-radius:50%;z-index:2;will-change:transform;filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
 .rl-wheel svg{width:100%;height:100%;display:block;border-radius:50%}
-.rl-hub{position:absolute;top:50%;left:50%;z-index:5;width:54px;height:54px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff3cf,#e0a93a 55%,#9a7420);box-shadow:0 4px 14px rgba(0,0,0,.6),inset 0 2px 4px rgba(255,255,255,.7),inset 0 -3px 6px rgba(0,0,0,.4);display:grid;place-items:center;font-size:22px}
+.rl-hub{position:absolute;top:50%;left:50%;z-index:5;width:54px;height:54px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff3cf,#e0a93a 55%,#9a7420);box-shadow:0 4px 14px rgba(0,0,0,.6),inset 0 2px 4px rgba(255,255,255,.7),inset 0 -3px 6px rgba(0,0,0,.4);display:grid;place-items:center;font-size:22px;cursor:pointer}
 .rl-pointer{position:absolute;top:-6px;left:50%;z-index:6;transform:translateX(-50%);width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-top:26px solid var(--rl-gold);filter:drop-shadow(0 3px 4px rgba(0,0,0,.6));transform-origin:50% 0}
 .rl-pointer.kick{animation:rlKick .12s ease}
 @keyframes rlKick{40%{transform:translateX(-50%) rotate(-9deg)}}
@@ -1428,7 +1428,7 @@ select option{background:#161c30;color:#fff}
             <div class="rl-rim"></div>
             <div class="rl-wheel" id="ruletaWheel"></div>
             <div class="rl-bulbs" id="ruletaBulbs"></div>
-            <div class="rl-hub">🎯</div>
+            <div class="rl-hub" onclick="spinRuleta()">🎯</div>
           </div>
           <div class="rl-spin-row">
             <div class="rl-tickets"><span class="rl-tkpill">🎟️ <span id="ruletaTixN">0</span></span><span>tickets · <span class="rl-tk-free">2 gratis / día</span></span></div>
@@ -1707,7 +1707,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.32.5';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.32.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -5337,6 +5337,57 @@ function ruletaTotalParaCandado(){
 }
 function ruletaIsLocked(){return ruletaTotalParaCandado()>=ruletaLockLimit();}
 
+function initRuletaInteraction(){
+  const wrap=document.querySelector('.rl-wheel-wrap');
+  if(!wrap||wrap._rlDragInit)return;
+  wrap._rlDragInit=true;
+  let drag=null;
+  function getAngle(cx,cy){
+    const r=wrap.getBoundingClientRect();
+    return Math.atan2(cy-r.top-r.height/2,cx-r.left-r.width/2)*180/Math.PI;
+  }
+  wrap.addEventListener('pointerdown',e=>{
+    if(ruletaSpinning)return;
+    const a=getAngle(e.clientX,e.clientY);
+    drag={lastA:a,delta:0,hist:[{a,t:e.timeStamp}]};
+    wrap.setPointerCapture(e.pointerId);
+    wrap.style.cursor='grabbing';
+    e.preventDefault();
+  },{passive:false});
+  wrap.addEventListener('pointermove',e=>{
+    if(!drag||ruletaSpinning)return;
+    const a=getAngle(e.clientX,e.clientY);
+    let diff=a-drag.lastA;
+    if(diff>180)diff-=360;if(diff<-180)diff+=360;
+    drag.delta+=diff;drag.lastA=a;
+    drag.hist.push({a,t:e.timeStamp});
+    if(drag.hist.length>8)drag.hist.shift();
+    const w=document.getElementById('ruletaWheel');
+    if(w)w.style.transform=`rotate(${ruletaRot+drag.delta}deg)`;
+  });
+  function onRelease(){
+    if(!drag)return;
+    const hist=drag.hist,totalDelta=Math.abs(drag.delta);
+    drag=null;wrap.style.cursor='grab';
+    let vel=0;
+    if(hist.length>=2){
+      const last=hist[hist.length-1],prev=hist[hist.length-2],dt=last.t-prev.t;
+      if(dt>0){let da=last.a-prev.a;if(da>180)da-=360;if(da<-180)da+=360;vel=Math.abs(da/dt);}
+    }
+    const w=document.getElementById('ruletaWheel');
+    if(vel>0.12||totalDelta>25){
+      if(w)w.style.transform=`rotate(${ruletaRot}deg)`;
+      spinRuleta();
+    }else{
+      if(w){w.style.transition='transform 0.3s ease-out';w.style.transform=`rotate(${ruletaRot}deg)`;setTimeout(()=>{w.style.transition='';},350);}
+    }
+  }
+  wrap.addEventListener('pointerup',onRelease);
+  wrap.addEventListener('pointercancel',()=>{
+    if(!drag)return;drag=null;wrap.style.cursor='grab';
+    const w=document.getElementById('ruletaWheel');if(w)w.style.transform=`rotate(${ruletaRot}deg)`;
+  });
+}
 function buildRuletaWheel(){
   const segs=ruletaSegs();if(!segs.length)return;
   const N=segs.length, SEG=360/N, cx=160, cy=160, R=160;
@@ -5374,7 +5425,7 @@ function updateRuletaBtn(){
 function openRuleta(){
   if(!state.ruleta)return toast('Cargando...');
   document.getElementById('ruletaOv').classList.add('show');
-  buildRuletaWheel();buildRuletaBulbs();
+  buildRuletaWheel();buildRuletaBulbs();initRuletaInteraction();
   renderRuletaGate();renderRuletaTickets();renderRuletaJp();
 }
 function closeRuleta(){
