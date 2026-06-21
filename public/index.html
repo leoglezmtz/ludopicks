@@ -1209,10 +1209,20 @@ select option{background:#161c30;color:#fff}
         <span style="font-size:16px">📲</span> Invitar
       </button>
     </div>
-    <div id="notifBtn" style="display:none;margin-top:10px">
-      <button onclick="activarNotifs()" style="width:100%;padding:10px;background:rgba(239,159,39,.15);border:1.5px solid rgba(239,159,39,.35);border-radius:12px;color:#FAC775;font-size:13px;font-weight:700;cursor:pointer">
-        🔔 Activar notificaciones de ganancias
-      </button>
+    <div id="pushBanner" style="display:none;margin-top:10px">
+      <div style="background:linear-gradient(135deg,rgba(239,159,39,.16),rgba(239,159,39,.07));border:1.5px solid rgba(239,159,39,.38);border-radius:14px;padding:12px 14px;position:relative">
+        <button onclick="dismissPushBanner()" style="position:absolute;top:7px;right:10px;background:none;border:none;color:rgba(255,255,255,.35);font-size:15px;cursor:pointer;line-height:1;padding:0" aria-label="Cerrar">✕</button>
+        <div style="display:flex;align-items:center;gap:10px;padding-right:18px">
+          <div style="font-size:28px">🔔</div>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:#FAC775;margin-bottom:2px">¡Activa las notificaciones!</div>
+            <div style="font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.4">Entérate de bonos, resultados y premios al instante — sin tener que abrir la app.</div>
+          </div>
+        </div>
+        <button onclick="activarNotifs()" style="width:100%;margin-top:10px;padding:9px;background:rgba(239,159,39,.28);border:1.5px solid rgba(239,159,39,.55);border-radius:10px;color:#FAC775;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.3px">
+          🔔 Activar notificaciones
+        </button>
+      </div>
     </div>
   </div>
   <nav class="nav">
@@ -1595,24 +1605,51 @@ function urlBase64ToUint8(b64){
   const p=b64.replace(/-/g,'+').replace(/_/g,'/');
   const raw=atob(p);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
-// Verifica el estado del permiso y muestra/oculta el botón
+// Verifica el estado del permiso y muestra/oculta el banner
 async function checkNotifStatus(){
-  const btn=document.getElementById('notifBtn');
-  if(!btn)return;
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)){btn.style.display='none';return;}
+  const banner=document.getElementById('pushBanner');
+  if(!banner)return;
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){banner.style.display='none';return;}
+  // Si dismissió hace menos de 3 días, no mostrar
+  const dismissed=Number(localStorage.getItem('ludo_push_dismiss')||0);
+  if(Date.now()-dismissed < 3*24*60*60*1000){banner.style.display='none';return;}
   const perm=Notification.permission;
   if(perm==='granted'){
-    // Ya tiene permiso — verificar si tiene suscripción activa
     try{
       const sw=await navigator.serviceWorker.ready;
       const sub=await sw.pushManager.getSubscription();
-      btn.style.display=sub?'none':'block'; // si no hay sub, mostrar por si se perdió
-    }catch{btn.style.display='none';}
+      banner.style.display=sub?'none':'block';
+    }catch{banner.style.display='none';}
   } else if(perm==='denied'){
-    btn.style.display='none'; // bloqueó — no podemos hacer nada
+    banner.style.display='none';
   } else {
-    btn.style.display='block'; // 'default' — aún no ha decidido
+    banner.style.display='block';
   }
+}
+function dismissPushBanner(){
+  localStorage.setItem('ludo_push_dismiss', Date.now());
+  document.getElementById('pushBanner').style.display='none';
+}
+function maybeShowPushPromo(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return false;
+  if(Notification.permission==='granted'||Notification.permission==='denied')return false;
+  const last=Number(localStorage.getItem('ludo_push_promo')||0);
+  if(Date.now()-last < 7*24*60*60*1000)return false; // máx 1 vez por semana
+  localStorage.setItem('ludo_push_promo', Date.now());
+  document.getElementById('mTitle').textContent='🔔 ¡No te pierdas nada!';
+  document.getElementById('mBody').innerHTML=`
+    <div style="text-align:center;padding:4px 0 10px">
+      <div style="font-size:48px;margin-bottom:10px">🔔</div>
+      <div style="font-size:14px;font-weight:800;color:#fff;margin-bottom:8px">Activa las notificaciones</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.65);line-height:1.6;margin-bottom:16px">
+        Entérate al instante cuando:<br>
+        <span style="color:var(--gold)">💰 Ganes una apuesta · 🎁 Haya bonos · 📣 El admin mande avisos</span>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:10px;font-size:14px;padding:13px" onclick="activarNotifs();closeModal()">🔔 Activar notificaciones</button>
+      <button style="width:100%;background:none;border:none;color:rgba(255,255,255,.38);font-size:12px;cursor:pointer;padding:6px" onclick="closeModal()">Tal vez después</button>
+    </div>`;
+  document.getElementById('overlay').style.display='flex';
+  return true;
 }
 // Se llama al tocar el botón
 async function activarNotifs(){
@@ -1624,7 +1661,8 @@ async function activarNotifs(){
     let sub=await sw.pushManager.getSubscription();
     if(!sub)sub=await sw.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8(VAPID_PUB)});
     await api({action:'saveSub',payload:{nombre:me,pin:myPin,sub:sub.toJSON()}});
-    document.getElementById('notifBtn').style.display='none';
+    document.getElementById('pushBanner').style.display='none';
+    localStorage.setItem('ludo_push_dismiss','0');
     toast('🔔 ¡Notificaciones activadas! Te avisamos cuando ganes.');
   }catch(e){toast('No se pudieron activar: '+e.message);}
 }
@@ -1671,7 +1709,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.32.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.32.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2152,7 +2190,7 @@ function enterApp(){
   const sb=document.getElementById('switchBtn');
   if(sb)sb.style.display=(isAdmin||me==='Leonidas')?'block':'none';
   refreshHero();renderSlipBar();
-  if(!isAdmin){checkNotifStatus();setTimeout(checkCancelledBets,1200);setTimeout(()=>{ if(maybeShowGiftClaim())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
+  if(!isAdmin){checkNotifStatus();setTimeout(checkCancelledBets,1200);setTimeout(()=>{ if(maybeShowGiftClaim())return; if(maybeShowPushPromo())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
 }
 async function switchMode(){
   if(isAdmin){
