@@ -1610,9 +1610,11 @@ async function checkNotifStatus(){
   const banner=document.getElementById('pushBanner');
   if(!banner)return;
   if(!('serviceWorker' in navigator)||!('PushManager' in window)){banner.style.display='none';return;}
-  // Si dismissió hace menos de 3 días, no mostrar
-  const dismissed=Number(localStorage.getItem('ludo_push_dismiss')||0);
-  if(Date.now()-dismissed < 3*24*60*60*1000){banner.style.display='none';return;}
+  const testMode=new URLSearchParams(location.search).has('testpush');
+  if(!testMode){
+    const dismissed=Number(localStorage.getItem('ludo_push_dismiss')||0);
+    if(Date.now()-dismissed < 3*24*60*60*1000){banner.style.display='none';return;}
+  }
   const perm=Notification.permission;
   if(perm==='granted'){
     try{
@@ -1632,9 +1634,12 @@ function dismissPushBanner(){
 }
 function maybeShowPushPromo(){
   if(!('serviceWorker' in navigator)||!('PushManager' in window))return false;
-  if(Notification.permission==='granted'||Notification.permission==='denied')return false;
-  const last=Number(localStorage.getItem('ludo_push_promo')||0);
-  if(Date.now()-last < 7*24*60*60*1000)return false; // máx 1 vez por semana
+  const testMode=new URLSearchParams(location.search).has('testpush');
+  if(!testMode){
+    if(Notification.permission==='granted'||Notification.permission==='denied')return false;
+    const last=Number(localStorage.getItem('ludo_push_promo')||0);
+    if(Date.now()-last < 7*24*60*60*1000)return false; // máx 1 vez por semana
+  }
   localStorage.setItem('ludo_push_promo', Date.now());
   document.getElementById('mTitle').textContent='🔔 ¡No te pierdas nada!';
   document.getElementById('mBody').innerHTML=`
@@ -1709,7 +1714,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.32.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.32.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
