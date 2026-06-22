@@ -1031,7 +1031,9 @@ select option{background:#161c30;color:#fff}
 .bkm-row.w{color:#fff}
 .bkm-row.fw{color:var(--gold)}
 .bkm-row.tbd{color:rgba(255,255,255,.18);font-style:italic}
-.bkm-row.confirmed{color:rgba(255,255,255,.78);box-shadow:inset 2.5px 0 0 var(--green)}
+.bkm-row.confirmed{color:#fff}
+.bkm.slot-confirmed{background:rgba(39,212,155,.07);border-color:rgba(39,212,155,.3);box-shadow:0 0 8px rgba(39,212,155,.1)}
+.bkm.slot-ghost{opacity:.22;border-style:dashed;border-color:rgba(255,255,255,.08);pointer-events:none}
 .bkm-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
 .bkm-sc{font-size:11px;font-weight:900;font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:2px}
 .bkm-sc.w{color:var(--gold)}
@@ -1708,7 +1710,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.32.7';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.32.8';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3787,7 +3789,10 @@ function bkCard(def,hTeam,aTeam,res,isFin,conf){
   const hasPen=fin&&res.pen_l!=null;
   const hWin=fin&&(gl>gv||(gl===gv&&hasPen&&res.pen_l>res.pen_v));
   const aWin=fin&&!hWin;
-  const cls=isFin?'bkm fin':fin?'bkm live':'bkm';
+  const isGhost=!hTeam&&!aTeam;
+  const anyConfirmed=!fin&&(conf?.h||conf?.a);
+  const cardExtra=fin?'':isGhost?' slot-ghost':anyConfirmed?' slot-confirmed':'';
+  const cls=isFin?'bkm fin':fin?'bkm live':`bkm${cardExtra}`;
   const rCls=(team,w,ok)=>!team?'bkm-row tbd':w?(isFin?'bkm-row fw':'bkm-row w'):(ok&&!fin?'bkm-row confirmed':'bkm-row');
   const nm=t=>t?teamName(t).slice(0,10):'?';
   const fl=t=>t?flagImg(t,13)||'':'❓';
