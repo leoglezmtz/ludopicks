@@ -1031,6 +1031,7 @@ select option{background:#161c30;color:#fff}
 .bkm-row.w{color:#fff}
 .bkm-row.fw{color:var(--gold)}
 .bkm-row.tbd{color:rgba(255,255,255,.18);font-style:italic}
+.bkm-row.confirmed{color:rgba(255,255,255,.78);box-shadow:inset 2.5px 0 0 var(--green)}
 .bkm-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
 .bkm-sc{font-size:11px;font-weight:900;font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:2px}
 .bkm-sc.w{color:var(--gold)}
@@ -1707,7 +1708,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.32.6';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.32.7';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3749,6 +3750,16 @@ function buildThirdsMapGreedy(thirds){
   T3_SLOTS.forEach(({k,gs})=>{const t=thirds.find(x=>!used.has(x.team)&&gs.includes(x.grupo));if(t){map[k]=t.team;used.add(t.team);}});
   return map;
 }
+function isGroupDone(grp){
+  const ms=(state.partidos||[]).filter(p=>p.grupo===grp);
+  return ms.length>0&&ms.every(p=>{const r=state.resultados?.[p.id];return r&&r.gl!=null&&!r.parcial;});
+}
+function isSlotConfirmed(slot,winMap){
+  if(!slot)return false;
+  if(slot.startsWith('W'))return !!winMap[slot.slice(1)];
+  if(slot.startsWith('3')){const grps=slot.slice(1).split('');return grps.every(g=>isGroupDone(g));}
+  return isGroupDone(slot.slice(1));
+}
 function buildElimWinnerMap(){
   const map={};
   (state.partidos||[]).filter(p=>['R32','R16','QF','SF','Final'].includes(p.grupo)).forEach(p=>{
@@ -3770,24 +3781,26 @@ function resolveSlot(slot,allS,thirdsMap,winMap){
 function getActualKO(bId){
   return (state.partidos||[]).find(p=>p.bracketId===bId&&['R32','R16','QF','SF','Final'].includes(p.grupo));
 }
-function bkCard(def,hTeam,aTeam,res,isFin){
+function bkCard(def,hTeam,aTeam,res,isFin,conf){
   const fin=res&&res.gl!=null&&!res.parcial;
   const gl=fin?+res.gl:null,gv=fin?+res.gv:null;
   const hasPen=fin&&res.pen_l!=null;
   const hWin=fin&&(gl>gv||(gl===gv&&hasPen&&res.pen_l>res.pen_v));
   const aWin=fin&&!hWin;
   const cls=isFin?'bkm fin':fin?'bkm live':'bkm';
-  const rCls=(team,w)=>!team?'bkm-row tbd':w?(isFin?'bkm-row fw':'bkm-row w'):'bkm-row';
+  const rCls=(team,w,ok)=>!team?'bkm-row tbd':w?(isFin?'bkm-row fw':'bkm-row w'):(ok&&!fin?'bkm-row confirmed':'bkm-row');
   const nm=t=>t?teamName(t).slice(0,10):'?';
   const fl=t=>t?flagImg(t,13)||'':'❓';
-  const mkRow=(team,slot,sc,w)=>`<div class="${rCls(team,w)}">${fl(team)}<span class="bkm-nm">${nm(team)||slot}</span>${fin&&sc!=null?`<span class="bkm-sc${w?' w':''}">${sc}</span>`:''}</div>`;
-  return `<div class="${cls}">${mkRow(hTeam,def.h,gl,hWin)}${mkRow(aTeam,def.a,gv,aWin)}</div>`;
+  const mkRow=(team,slot,sc,w,ok)=>`<div class="${rCls(team,w,ok)}">${fl(team)}<span class="bkm-nm">${nm(team)||slot}</span>${fin&&sc!=null?`<span class="bkm-sc${w?' w':''}">${sc}</span>`:''}</div>`;
+  return `<div class="${cls}">${mkRow(hTeam,def.h,gl,hWin,conf?.h)}${mkRow(aTeam,def.a,gv,aWin,conf?.a)}</div>`;
 }
 function bkMatchHtml(def,allS,thirdsMap,winMap){
   const act=getActualKO(def.id);
   const h=act?act.local:resolveSlot(def.h,allS,thirdsMap,winMap);
   const a=act?act.visita:resolveSlot(def.a,allS,thirdsMap,winMap);
-  return bkCard(def,h,a,act?state.resultados?.[act.id]:null,false);
+  const hConf=act?true:isSlotConfirmed(def.h,winMap);
+  const aConf=act?true:isSlotConfirmed(def.a,winMap);
+  return bkCard(def,h,a,act?state.resultados?.[act.id]:null,false,{h:hConf,a:aConf});
 }
 function bkColHtml(defs,allS,thirdsMap,winMap,side,cls){
   const pairs=[];for(let i=0;i<defs.length;i+=2)pairs.push([defs[i],defs[i+1]].filter(Boolean));
@@ -3797,13 +3810,17 @@ function bkSFHtml(def,allS,thirdsMap,winMap,side){
   const act=getActualKO(def.id);
   const h=act?act.local:resolveSlot(def.h,allS,thirdsMap,winMap);
   const a=act?act.visita:resolveSlot(def.a,allS,thirdsMap,winMap);
-  return `<div class="bk-col bk-${side} bk-col-sf bk-sf-${side[0]}">${bkCard(def,h,a,act?state.resultados?.[act.id]:null,false)}</div>`;
+  const hConf=act?true:isSlotConfirmed(def.h,winMap);
+  const aConf=act?true:isSlotConfirmed(def.a,winMap);
+  return `<div class="bk-col bk-${side} bk-col-sf bk-sf-${side[0]}">${bkCard(def,h,a,act?state.resultados?.[act.id]:null,false,{h:hConf,a:aConf})}</div>`;
 }
 function bkFinHtml(allS,thirdsMap,winMap){
   const act=getActualKO(BK_FIN.id);
   const h=act?act.local:resolveSlot(BK_FIN.h,allS,thirdsMap,winMap);
   const a=act?act.visita:resolveSlot(BK_FIN.a,allS,thirdsMap,winMap);
-  return `<div class="bk-col bk-col-fin">${bkCard(BK_FIN,h,a,act?state.resultados?.[act.id]:null,true)}</div>`;
+  const hConf=act?true:isSlotConfirmed(BK_FIN.h,winMap);
+  const aConf=act?true:isSlotConfirmed(BK_FIN.a,winMap);
+  return `<div class="bk-col bk-col-fin">${bkCard(BK_FIN,h,a,act?state.resultados?.[act.id]:null,true,{h:hConf,a:aConf})}</div>`;
 }
 
 // ── ESCENARIOS DE CLASIFICACIÓN (matemático, SOLO resultados finales) ──────
