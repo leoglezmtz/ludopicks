@@ -5,6 +5,19 @@ import crypto from "crypto";
 
 const { subtle } = webcrypto;
 
+// ── PIN HASHING (scrypt — Node.js built-in, sin dependencias) ─────────────
+function hashPin(pin) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  return salt + ':' + crypto.scryptSync(String(pin), salt, 32).toString('hex');
+}
+function verifyPin(pin, stored) {
+  if (!stored) return false;
+  if (!String(stored).includes(':')) return String(pin) === String(stored); // legacy cleartext
+  const [salt, hash] = String(stored).split(':');
+  try { return crypto.scryptSync(String(pin), salt, 32).toString('hex') === hash; }
+  catch { return false; }
+}
+
 // ── WEB PUSH NATIVO (sin dependencias externas) ───────────────
 function b64u(s){ return Buffer.from(s.replace(/-/g,'+').replace(/_/g,'/'), 'base64'); }
 function toB64u(b){ return Buffer.from(b).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
@@ -419,7 +432,7 @@ export default async function handler(req, res) {
     const jugadores = (await kv.get("jugadores")) || {};
     const j = jugadores[nombre];
     if (!j) return res.status(400).json({ error: "Jugador no existe" });
-    if (String(j.pin) !== String(pin)) return res.status(403).json({ error: "PIN incorrecto" });
+    if (!verifyPin(pin, j.pin)) return res.status(403).json({ error: "PIN incorrecto" });
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
 
@@ -428,7 +441,7 @@ export default async function handler(req, res) {
     const jugadores = (await kv.get("jugadores")) || {};
     const j = jugadores[nombre];
     if (!j) return res.status(400).json({ error: "Jugador no existe" });
-    if (String(j.pin) !== String(pin)) return res.status(403).json({ error: "PIN incorrecto" });
+    if (!verifyPin(pin, j.pin)) return res.status(403).json({ error: "PIN incorrecto" });
     jugadores[nombre].avatar = avatar;
     await kv.set("jugadores", jugadores);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
@@ -787,7 +800,7 @@ export default async function handler(req, res) {
     const { nombre, pin } = payload;
     const jugadores = (await kv.get("jugadores")) || {};
     const j = jugadores[nombre];
-    if (!j || String(j.pin) !== String(pin)) return res.status(403).json({ error: "No autorizado" });
+    if (!j || !verifyPin(pin, j.pin)) return res.status(403).json({ error: "No autorizado" });
     const regalos = j.regalos || [];
     if (!regalos.length) return res.json({ ok: true, jugadores: publicJugadores(jugadores, nombre) });
     for (const r of regalos) {
@@ -1300,9 +1313,28 @@ export default async function handler(req, res) {
     if (!/^\d{4}$/.test(String(nuevoPin))) return res.status(400).json({ error: "PIN debe ser 4 dígitos" });
     const jugadores = (await kv.get("jugadores")) || {};
     if (!jugadores[nombre]) return res.status(400).json({ error: "Jugador no existe" });
-    jugadores[nombre].pin = String(nuevoPin);
+    jugadores[nombre].pin = hashPin(nuevoPin);
     await kv.set("jugadores", jugadores);
     return res.json({ ok: true });
+  }
+
+  // ── ADMIN: migrar PINs cleartext → scrypt hash ──────────────────────────
+  if (action === "migrateHashPins") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const jugadores = (await kv.get("jugadores")) || {};
+    await kv.set("backup:jugadores:pre-pin-migration", jugadores);
+    const results = [];
+    for (const j of Object.values(jugadores)) {
+      if (!j.pin) { results.push({ nombre: j.nombre, status: 'no_pin' }); continue; }
+      if (String(j.pin).includes(':')) { results.push({ nombre: j.nombre, status: 'already_hashed' }); continue; }
+      const original = String(j.pin);
+      const hashed = hashPin(original);
+      if (!verifyPin(original, hashed)) return res.status(500).json({ error: `Verificación fallida: ${j.nombre}` });
+      j.pin = hashed;
+      results.push({ nombre: j.nombre, status: 'migrated' });
+    }
+    await kv.set("jugadores", jugadores);
+    return res.json({ ok: true, total: results.length, migrated: results.filter(r => r.status === 'migrated').length, results });
   }
 
   if (action === "borrarJugador") {
@@ -1325,7 +1357,7 @@ export default async function handler(req, res) {
       const jugadores = (await kv.get("jugadores")) || {};
       const j = jugadores[nombre];
       if (!j) return res.status(403).json({ error: "Jugador no existe" });
-      if (!pin || String(j.pin) !== String(pin)) return res.status(403).json({ error: "PIN incorrecto" });
+      if (!pin || !verifyPin(pin, j.pin)) return res.status(403).json({ error: "PIN incorrecto" });
     }
     const subs = (await kv.get("pushSubs")) || {};
     subs[nombre] = sub;
