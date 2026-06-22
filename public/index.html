@@ -1010,34 +1010,14 @@ select option{background:#161c30;color:#fff}
 .bk-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:4px 4px 12px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent}
 .bk-wrap::-webkit-scrollbar{height:3px}
 .bk-wrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
-.bk-lbl-row{display:flex;gap:3px;margin-bottom:5px;width:max-content}
+.bk-lbl-row{display:flex;gap:2px;margin-bottom:5px;width:max-content}
 .bk-lbl{text-align:center;font-size:9px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
 .bk-lbl.fin{color:rgba(255,219,0,.65)}
 .bk-tree{display:flex;align-items:stretch;height:540px;gap:2px;width:max-content}
 .bk-col{display:flex;flex-direction:column;flex-shrink:0;position:relative}
-.bk-col-fin{width:80px;justify-content:center;padding:0 1px;z-index:5}
-.bk-col-sf{width:70px;justify-content:center}
-.bk-col-qf,.bk-col-r16,.bk-col-r32{width:70px}
-/* Nested overlap: QF/SF columns overlap halfway into outer columns */
-.bk-left.bk-col-r32{z-index:1}.bk-left.bk-col-r16{z-index:2}
-.bk-left.bk-col-qf{margin-left:-35px;z-index:3}
-.bk-left.bk-col-sf{margin-left:-35px;z-index:4}
-.bk-right.bk-col-sf{z-index:4}
-.bk-right.bk-col-qf{margin-left:-35px;z-index:3}
-.bk-right.bk-col-r16{margin-left:-35px;z-index:2}.bk-right.bk-col-r32{z-index:1}
-/* R16 ::after connectors are covered by QF (higher z-index) — suppress them */
-.bk-left.bk-col-r16 .bk-pair::after,.bk-right.bk-col-r16 .bk-pair::after{display:none}
-/* QF draws TWO backward connectors into R16 via ::before (top half) and ::after (bottom half).
-   QF z=3 > R16 z=2 so these render above R16 content. Arms at 12.5%/37.5% align
-   with the two match centers inside each R16 pair (space-around in 50% height). */
-.bk-left.bk-col-qf .bk-pair::before{content:'';position:absolute;pointer-events:none;right:100%;width:33px;top:12.5%;bottom:62.5%;border-top:1.5px solid rgba(255,255,255,.18);border-right:1.5px solid rgba(255,255,255,.18);border-bottom:1.5px solid rgba(255,255,255,.18);border-radius:0 3px 3px 0}
-.bk-left.bk-col-qf .bk-pair::after{right:100%;width:33px;top:62.5%;bottom:12.5%}
-.bk-right.bk-col-qf .bk-pair::before{content:'';position:absolute;pointer-events:none;left:100%;width:33px;top:12.5%;bottom:62.5%;border-top:1.5px solid rgba(255,255,255,.18);border-left:1.5px solid rgba(255,255,255,.18);border-bottom:1.5px solid rgba(255,255,255,.18);border-radius:3px 0 0 3px}
-.bk-right.bk-col-qf .bk-pair::after{left:100%;width:33px;top:62.5%;bottom:12.5%}
-/* SF draws one backward connector into QF (both QF matches → SF match).
-   SF z=4 > QF z=3, so this renders above QF content. */
-.bk-col-sf.bk-sf-l::before{content:'';position:absolute;pointer-events:none;right:100%;width:33px;top:25%;bottom:25%;border-top:1.5px solid rgba(255,255,255,.18);border-right:1.5px solid rgba(255,255,255,.18);border-bottom:1.5px solid rgba(255,255,255,.18);border-radius:0 3px 3px 0}
-.bk-col-sf.bk-sf-r::before{content:'';position:absolute;pointer-events:none;left:100%;width:33px;top:25%;bottom:25%;border-top:1.5px solid rgba(255,255,255,.18);border-left:1.5px solid rgba(255,255,255,.18);border-bottom:1.5px solid rgba(255,255,255,.18);border-radius:3px 0 0 3px}
+.bk-col-fin{width:76px;justify-content:center;padding:0 1px;z-index:5}
+.bk-col-sf{width:66px;justify-content:center}
+.bk-col-qf,.bk-col-r16,.bk-col-r32{width:66px}
 .bk-pair{flex:1;display:flex;flex-direction:column;justify-content:space-around;position:relative}
 .bk-left .bk-pair::after{content:'';position:absolute;right:-3px;top:25%;bottom:25%;width:3px;border-top:1.5px solid rgba(255,255,255,.14);border-right:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:0 3px 3px 0;pointer-events:none}
 .bk-right .bk-pair::after{content:'';position:absolute;left:-3px;top:25%;bottom:25%;width:3px;border-top:1.5px solid rgba(255,255,255,.14);border-left:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:3px 0 0 3px;pointer-events:none}
@@ -1731,7 +1711,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.33.6';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.33.7';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3974,7 +3954,7 @@ function renderElim(){
 
   // Bracket labels row
   const LBLS=['R32','R16','QF','SF','FINAL','SF','QF','R16','R32'];
-  const WIDS=[70,35,70,70,80,70,70,35,70];
+  const WIDS=[66,66,66,66,76,66,66,66,66];
   const lblRow=`<div class="bk-lbl-row">${LBLS.map((l,i)=>`<div class="bk-lbl${l==='FINAL'?' fin':''}" style="width:${WIDS[i]}px">${l}</div>`).join('')}</div>`;
 
   // Bracket tree
