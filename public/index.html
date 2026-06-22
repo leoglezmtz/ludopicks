@@ -1018,22 +1018,26 @@ select option{background:#161c30;color:#fff}
 .bk-col-fin{width:80px;justify-content:center;padding:0 1px;z-index:5}
 .bk-col-sf{width:70px;justify-content:center}
 .bk-col-qf,.bk-col-r16,.bk-col-r32{width:70px}
-/* Nested overlap: inner rounds sit ~halfway inside outer round columns */
+/* Nested overlap: QF/SF columns overlap halfway into outer columns */
 .bk-left.bk-col-r32{z-index:1}.bk-left.bk-col-r16{z-index:2}
 .bk-left.bk-col-qf{margin-left:-35px;z-index:3}
 .bk-left.bk-col-sf{margin-left:-35px;z-index:4}
 .bk-right.bk-col-sf{z-index:4}
 .bk-right.bk-col-qf{margin-left:-35px;z-index:3}
 .bk-right.bk-col-r16{margin-left:-35px;z-index:2}.bk-right.bk-col-r32{z-index:1}
-/* Outer cols: suppress ::after connectors (inner col z-index covers the bar) */
-.bk-left.bk-col-r16 .bk-pair::after,.bk-left.bk-col-qf .bk-pair::after{display:none}
-.bk-right.bk-col-r16 .bk-pair::after,.bk-right.bk-col-qf .bk-pair::after{display:none}
-/* Inner cols draw connectors via ::before, extending into outer col space.
-   Higher z-index ensures they render above the outer col content. */
-.bk-left.bk-col-qf .bk-pair::before{content:'';position:absolute;right:100%;width:33px;top:25%;bottom:25%;border-top:1.5px solid rgba(255,255,255,.14);border-right:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:0 3px 3px 0;pointer-events:none}
-.bk-col-sf.bk-sf-l::before{content:'';position:absolute;right:100%;width:33px;top:25%;bottom:25%;border-top:1.5px solid rgba(255,255,255,.14);border-right:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:0 3px 3px 0;pointer-events:none}
-.bk-right.bk-col-qf .bk-pair::before{content:'';position:absolute;left:100%;width:33px;top:25%;bottom:25%;border-top:1.5px solid rgba(255,255,255,.14);border-left:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:3px 0 0 3px;pointer-events:none}
-.bk-col-sf.bk-sf-r::before{content:'';position:absolute;left:100%;width:33px;top:25%;bottom:25%;border-top:1.5px solid rgba(255,255,255,.14);border-left:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:3px 0 0 3px;pointer-events:none}
+/* R16 ::after connectors are covered by QF (higher z-index) — suppress them */
+.bk-left.bk-col-r16 .bk-pair::after,.bk-right.bk-col-r16 .bk-pair::after{display:none}
+/* QF draws TWO backward connectors into R16 via ::before (top half) and ::after (bottom half).
+   QF z=3 > R16 z=2 so these render above R16 content. Arms at 12.5%/37.5% align
+   with the two match centers inside each R16 pair (space-around in 50% height). */
+.bk-left.bk-col-qf .bk-pair::before{content:'';position:absolute;pointer-events:none;right:100%;width:33px;top:12.5%;bottom:62.5%;border-top:1.5px solid rgba(255,255,255,.18);border-right:1.5px solid rgba(255,255,255,.18);border-bottom:1.5px solid rgba(255,255,255,.18);border-radius:0 3px 3px 0}
+.bk-left.bk-col-qf .bk-pair::after{right:100%;width:33px;top:62.5%;bottom:12.5%}
+.bk-right.bk-col-qf .bk-pair::before{content:'';position:absolute;pointer-events:none;left:100%;width:33px;top:12.5%;bottom:62.5%;border-top:1.5px solid rgba(255,255,255,.18);border-left:1.5px solid rgba(255,255,255,.18);border-bottom:1.5px solid rgba(255,255,255,.18);border-radius:3px 0 0 3px}
+.bk-right.bk-col-qf .bk-pair::after{left:100%;width:33px;top:62.5%;bottom:12.5%}
+/* SF draws one backward connector into QF (both QF matches → SF match).
+   SF z=4 > QF z=3, so this renders above QF content. */
+.bk-col-sf.bk-sf-l::before{content:'';position:absolute;pointer-events:none;right:100%;width:33px;top:25%;bottom:25%;border-top:1.5px solid rgba(255,255,255,.18);border-right:1.5px solid rgba(255,255,255,.18);border-bottom:1.5px solid rgba(255,255,255,.18);border-radius:0 3px 3px 0}
+.bk-col-sf.bk-sf-r::before{content:'';position:absolute;pointer-events:none;left:100%;width:33px;top:25%;bottom:25%;border-top:1.5px solid rgba(255,255,255,.18);border-left:1.5px solid rgba(255,255,255,.18);border-bottom:1.5px solid rgba(255,255,255,.18);border-radius:3px 0 0 3px}
 .bk-pair{flex:1;display:flex;flex-direction:column;justify-content:space-around;position:relative}
 .bk-left .bk-pair::after{content:'';position:absolute;right:-3px;top:25%;bottom:25%;width:3px;border-top:1.5px solid rgba(255,255,255,.14);border-right:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:0 3px 3px 0;pointer-events:none}
 .bk-right .bk-pair::after{content:'';position:absolute;left:-3px;top:25%;bottom:25%;width:3px;border-top:1.5px solid rgba(255,255,255,.14);border-left:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:3px 0 0 3px;pointer-events:none}
@@ -1727,7 +1731,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.33.5';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.33.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
