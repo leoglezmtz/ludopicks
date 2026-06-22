@@ -1244,7 +1244,6 @@ select option{background:#161c30;color:#fff}
         <button class="fbtn" id="atab-casino" onclick="setAdminTab('casino',this)">🎰 Casino</button>
         <button class="fbtn" id="atab-tablas" onclick="setAdminTab('tablas',this)">📋 Tablas</button>
         <button class="fbtn" id="atab-fairplay" onclick="setAdminTab('fairplay',this)">🟨 Fair Play</button>
-        <button class="fbtn" id="atab-elim" onclick="setAdminTab('elim',this)">🏆 Eliminatorias</button>
       </div>
       <div id="admin-content-wrap">
       <div id="admin-resultados">
@@ -1405,7 +1404,6 @@ select option{background:#161c30;color:#fff}
     <div id="fpEquiposList"></div>
   </div>
 </div>
-      <div id="admin-elim" style="display:none"><div id="listaElimAdmin"></div></div>
       <button class="btn btn-danger btn-sm" style="width:100%;margin-top:16px" onclick="resetTodo()">⚠️ Reset total</button>
       </div>
     </div>
@@ -1717,7 +1715,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.35.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.35.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2189,8 +2187,8 @@ function enterApp(){
   const recNavBtn=document.getElementById('tab-records');if(recNavBtn)recNavBtn.style.display='none';
   // Records top button: only for players, not admin
   const recTopBtn=document.getElementById('recordsTopBtn');if(recTopBtn)recTopBtn.style.display=isAdmin?'none':'inline-flex';
-  // Elimis tab always visible for players
-  const elimTab=document.getElementById('tab-elim');if(elimTab)elimTab.style.display=isAdmin?'none':'flex';
+  // Elimis tab visible para todos (jugadores y admin: el admin también quiere ver la llave)
+  const elimTab=document.getElementById('tab-elim');if(elimTab)elimTab.style.display='flex';
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
   // Persistir credenciales del switch en claves dedicadas (sobreviven logout)
@@ -2292,7 +2290,7 @@ async function manualRefresh(){
   if(currentTab==='mis')renderMis();
   if(currentTab==='elim')renderElim();
   if(currentTab==='especiales')renderEspeciales();
-  if(currentTab==='admin'&&isAdmin){renderAdmin();renderAdminUsers();if(adminTab==='elim')renderElim();}
+  if(currentTab==='admin'&&isAdmin){renderAdmin();renderAdminUsers();}
   if(!isAdmin)checkCancelledBets();
   toast('Actualizado ✓');
 }
@@ -2554,9 +2552,7 @@ function setAdminTab(name,btn){
   document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
   document.getElementById('admin-tablas').style.display=name==='tablas'?'block':'none';
   document.getElementById('admin-fairplay').style.display=name==='fairplay'?'block':'none';
-  document.getElementById('admin-elim').style.display=name==='elim'?'block':'none';
   if(name==='fairplay') renderFairPlayAdmin();
-  if(name==='elim') renderElim();
   if(name==='saldos'){const sel=document.getElementById('adjJugador');if(sel)sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
     const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}
     // Inicializar panel unificado
@@ -3995,8 +3991,7 @@ function renderElim(){
   }
 
   const segLlaveOn=elimView!=='grupos', segGruposOn=elimView==='grupos';
-  // IDs como clases: el HTML se pinta en la pestaña de usuario Y en el dashboard admin,
-  // así que no puede haber IDs duplicados. setElimView opera sobre todas las instancias.
+  // Toggle vía clases (no IDs) para evitar colisiones si el bloque se montara más de una vez.
   const elimHtmlFull=`<div style="padding:0 2px 4px">
     <div class="elim-seg">
       <button class="elim-seg-llave ${segLlaveOn?'on':''}" onclick="setElimView('llave')">⚽ Llave</button>
@@ -4020,7 +4015,6 @@ function renderElim(){
     </div>
   </div>`;
   const elU=document.getElementById('listaElim');if(elU)elU.innerHTML=elimHtmlFull;
-  const elA=document.getElementById('listaElimAdmin');if(elA)elA.innerHTML=elimHtmlFull;
 }
 // Toggle Llave/Grupos en Eliminatorias. Opera sobre TODAS las instancias (usuario + admin)
 // para que ambas vistas queden sincronizadas. Sin re-render completo.
@@ -5706,7 +5700,7 @@ async function poll(){
   if(currentTab==='mis')renderMis();
   if(currentTab==='elim')renderElim();          // tablas de grupos + bracket en vivo
   if(currentTab==='especiales')renderEspeciales();
-  if(currentTab==='admin'&&isAdmin){renderAdmin();if(adminTab==='elim')renderElim();}
+  if(currentTab==='admin'&&isAdmin)renderAdmin();
 }
 setInterval(poll,20000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});
