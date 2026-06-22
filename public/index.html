@@ -1013,17 +1013,17 @@ select option{background:#161c30;color:#fff}
 .bk-lbl-row{display:flex;gap:3px;margin-bottom:5px;width:max-content}
 .bk-lbl{text-align:center;font-size:9px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
 .bk-lbl.fin{color:rgba(255,219,0,.65)}
-.bk-tree{display:flex;align-items:stretch;height:660px;gap:3px;width:max-content}
+.bk-tree{display:flex;align-items:stretch;height:540px;gap:2px;width:max-content}
 .bk-col{display:flex;flex-direction:column;flex-shrink:0;position:relative}
-.bk-col-fin{width:118px;justify-content:center;padding:0 2px}
-.bk-col-sf{width:108px;justify-content:center}
-.bk-col-qf,.bk-col-r16,.bk-col-r32{width:108px}
+.bk-col-fin{width:80px;justify-content:center;padding:0 1px}
+.bk-col-sf{width:70px;justify-content:center}
+.bk-col-qf,.bk-col-r16,.bk-col-r32{width:70px}
 .bk-pair{flex:1;display:flex;flex-direction:column;justify-content:space-around;position:relative}
 .bk-left .bk-pair::after{content:'';position:absolute;right:-3px;top:25%;bottom:25%;width:3px;border-top:1.5px solid rgba(255,255,255,.14);border-right:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:0 3px 3px 0;pointer-events:none}
 .bk-right .bk-pair::after{content:'';position:absolute;left:-3px;top:25%;bottom:25%;width:3px;border-top:1.5px solid rgba(255,255,255,.14);border-left:1.5px solid rgba(255,255,255,.14);border-bottom:1.5px solid rgba(255,255,255,.14);border-radius:3px 0 0 3px;pointer-events:none}
 .bk-sf-l::after{content:'';position:absolute;right:-3px;top:50%;margin-top:-.75px;width:3px;height:1.5px;background:rgba(255,255,255,.14);pointer-events:none}
 .bk-sf-r::after{content:'';position:absolute;left:-3px;top:50%;margin-top:-.75px;width:3px;height:1.5px;background:rgba(255,255,255,.14);pointer-events:none}
-.bkm{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:4px 7px;margin:2px 3px}
+.bkm{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:3px 5px;margin:1px 2px}
 .bkm.fin{background:rgba(255,219,0,.06);border-color:rgba(255,219,0,.3)}
 .bkm.live{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.08)}
 .bkm-row{display:flex;align-items:center;gap:3px;padding:2px 0;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);overflow:hidden;line-height:1.2}
@@ -1711,7 +1711,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.33.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.33.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3799,8 +3799,8 @@ function bkCard(def,hTeam,aTeam,res,isFin,conf){
     if(fin)return 'bkm-row';
     return ok?'bkm-row confirmed':'bkm-row projected';
   };
-  const nm=t=>t?teamName(t).slice(0,10):'?';
-  const fl=t=>t?flagImg(t,13)||'':'❓';
+  const nm=t=>t||'?';
+  const fl=t=>t?flagImg(t,11)||'':'❓';
   const mkRow=(team,slot,sc,w,ok)=>`<div class="${rCls(team,w,ok)}">${fl(team)}<span class="bkm-nm">${nm(team)||slot}</span>${fin&&sc!=null?`<span class="bkm-sc${w?' w':''}">${sc}</span>`:''}</div>`;
   return `<div class="${cls}">${mkRow(hTeam,def.h,gl,hWin,conf?.h)}${mkRow(aTeam,def.a,gv,aWin,conf?.a)}</div>`;
 }
@@ -3954,7 +3954,7 @@ function renderElim(){
 
   // Bracket labels row
   const LBLS=['R32','R16','QF','SF','FINAL','SF','QF','R16','R32'];
-  const WIDS=[108,108,108,108,118,108,108,108,108];
+  const WIDS=[70,70,70,70,80,70,70,70,70];
   const lblRow=`<div class="bk-lbl-row">${LBLS.map((l,i)=>`<div class="bk-lbl${l==='FINAL'?' fin':''}" style="width:${WIDS[i]}px">${l}</div>`).join('')}</div>`;
 
   // Bracket tree
