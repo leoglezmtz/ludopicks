@@ -560,6 +560,10 @@ body::after{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .fbtn-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
 .fbtn-row::-webkit-scrollbar{display:none}
 .fbtn.on{background:var(--green);color:#04231a;border-color:var(--green)}
+/* Segmented toggle Llave/Grupos en Eliminatorias */
+.elim-seg{display:flex;gap:5px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:22px;padding:4px;margin-bottom:14px}
+.elim-seg button{flex:1;padding:8px 10px;font-size:13px;font-weight:800;border-radius:18px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.elim-seg button.on{background:var(--green);color:#04231a;box-shadow:0 2px 8px rgba(93,202,165,.25)}
 
 .podium{display:flex;justify-content:center;align-items:flex-end;gap:8px;padding:18px 8px 14px;background:linear-gradient(180deg,var(--bg2),var(--bg));border-radius:16px;margin-bottom:12px}
 .pod{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;animation:rise .5s ease both}
@@ -1711,10 +1715,11 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.33.7';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.34.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
+let elimView='llave';   // 'llave' | 'grupos' — sub-pestaña dentro de Eliminatorias
 let expanded=new Set();   // ids de partidos con la tarjeta desplegada
 let daysToShow=3;          // cuántos días de partidos mostrar (Todos)
 
@@ -3985,19 +3990,39 @@ function renderElim(){
     champHtml+=`<div class="info-card"><div style="font-size:13px;color:var(--muted);line-height:1.5">Apuesta <b style="color:var(--gold)">una sola vez</b> al campeón. Mientras más improbable, ¡más paga!</div><div style="text-align:center;margin:10px 0;font-size:12px;color:var(--gold);font-weight:800">⏳ Cierra en ${fmtCountdown(ms).replace('¡Ya!','¡ya casi!')}</div>${myBet?`<div class="campeon-mybet">Tu pick: ${flagImg(myBet.equipo,18)} <b>${teamName(myBet.equipo)}</b> · ${myBet.momio}x<div style="font-size:12px;color:var(--muted)">$${myBet.monto.toLocaleString()} → posible $${Math.round(myBet.monto*myBet.momio).toLocaleString()}</div></div>`:''}<button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="openCampeonPicker()">${myBet?'Cambiar mi campeón':'🏆 Elegir campeón'}</button></div>`;
   }
 
+  const segLlaveOn=elimView!=='grupos', segGruposOn=elimView==='grupos';
   document.getElementById('listaElim').innerHTML=`<div style="padding:0 2px 4px">
-    <div class="sec-title">📊 Posiciones por grupo</div>
-    <div class="elim-legend" style="font-size:10px;color:var(--muted2);margin-bottom:10px;gap:0 16px">
-      <div>🟢 Avanza · 🟡 Posible 3er lugar · 🔴 En vivo (provisional)</div>
-      <div>⭐ 1° asegurado · ✅ Clasificado (matemático) · ❌ Eliminado (matemático)</div>
+    <div class="elim-seg">
+      <button id="elimSegLlave" class="${segLlaveOn?'on':''}" onclick="setElimView('llave')">⚽ Llave</button>
+      <button id="elimSegGrupos" class="${segGruposOn?'on':''}" onclick="setElimView('grupos')">📊 Grupos</button>
     </div>
-    <div class="eg-grid">${groupsHtml}</div>
-    ${thirdsHtml}
-    ${elimHtml}
-    <div class="sec-title" style="margin-bottom:8px">⚽ Llaves eliminatorias</div>
-    <div style="font-size:10px;color:var(--muted2);margin-bottom:6px">Proyectado según posiciones actuales · desliza →</div>
-    <div class="bk-wrap">${lblRow}${treeHtml}</div>
-  </div>${champHtml}`;
+    <div id="elimLlave" style="display:${segLlaveOn?'block':'none'}">
+      <div class="sec-title" style="margin-bottom:8px">⚽ Llaves eliminatorias</div>
+      <div style="font-size:10px;color:var(--muted2);margin-bottom:6px">Proyectado según posiciones actuales · desliza →</div>
+      <div class="bk-wrap">${lblRow}${treeHtml}</div>
+      ${champHtml}
+    </div>
+    <div id="elimGrupos" style="display:${segGruposOn?'block':'none'}">
+      <div class="sec-title">📊 Posiciones por grupo</div>
+      <div class="elim-legend" style="font-size:10px;color:var(--muted2);margin-bottom:10px;gap:0 16px">
+        <div>🟢 Avanza · 🟡 Posible 3er lugar · 🔴 En vivo (provisional)</div>
+        <div>⭐ 1° asegurado · ✅ Clasificado (matemático) · ❌ Eliminado (matemático)</div>
+      </div>
+      <div class="eg-grid">${groupsHtml}</div>
+      ${thirdsHtml}
+      ${elimHtml}
+    </div>
+  </div>`;
+}
+// Toggle Llave/Grupos dentro de Eliminatorias (sin re-render completo)
+function setElimView(v){
+  elimView=v;
+  const l=document.getElementById('elimLlave'),g=document.getElementById('elimGrupos');
+  if(l)l.style.display=v==='grupos'?'none':'block';
+  if(g)g.style.display=v==='grupos'?'block':'none';
+  const bl=document.getElementById('elimSegLlave'),bg=document.getElementById('elimSegGrupos');
+  if(bl)bl.classList.toggle('on',v!=='grupos');
+  if(bg)bg.classList.toggle('on',v==='grupos');
 }
 // Selector de campeón (lista de selecciones ordenadas por momio)
 function openCampeonPicker(){
