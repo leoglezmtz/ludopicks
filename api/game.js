@@ -422,7 +422,7 @@ export default async function handler(req, res) {
     if (!/^\d{4}$/.test(String(pin))) return res.status(400).json({ error: "El PIN debe ser de 4 dígitos" });
     const jugadores = (await kv.get("jugadores")) || {};
     if (jugadores[nombre]) return res.status(400).json({ error: "Ese nombre ya existe, elige otro" });
-    jugadores[nombre] = { nombre, pin: String(pin), saldo: SALDO_INICIAL, creado: Date.now(), avatar: avatar || null };
+    jugadores[nombre] = { nombre, pin: hashPin(pin), saldo: SALDO_INICIAL, creado: Date.now(), avatar: avatar || null };
     await kv.set("jugadores", jugadores);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores) });
   }
@@ -930,8 +930,9 @@ export default async function handler(req, res) {
     if (gv != null && gv !== '') { const g = Math.floor(Number(gv)); if (!isNaN(g) && g >= 0 && g <= 30) entry.gv = g; }
     if (corners != null && corners !== '') { const c = Math.floor(Number(corners)); if (!isNaN(c) && c >= 0 && c <= 50) entry.corners = c; }
     if (tarjetas != null && tarjetas !== '') { const t = Math.floor(Number(tarjetas)); if (!isNaN(t) && t >= 0 && t <= 30) entry.tarjetas = t; }
-    // Si todos los campos vienen vacíos, limpiar
-    if (Object.keys(entry).length === 1) delete live[partidoId];
+    // Guardado sin datos: SOLO eliminar el marcador en vivo con intención explícita (borrar:true).
+    // Un guardado vacío por accidente NO debe borrar el marcador que ven los jugadores.
+    if (Object.keys(entry).length === 1) { if (payload.borrar === true) delete live[partidoId]; }
     else live[partidoId] = entry;
     await kv.set("liveScores", live);
 
@@ -1189,6 +1190,36 @@ export default async function handler(req, res) {
     if (corregidos.length === 0) return res.json({ ok: true, corregidos: [] });
     await kv.set("jugadores", jugadores);
     return res.json({ ok: true, corregidos, jugadores: publicJugadores(jugadores) });
+  }
+
+  // ── ADMIN: reconciliar (re-liquidar todo contra la verdad actual + corregir negativos) ──
+  // Red de seguridad manual: vuelve a correr settleAll sobre TODAS las apuestas, así que
+  // cualquier apuesta cuyo estado (won/lost/pending) quedó desfasado de su resultado real
+  // —p.ej. por una escritura pisada bajo concurrencia— se re-liquida y el saldo se ajusta.
+  // LÍMITE HONESTO: settleAll es idempotente y solo corrige apuestas cuyo ESTADO no cuadra;
+  // NO recupera registros de apuesta perdidos por un lost-update (esos ya no existen en KV).
+  if (action === "reconciliar") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const [jugadores, apuestas, resultados, campeon, especiales, liveScores] = await Promise.all([
+      kv.get("jugadores").then(v => v || {}),
+      kv.get("apuestas").then(v => v || {}),
+      kv.get("resultados").then(v => v || {}),
+      kv.get("campeon").then(v => v || null),
+      loadEspeciales(),
+      kv.get("liveScores").then(v => v || {}),
+    ]);
+    const antes = {};
+    Object.values(apuestas).forEach(b => { antes[b.id] = b.status || "pending"; });
+    settleAll(jugadores, apuestas, resultados, campeon, especiales, liveScores);
+    const reLiquidadas = Object.values(apuestas)
+      .filter(b => (antes[b.id] || "pending") !== (b.status || "pending"))
+      .map(b => ({ id: b.id, nombre: b.nombre, de: antes[b.id] || "pending", a: b.status || "pending" }));
+    const negativos = [];
+    for (const j of Object.values(jugadores)) {
+      if (j.saldo < 0) { negativos.push({ nombre: j.nombre, saldoAntes: j.saldo }); j.saldo = 0; }
+    }
+    await Promise.all([kv.set("jugadores", jugadores), kv.set("apuestas", apuestas)]);
+    return res.json({ ok: true, reLiquidadas: reLiquidadas.length, detalle: reLiquidadas, negativosCorregidos: negativos, jugadores: publicJugadores(jugadores), apuestas });
   }
 
   if (action === "bonusTodos") {
@@ -1599,7 +1630,7 @@ export default async function handler(req, res) {
     const ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world";
     let sb;
     try {
-      const resp = await fetch(`${ESPN}/scoreboard?dates=20260611-20260627&limit=200`, { headers: { Accept: "application/json" } });
+      const resp = await fetch(`${ESPN}/scoreboard?dates=20260611-20260719&limit=200`, { headers: { Accept: "application/json" } });
       if (!resp.ok) return res.status(502).json({ error: `ESPN respondió ${resp.status}` });
       sb = await resp.json();
     } catch (e) {

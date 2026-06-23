@@ -1,0 +1,34 @@
+name: Sync FIFA scores (safety net)
+
+on:
+  schedule:
+    # Cada 5 min (mínimo real de GitHub Actions). Red de seguridad: mantiene
+    # marcadores en vivo, Pago Anticipado y liquidación corriendo aunque la
+    # pestaña del admin esté cerrada. El sync de 10s del navegador admin sigue
+    # siendo el primario cuando está online; esto solo cubre cuando NO lo está.
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # permite correrlo manualmente desde GitHub
+
+# Evita que dos corridas se encimen y peguen escrituras concurrentes en KV
+concurrency:
+  group: sync-fifa
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sincronizar marcadores FIFA
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            "https://ludopicks.vercel.app/api/game" \
+            -H "Content-Type: application/json" \
+            -d "{\"action\":\"syncFifa\",\"payload\":{\"adminKey\":\"${{ secrets.ADMIN_KEY }}\"}}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "HTTP $HTTP_CODE"
+          echo "$BODY"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Error: respuesta no-200"
+            exit 1
+          fi
