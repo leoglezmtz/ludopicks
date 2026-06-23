@@ -1721,7 +1721,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.37.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.37.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4563,9 +4563,12 @@ function renderAdmin(){
     const live=state.liveScores&&state.liveScores[p.id];
     const hasFinal=res&&res.gl!=null&&!res.parcial;
     if(hasFinal){liquidados.push(p);return;}
-    // Estimación de fin del partido: kickoff + 2h30
+    // Un marcador en vivo fresco (sync reciente) manda: el partido SIGUE en curso
+    // aunque exceda la duración estimada (retrasos por lluvia, alargues, etc.).
+    const liveFresh=live&&(now-(live.ts||0)<30*60*1000);
+    // Respaldo si no hay feed en vivo: ventana estimada kickoff + 2h30
     const finEst=p.kickoff+150*60*1000;
-    if(now>=p.kickoff&&now<=finEst){enVivo.push(p);return;}
+    if(liveFresh||(now>=p.kickoff&&now<=finEst)){enVivo.push(p);return;}
     if(now<p.kickoff){porIniciar.push(p);return;}
     pendLiq.push(p); // ya pasó la hora estimada y no hay marcador final
   });
