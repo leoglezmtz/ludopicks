@@ -1041,7 +1041,7 @@ select option{background:#161c30;color:#fff}
 .bkm-row.w{color:#fff}
 .bkm-row.fw{color:var(--gold)}
 .bkm-row.tbd{color:rgba(255,255,255,.18);font-style:italic}
-.bkm-row.projected{opacity:.35}
+.bkm-row.projected{opacity:.55}
 .bkm-row.projected img{filter:grayscale(1)}
 .bkm-row.confirmed{color:#fff;opacity:1}
 .bkm-row.confirmed img{filter:none;opacity:1}
@@ -1056,6 +1056,9 @@ select option{background:#161c30;color:#fff}
 .elim-el-grid{grid-template-columns:repeat(6,1fr);gap:4px}
 .el-head::after{background:rgba(226,75,74,.18)}
 .el-chip{background:rgba(226,75,74,.05);border-color:rgba(226,75,74,.2)}
+/* Eliminado OFICIAL (matemático): X roja sobre todo el recuadro */
+.el-chip.el-confirmed{position:relative;opacity:.95;background:rgba(226,75,74,.12);border-color:rgba(226,75,74,.5)}
+.el-chip.el-confirmed::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(to top right,transparent calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% + 1.1px),transparent calc(50% + 1.1px)),linear-gradient(to bottom right,transparent calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% + 1.1px),transparent calc(50% + 1.1px))}
 .el-name{color:rgba(226,75,74,.8)}
 @media(min-width:900px){
   /* Elimis grupos: 2 columnas, stats más anchos y legibles */
@@ -1229,7 +1232,7 @@ select option{background:#161c30;color:#fff}
     <button id="tab-especiales" onclick="showTab('especiales')"><i class="ti ti-sparkles"></i>Especiales</button>
     <button id="tab-mis" onclick="showTab('mis')"><i class="ti ti-ticket"></i>Mis picks</button>
     <button id="tab-ranking" onclick="showTab('ranking')"><i class="ti ti-trophy"></i>Ranking</button>
-    <button id="tab-elim" onclick="showTab('elim')"><i class="ti ti-tournament"></i>Elimis</button>
+    <button id="tab-elim" onclick="showTab('elim')"><i class="ti ti-tournament"></i>Eliminatorias</button>
     <button id="tab-records" class="tab-records-glow" onclick="showTab('records')" style="display:none"><i class="ti ti-star"></i>Récords</button>
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
@@ -1730,7 +1733,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.38.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.38.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3988,13 +3991,15 @@ function renderElim(){
   const tEmpty=Array.from({length:Math.max(0,8-thirds.length)},()=>`<div class="et3-chip out"><div class="et3-flag">❓</div><div class="et3-name">—</div></div>`).join('');
   const thirdsHtml=`<div class="et3-head">Mejores terceros clasificados</div><div class="et3-grid">${thirds.map(t=>`<div class="et3-chip"><div class="et3-flag">${flagImg(t.team,18)||'🏳️'}</div><div class="et3-name">${teamName(t.team)}</div><div class="et3-pts">${t.pts}pts·${t.grupo}</div></div>`).join('')}${tEmpty}</div>`;
 
-  // Eliminados: terceros fuera + cuartos de grupo
+  // Eliminados: terceros fuera + cuartos de grupo (con grupo para checar eliminación matemática)
   const qualSet=new Set(thirds.map(t=>t.team));
-  const worstThirds=GRUPOS.map(g=>allS[g]?.[2]).filter(t=>t&&!qualSet.has(t.team));
-  const fourths=GRUPOS.map(g=>allS[g]?.[3]).filter(Boolean);
+  const worstThirds=GRUPOS.map(g=>{const t=allS[g]?.[2];return t&&!qualSet.has(t.team)?{...t,grupo:g}:null;}).filter(Boolean);
+  const fourths=GRUPOS.map(g=>{const t=allS[g]?.[3];return t?{...t,grupo:g}:null;}).filter(Boolean);
   const elimTeams=[...worstThirds,...fourths];
+  // Veredictos por grupo: un equipo OFICIALMENTE eliminado (matemático) lleva una X.
+  const elimVerd={};GRUPOS.forEach(g=>{elimVerd[g]=groupVerdicts(g);});
   const elimEmpty=Array.from({length:Math.max(0,16-elimTeams.length)},()=>`<div class="et3-chip el-chip out" style="opacity:.15"><div class="et3-flag">—</div></div>`).join('');
-  const elimHtml=elimTeams.length?`<div class="et3-head el-head">Eliminados (proyectado)</div><div class="et3-grid elim-el-grid">${elimTeams.map(t=>`<div class="et3-chip el-chip"><div class="et3-flag">${flagImg(t.team,14)||'🏳️'}</div><div class="et3-name el-name">${teamName(t.team).slice(0,10)}</div></div>`).join('')}${elimEmpty}</div>`:'';
+  const elimHtml=elimTeams.length?`<div class="et3-head el-head">Eliminados (proyectado · ✕ = oficial)</div><div class="et3-grid elim-el-grid">${elimTeams.map(t=>{const oficial=!!elimVerd[t.grupo]?.[t.team]?.elim;return `<div class="et3-chip el-chip${oficial?' el-confirmed':''}"${oficial?' title="Eliminado matemáticamente"':''}><div class="et3-flag">${flagImg(t.team,14)||'🏳️'}</div><div class="et3-name el-name">${teamName(t.team).slice(0,10)}</div></div>`;}).join('')}${elimEmpty}</div>`:'';
 
   // Bracket labels row
   const LBLS=['R32','R16','QF','SF','FINAL','SF','QF','R16','R32'];
