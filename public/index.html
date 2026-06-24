@@ -1730,7 +1730,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.38.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.38.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3921,22 +3921,41 @@ function matchInsight(p){
   const winL=groupVerdicts(g,[{id:p.id,gl:1,gv:0}]);
   const winV=groupVerdicts(g,[{id:p.id,gl:0,gv:1}]);
   const c=[];
-  if(!base[L].elim&&winV[L].elim)c.push([1,`🔻 Si pierde, ${teamName(L)} queda eliminado`]);
-  if(!base[Vt].elim&&winL[Vt].elim)c.push([1,`🔻 Si pierde, ${teamName(Vt)} queda eliminado`]);
-  if(!base[L].first&&winL[L].first)c.push([2,`🥇 Si gana, ${teamName(L)} termina 1° del grupo`]);
-  if(!base[Vt].first&&winV[Vt].first)c.push([2,`🥇 Si gana, ${teamName(Vt)} termina 1° del grupo`]);
-  if(!base[L].top2&&winL[L].top2)c.push([3,`✅ Si gana, ${teamName(L)} clasifica`]);
-  if(!base[Vt].top2&&winV[Vt].top2)c.push([3,`✅ Si gana, ${teamName(Vt)} clasifica`]);
-  if(base[L].top2)c.push([4,`✅ ${teamName(L)} ya está clasificado`]);
-  if(base[Vt].top2)c.push([4,`✅ ${teamName(Vt)} ya está clasificado`]);
-  // Capa provisional: liderato del grupo si gana (lenguaje claramente no-definitivo).
+  const nm=teamName;
+  // Si AMBOS equipos disparan el mismo hito (caso simétrico, p.ej. el partido entre
+  // los dos líderes), se fusiona en "Quien gane / Quien pierda ..." para no dar a
+  // entender que el hito solo aplica al equipo local.
+  // [1] eliminación si pierde
+  const elimL=!base[L].elim&&winV[L].elim, elimV=!base[Vt].elim&&winL[Vt].elim;
+  if(elimL&&elimV)c.push([1,`🔻 Quien pierda queda eliminado`]);
+  else if(elimL)c.push([1,`🔻 Si pierde, ${nm(L)} queda eliminado`]);
+  else if(elimV)c.push([1,`🔻 Si pierde, ${nm(Vt)} queda eliminado`]);
+  // [2] termina 1° del grupo si gana (confirmación matemática)
+  const firstL=!base[L].first&&winL[L].first, firstV=!base[Vt].first&&winV[Vt].first;
+  if(firstL&&firstV)c.push([2,`🥇 Quien gane termina 1° del grupo`]);
+  else if(firstL)c.push([2,`🥇 Si gana, ${nm(L)} termina 1° del grupo`]);
+  else if(firstV)c.push([2,`🥇 Si gana, ${nm(Vt)} termina 1° del grupo`]);
+  // [3] clasifica si gana
+  const top2L=!base[L].top2&&winL[L].top2, top2V=!base[Vt].top2&&winV[Vt].top2;
+  if(top2L&&top2V)c.push([3,`✅ Quien gane clasifica`]);
+  else if(top2L)c.push([3,`✅ Si gana, ${nm(L)} clasifica`]);
+  else if(top2V)c.push([3,`✅ Si gana, ${nm(Vt)} clasifica`]);
+  // [4] ya clasificado
+  if(base[L].top2&&base[Vt].top2)c.push([4,`✅ Ambos ya están clasificados`]);
+  else if(base[L].top2)c.push([4,`✅ ${nm(L)} ya está clasificado`]);
+  else if(base[Vt].top2)c.push([4,`✅ ${nm(Vt)} ya está clasificado`]);
+  // [5/6] liderato provisional si gana (lenguaje claramente no-definitivo)
   const topOther=(pmap,team)=>Math.max(0,...Object.entries(pmap).filter(([t])=>t!==team).map(([,v])=>v));
   const pL=_grpPts(g,[{id:p.id,gl:1,gv:0}]), pV=_grpPts(g,[{id:p.id,gl:0,gv:1}]);
   const oL=topOther(pL,L), oV=topOther(pV,Vt);
-  if(pL[L]>oL)c.push([5,`🔼 Si gana, ${teamName(L)} se pone líder del grupo (provisional)`]);
-  else if(pL[L]===oL&&pL[L]>0)c.push([6,`🔼 Si gana, ${teamName(L)} alcanza la cima del grupo (provisional)`]);
-  if(pV[Vt]>oV)c.push([5,`🔼 Si gana, ${teamName(Vt)} se pone líder del grupo (provisional)`]);
-  else if(pV[Vt]===oV&&pV[Vt]>0)c.push([6,`🔼 Si gana, ${teamName(Vt)} alcanza la cima del grupo (provisional)`]);
+  const provTier=(pts,team,o)=> pts[team]>o?5 : (pts[team]===o&&pts[team]>0?6:0);
+  const tL=provTier(pL,L,oL), tV=provTier(pV,Vt,oV);
+  const provTxt={5:'se pone líder del grupo (provisional)',6:'alcanza la cima del grupo (provisional)'};
+  if(tL&&tL===tV)c.push([tL,`🔼 Quien gane ${provTxt[tL]}`]);
+  else{
+    if(tL)c.push([tL,`🔼 Si gana, ${nm(L)} ${provTxt[tL]}`]);
+    if(tV)c.push([tV,`🔼 Si gana, ${nm(Vt)} ${provTxt[tV]}`]);
+  }
   c.sort((a,b)=>a[0]-b[0]);
   return c.length?c[0][1]:'';
 }
