@@ -1733,7 +1733,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.38.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.38.3';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2621,27 +2621,43 @@ function fmtClose(ms){
   if(m>0)return `cierra en ${m}m ${ss}s`;
   return `cierra en ${ss}s`;
 }
-let cdRenderedId=null;
+// Todos los partidos que comparten el PRÓXIMO horario de inicio (para juegos simultáneos).
+function nextMatches(){
+  const up=state.partidos.filter(p=>!state.resultados[p.id]&&p.kickoff>eNow()).sort((a,b)=>a.kickoff-b.kickoff);
+  if(!up.length)return [];
+  const k=up[0].kickoff;
+  return up.filter(p=>p.kickoff===k);
+}
+let cdRenderedKey=null;
 function renderCountdown(){
   const box=document.getElementById('countdownBox');if(!box)return;
-  const n=nextMatch();
-  if(!n){box.innerHTML='';cdRenderedId=null;return;}
-  const ms=n.kickoff-eNow();
-  // Si sigue siendo el mismo partido, solo actualiza el texto del tiempo (no recargar banderas → sin parpadeo)
-  if(cdRenderedId===n.id){
-    const t=document.getElementById('cdTimeText');
-    if(t)t.textContent=fmtCountdown(ms);
-    const ins=document.getElementById('cdInsight');
-    if(ins){const tx=matchInsight(n);ins.textContent=tx;ins.style.display=tx?'block':'none';}
+  const ns=nextMatches();
+  if(!ns.length){box.innerHTML='';cdRenderedKey=null;return;}
+  const ms=ns[0].kickoff-eNow();
+  const key=ns.map(p=>p.id).join(',');
+  // Mismo conjunto de partidos: solo actualiza tiempo e insights (sin recargar banderas → sin parpadeo)
+  if(cdRenderedKey===key){
+    document.querySelectorAll('.cd-time-text').forEach(t=>t.textContent=fmtCountdown(ms));
+    ns.forEach(p=>{const ins=document.getElementById('cdInsight-'+p.id);if(ins){const tx=matchInsight(p);ins.textContent=tx;ins.style.display=tx?'block':'none';}});
     return;
   }
-  cdRenderedId=n.id;
-  const insTxt=matchInsight(n);
-  const insHtml=`<div id="cdInsight" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:5px;line-height:1.3${insTxt?'':';display:none'}">${insTxt}</div>`;
-  const fav=matchFav(n), fL=teamForm(n.local,3), fV=teamForm(n.visita,3);
-  const metaBits=[];if(fav)metaBits.push(fav);if(fL!=='—'||fV!=='—')metaBits.push(`${fL} vs ${fV}`);
-  const metaHtml=metaBits.length?`<div style="font-size:10.5px;color:var(--muted2);margin-top:4px">${metaBits.join('  ·  ')}</div>`:'';
-  box.innerHTML=`<div class="countdown" onclick="goToMatch(${n.id})" role="button" tabindex="0" style="cursor:pointer" aria-label="Ir a apostar por ${n.local} vs ${n.visita}"><div><div class="cd-label">Próximo partido · toca para apostar</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div>${insHtml}${metaHtml}</div><div class="cd-time"><span id="cdTimeText">${fmtCountdown(ms)}</span><small>${n.fecha} · ${n.hora}</small></div></div>`;
+  cdRenderedKey=key;
+  const timeHtml=`<div class="cd-time"><span class="cd-time-text">${fmtCountdown(ms)}</span><small>${ns[0].fecha} · ${ns[0].hora}</small></div>`;
+  if(ns.length===1){
+    const n=ns[0];
+    const insTxt=matchInsight(n);
+    const insHtml=`<div id="cdInsight-${n.id}" style="font-size:11px;color:var(--gold);font-weight:700;margin-top:5px;line-height:1.3${insTxt?'':';display:none'}">${insTxt}</div>`;
+    const fav=matchFav(n), fL=teamForm(n.local,3), fV=teamForm(n.visita,3);
+    const metaBits=[];if(fav)metaBits.push(fav);if(fL!=='—'||fV!=='—')metaBits.push(`${fL} vs ${fV}`);
+    const metaHtml=metaBits.length?`<div style="font-size:10.5px;color:var(--muted2);margin-top:4px">${metaBits.join('  ·  ')}</div>`:'';
+    box.innerHTML=`<div class="countdown" onclick="goToMatch(${n.id})" role="button" tabindex="0" style="cursor:pointer" aria-label="Ir a apostar por ${n.local} vs ${n.visita}"><div><div class="cd-label">Próximo partido · toca para apostar</div><div class="cd-match">${teamFlag(n.local,15)} vs ${teamFlag(n.visita,15)}</div>${insHtml}${metaHtml}</div>${timeHtml}</div>`;
+  }else{
+    const rows=ns.map((p,i)=>{
+      const insTxt=matchInsight(p);
+      return `<div onclick="goToMatch(${p.id})" role="button" tabindex="0" style="cursor:pointer${i>0?';border-top:1px solid rgba(255,255,255,.1);margin-top:8px;padding-top:8px':''}"><div class="cd-match" style="font-size:14px">${teamFlag(p.local,14)} vs ${teamFlag(p.visita,14)}</div><div id="cdInsight-${p.id}" style="font-size:10.5px;color:var(--gold);font-weight:700;margin-top:3px;line-height:1.3${insTxt?'':';display:none'}">${insTxt}</div></div>`;
+    }).join('');
+    box.innerHTML=`<div class="countdown" style="align-items:flex-start"><div style="flex:1;min-width:0"><div class="cd-label">${ns.length} partidos · misma hora · toca para apostar</div><div style="margin-top:4px">${rows}</div></div>${timeHtml}</div>`;
+  }
 }
 // Lleva al usuario a la ficha del partido y la expande para apostar.
 function goToMatch(pid){
