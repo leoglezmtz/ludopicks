@@ -1282,6 +1282,7 @@ select option{background:#161c30;color:#fff}
     <button id="tab-mis" onclick="showTab('mis')"><i class="ti ti-ticket"></i>Mis picks</button>
     <button id="tab-ranking" onclick="showTab('ranking')"><i class="ti ti-trophy"></i>Ranking</button>
     <button id="tab-elim" onclick="showTab('elim')"><i class="ti ti-tournament"></i>Eliminatorias</button>
+    <button id="tab-ko" onclick="showTab('ko')" style="display:none"><i class="ti ti-map-2"></i>Apuestas KO</button>
     <button id="tab-records" class="tab-records-glow" onclick="showTab('records')" style="display:none"><i class="ti ti-star"></i>Récords</button>
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
@@ -1291,6 +1292,7 @@ select option{background:#161c30;color:#fff}
     <div id="tabc-ranking" class="tabc"><div id="listaRanking"></div></div>
     <div id="tabc-records" class="tabc"><div id="listaRecords"></div></div>
     <div id="tabc-elim" class="tabc"><div id="listaElim"></div></div>
+    <div id="tabc-ko" class="tabc"><div id="koView"></div></div>
     <div id="tabc-especiales" class="tabc"><div id="listaEspeciales"></div></div>
     <div id="tabc-admin" class="tabc">
       <div id="adminTabs" class="admin-tabs">
@@ -1782,7 +1784,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.42.4';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.43.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2262,6 +2264,8 @@ function enterApp(){
   const recTopBtn=document.getElementById('recordsTopBtn');if(recTopBtn)recTopBtn.style.display=isAdmin?'none':'inline-flex';
   // Elimis tab visible para todos (jugadores y admin: el admin también quiere ver la llave)
   const elimTab=document.getElementById('tab-elim');if(elimTab)elimTab.style.display='flex';
+  // Apuestas KO: pestaña de PREVIEW, solo admin por ahora.
+  const koTab=document.getElementById('tab-ko');if(koTab)koTab.style.display=isAdmin?'flex':'none';
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
   // Persistir credenciales del switch en claves dedicadas (sobreviven logout)
@@ -2362,6 +2366,7 @@ async function manualRefresh(){
   if(currentTab==='ranking')renderRanking();
   if(currentTab==='mis')renderMis();
   if(currentTab==='elim')renderElim();
+  if(currentTab==='ko')renderKO();
   if(currentTab==='especiales')renderEspeciales();
   if(currentTab==='admin'&&isAdmin){renderAdmin();renderAdminUsers();}
   if(!isAdmin)checkCancelledBets();
@@ -2610,6 +2615,7 @@ function showTab(name){
   if(name==='ranking')renderRanking();
   if(name==='records')renderRecords();
   if(name==='elim')renderElim();
+  if(name==='ko')renderKO();
   if(name==='especiales')renderEspeciales();
   if(name==='admin'){renderAdmin();renderAdminUsers();try{initFifaAuto();}catch(e){}}
 }
@@ -4137,29 +4143,13 @@ function renderElim(){
     champHtml+=`<div class="info-card"><div style="font-size:13px;color:var(--muted);line-height:1.5">Apuesta <b style="color:var(--gold)">una sola vez</b> al campeón. Mientras más improbable, ¡más paga!</div><div style="text-align:center;margin:10px 0;font-size:12px;color:var(--gold);font-weight:800">⏳ Cierra en ${fmtCountdown(ms).replace('¡Ya!','¡ya casi!')}</div>${myBet?`<div class="campeon-mybet">Tu pick: ${flagImg(myBet.equipo,18)} <b>${teamName(myBet.equipo)}</b> · ${myBet.momio}x<div style="font-size:12px;color:var(--muted)">$${myBet.monto.toLocaleString()} → posible $${Math.round(myBet.monto*myBet.momio).toLocaleString()}</div></div>`:''}<button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="openCampeonPicker()">${myBet?'Cambiar mi campeón':'🏆 Elegir campeón'}</button></div>`;
   }
 
-  // El radial "Camino" es SOLO para admin (preview); los jugadores ven la Llave normal.
-  const camAdmin=isAdmin;
-  const ev=(elimView==='camino'&&!camAdmin)?'llave':elimView;
-  const segCam=ev==='camino', segLlave=ev==='llave', segGru=ev==='grupos';
-  // Cruces R32 con equipos reales pronosticados (misma lógica del bracket) para el radial.
-  const bkM=def=>{const h=resolveSlot(def.h,allS,thirdsMap,winMap),a=resolveSlot(def.a,allS,thirdsMap,winMap);return {h,a,bracketId:def.id,hConf:isSlotConfirmed(def.h,h,winMap),aConf:isSlotConfirmed(def.a,a,winMap)};};
-  caminoMatches=[...BK_L32.map(bkM),...BK_R32.map(bkM)];
+  const segLlave=elimView!=='grupos', segGru=elimView==='grupos';
   // Toggle vía clases (no IDs) para evitar colisiones si el bloque se montara más de una vez.
   const elimHtmlFull=`<div style="padding:0 2px 4px">
     <div class="elim-seg">
-      ${camAdmin?`<button class="elim-seg-camino ${segCam?'on':''}" onclick="setElimView('camino')">🗺️ Camino</button>`:''}
       <button class="elim-seg-llave ${segLlave?'on':''}" onclick="setElimView('llave')">⚽ Llave</button>
       <button class="elim-seg-grupos ${segGru?'on':''}" onclick="setElimView('grupos')">📊 Grupos</button>
     </div>
-    ${camAdmin?`<div class="elim-view-camino" style="display:${segCam?'block':'none'}">
-      <div class="cam-preview-note">👁️ Vista previa (admin) de cómo se desplegará la fase de eliminatoria en la pestaña <b>Apuestas</b>.</div>
-      <div class="cam-browse">
-        <button class="cam-bpill ${caminoBrowse==='camino'?'on':''}" onclick="caminoSetBrowse('camino')">🗺️ Camino</button>
-        <button class="cam-bpill ${caminoBrowse==='calendario'?'on':''}" onclick="caminoSetBrowse('calendario')">📅 Calendario</button>
-      </div>
-      <div id="caminoPanel" class="camino-panel"></div>
-      <div id="caminoWrap" class="${caminoBrowse==='calendario'?'camino-list':'camino-wrap'}"></div>
-    </div>`:''}
     <div class="elim-view-llave" style="display:${segLlave?'block':'none'}">
       <div class="sec-title" style="margin-bottom:8px">⚽ Llaves eliminatorias</div>
       <div style="font-size:10px;color:var(--muted2);margin-bottom:6px">Proyectado según posiciones actuales · desliza →</div>
@@ -4178,18 +4168,15 @@ function renderElim(){
     </div>
   </div>`;
   const elU=document.getElementById('listaElim');if(elU)elU.innerHTML=elimHtmlFull;
-  if(camAdmin&&ev==='camino')renderCaminoView();
 }
 // Toggle Llave/Grupos en Eliminatorias. Opera sobre TODAS las instancias (usuario + admin)
 // para que ambas vistas queden sincronizadas. Sin re-render completo.
 function setElimView(v){
   elimView=v;
-  const sh=(cls,on)=>document.querySelectorAll(cls).forEach(e=>e.style.display=on?'block':'none');
-  sh('.elim-view-camino',v==='camino');sh('.elim-view-llave',v==='llave');sh('.elim-view-grupos',v==='grupos');
-  document.querySelectorAll('.elim-seg-camino').forEach(b=>b.classList.toggle('on',v==='camino'));
-  document.querySelectorAll('.elim-seg-llave').forEach(b=>b.classList.toggle('on',v==='llave'));
+  document.querySelectorAll('.elim-view-llave').forEach(e=>e.style.display=v==='grupos'?'none':'block');
+  document.querySelectorAll('.elim-view-grupos').forEach(e=>e.style.display=v==='grupos'?'block':'none');
+  document.querySelectorAll('.elim-seg-llave').forEach(b=>b.classList.toggle('on',v!=='grupos'));
   document.querySelectorAll('.elim-seg-grupos').forEach(b=>b.classList.toggle('on',v==='grupos'));
-  if(v==='camino')renderCaminoView();
 }
 // Selector de campeón (lista de selecciones ordenadas por momio)
 function openCampeonPicker(){
@@ -5400,6 +5387,22 @@ function closeModal(){const o=document.getElementById('overlay');o.style.display
 let caminoMatches=[], caminoSel=null, caminoSlip=[], caminoCollapsed=false, caminoLines={g:2.5,c:9.5,t:4.5}, caminoMonto='', caminoBrowse='camino';
 function caminoTeamAt(i){const m=caminoMatches[i>>1]||{};return i%2===0?m.h:m.a;}
 function caminoConfAt(i){const m=caminoMatches[i>>1]||{};return i%2===0?m.hConf:m.aConf;}
+// Pestaña "Apuestas KO" (preview admin): pastillas Camino/Calendario + panel de apuestas.
+function renderKO(){
+  const view=document.getElementById('koView');if(!view)return;
+  const allS=calcAllStandings(),thirds=calcBestThirds(allS),thirdsMap=buildThirdsMap(thirds),winMap=buildElimWinnerMap();
+  const bkM=def=>{const h=resolveSlot(def.h,allS,thirdsMap,winMap),a=resolveSlot(def.a,allS,thirdsMap,winMap);return {h,a,bracketId:def.id,hConf:isSlotConfirmed(def.h,h,winMap),aConf:isSlotConfirmed(def.a,a,winMap)};};
+  caminoMatches=[...BK_L32.map(bkM),...BK_R32.map(bkM)];
+  view.innerHTML=`
+    <div class="cam-preview-note">👁️ Vista previa (solo admin) de cómo se verán las apuestas de eliminatoria. Aún no es pública ni real — momios de demostración.</div>
+    <div class="cam-browse">
+      <button class="cam-bpill ${caminoBrowse==='camino'?'on':''}" onclick="caminoSetBrowse('camino')">🗺️ Camino</button>
+      <button class="cam-bpill ${caminoBrowse==='calendario'?'on':''}" onclick="caminoSetBrowse('calendario')">📅 Calendario</button>
+    </div>
+    <div id="caminoPanel" class="camino-panel"></div>
+    <div id="caminoWrap" class="${caminoBrowse==='calendario'?'camino-list':'camino-wrap'}"></div>`;
+  renderCaminoView();
+}
 function caminoSetBrowse(v){
   caminoBrowse=v;
   const pills=document.querySelectorAll('.cam-bpill');
@@ -6092,6 +6095,7 @@ async function poll(){
   if(currentTab==='ranking')renderRanking();
   if(currentTab==='mis')renderMis();
   if(currentTab==='elim')renderElim();          // tablas de grupos + bracket en vivo
+  if(currentTab==='ko')renderKO();
   if(currentTab==='especiales')renderEspeciales();
   if(currentTab==='admin'&&isAdmin)renderAdmin();
 }
