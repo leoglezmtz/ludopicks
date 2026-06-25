@@ -1065,14 +1065,28 @@ select option{background:#161c30;color:#fff}
 .el-chip.el-confirmed::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(to top right,transparent calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% + 1.1px),transparent calc(50% + 1.1px)),linear-gradient(to bottom right,transparent calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% + 1.1px),transparent calc(50% + 1.1px))}
 .el-name{color:rgba(226,75,74,.8)}
 /* ── Vista radial "El Camino" (bracket eliminatoria) ── */
-.camino-wrap{position:relative;width:100%;max-width:640px;margin:0 auto;border-radius:16px;overflow:hidden;background-color:#0a0f1e;background-image:radial-gradient(circle at 50% 47%,rgba(255,212,0,.18),rgba(255,212,0,.05) 28%,transparent 52%),url('/img/copa.jpg');background-size:cover;background-position:center}
-.camino-wrap svg{display:block;width:100%;height:auto}
+.camino-wrap{position:relative;width:100%;max-width:640px;margin:0 auto;border-radius:16px;overflow:hidden;background-color:#0a0f1e}
+.camino-wrap::before{content:'';position:absolute;inset:0;background:url('https://c.files.bbci.co.uk/977C/production/_102008783_mediaitem102008782.jpg') center/cover no-repeat;opacity:.5;z-index:0}
+.camino-wrap svg{position:relative;z-index:1;display:block;width:100%;height:auto}
 .cam-flag:hover circle{stroke:#ffd400}
-.camino-panel{max-width:640px;margin:12px auto 0}
-.cam-panel-empty{text-align:center;color:var(--muted2);font-size:12.5px;padding:16px}
-.cam-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px}
-.cam-card-h{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:15px;font-weight:800;color:#fff;margin-bottom:2px}
-.cam-demo-tag{font-size:10px;color:#2b1d00;background:var(--gold);padding:2px 8px;border-radius:10px;font-weight:800}
+/* Panel de apuestas ARRIBA del radial */
+.camino-panel{max-width:640px;margin:0 auto 12px}
+.cam-panel-empty{text-align:center;color:var(--muted2);font-size:12.5px;padding:14px;line-height:1.5}
+.cam-match{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px}
+.cam-match-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:15px;font-weight:800;color:#fff;margin-bottom:2px}
+.cam-vs{color:var(--muted2);font-size:12px;font-weight:600;margin:0 2px}
+.cam-collapse{background:rgba(255,255,255,.12);border:none;color:#fff;font-size:12px;font-weight:700;border-radius:18px;padding:6px 12px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.cam-demo-note{text-align:center;font-size:11px;color:var(--gold);opacity:.85;margin-bottom:12px}
+/* Boleto / parlay */
+.cam-boleto{background:rgba(255,219,0,.08);border:1px solid rgba(255,219,0,.32);border-radius:14px;padding:12px;margin-bottom:10px}
+.cam-boleto-h{display:flex;justify-content:space-between;align-items:center;font-weight:800;color:#fff;font-size:13px}
+.cam-boleto-cuota{color:var(--gold);font-size:17px;font-weight:900}
+.cam-boleto-legs{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0}
+.cam-leg{font-size:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:3px 7px;color:rgba(255,255,255,.85)}
+.cam-leg b{color:var(--gold)}
+.cam-leg-x{cursor:pointer;color:var(--rl);margin-left:4px;font-weight:800}
+.cam-boleto-act{display:flex;gap:10px;align-items:center}
+.cam-clear{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;flex-shrink:0}
 @media(min-width:900px){
   /* Elimis grupos: 2 columnas, stats más anchos y legibles */
   .eg-grid{grid-template-columns:repeat(2,1fr);gap:12px}
@@ -1266,7 +1280,6 @@ select option{background:#161c30;color:#fff}
         <button class="fbtn" id="atab-casino" onclick="setAdminTab('casino',this)">🎰 Casino</button>
         <button class="fbtn" id="atab-tablas" onclick="setAdminTab('tablas',this)">📋 Tablas</button>
         <button class="fbtn" id="atab-fairplay" onclick="setAdminTab('fairplay',this)">🟨 Fair Play</button>
-        <button class="fbtn" id="atab-camino" onclick="setAdminTab('camino',this)">🗺️ Camino (demo)</button>
       </div>
       <div id="admin-content-wrap">
       <div id="admin-resultados">
@@ -1436,12 +1449,6 @@ select option{background:#161c30;color:#fff}
     <div id="fpEquiposList"></div>
   </div>
 </div>
-      <div id="admin-camino" style="display:none">
-        <div class="sec-title" style="margin-bottom:4px">🗺️ El Camino — vista radial (demo)</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Maqueta funcional del bracket radial que reemplazará la Llave al terminar los grupos. Toca una bandera para ver su partido y los momios. Datos de demostración.</div>
-        <div id="caminoWrap" class="camino-wrap"></div>
-        <div id="caminoPanel" class="camino-panel"></div>
-      </div>
       <button class="btn btn-danger btn-sm" style="width:100%;margin-top:16px" onclick="resetTodo()">⚠️ Reset total</button>
       </div>
     </div>
@@ -1753,11 +1760,11 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.41.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.42.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
-let elimView='llave';   // 'llave' | 'grupos' — sub-pestaña dentro de Eliminatorias
+let elimView='camino';   // 'camino' | 'llave' | 'grupos' — sub-pestaña dentro de Eliminatorias
 let expanded=new Set();   // ids de partidos con la tarjeta desplegada
 let daysToShow=3;          // cuántos días de partidos mostrar (Todos)
 
@@ -2596,9 +2603,7 @@ function setAdminTab(name,btn){
   document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
   document.getElementById('admin-tablas').style.display=name==='tablas'?'block':'none';
   document.getElementById('admin-fairplay').style.display=name==='fairplay'?'block':'none';
-  document.getElementById('admin-camino').style.display=name==='camino'?'block':'none';
   if(name==='fairplay') renderFairPlayAdmin();
-  if(name==='camino') renderCaminoDemo();
   if(name==='saldos'){const sel=document.getElementById('adjJugador');if(sel)sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
     const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}
     // Inicializar panel unificado
@@ -4110,20 +4115,28 @@ function renderElim(){
     champHtml+=`<div class="info-card"><div style="font-size:13px;color:var(--muted);line-height:1.5">Apuesta <b style="color:var(--gold)">una sola vez</b> al campeón. Mientras más improbable, ¡más paga!</div><div style="text-align:center;margin:10px 0;font-size:12px;color:var(--gold);font-weight:800">⏳ Cierra en ${fmtCountdown(ms).replace('¡Ya!','¡ya casi!')}</div>${myBet?`<div class="campeon-mybet">Tu pick: ${flagImg(myBet.equipo,18)} <b>${teamName(myBet.equipo)}</b> · ${myBet.momio}x<div style="font-size:12px;color:var(--muted)">$${myBet.monto.toLocaleString()} → posible $${Math.round(myBet.monto*myBet.momio).toLocaleString()}</div></div>`:''}<button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="openCampeonPicker()">${myBet?'Cambiar mi campeón':'🏆 Elegir campeón'}</button></div>`;
   }
 
-  const segLlaveOn=elimView!=='grupos', segGruposOn=elimView==='grupos';
+  const segCam=elimView==='camino', segLlave=elimView==='llave', segGru=elimView==='grupos';
+  // Cruces R32 con equipos reales pronosticados (misma lógica del bracket) para el radial.
+  const bkM=def=>{const h=resolveSlot(def.h,allS,thirdsMap,winMap),a=resolveSlot(def.a,allS,thirdsMap,winMap);return {h,a,bracketId:def.id,hConf:isSlotConfirmed(def.h,h,winMap),aConf:isSlotConfirmed(def.a,a,winMap)};};
+  caminoMatches=[...BK_L32.map(bkM),...BK_R32.map(bkM)];
   // Toggle vía clases (no IDs) para evitar colisiones si el bloque se montara más de una vez.
   const elimHtmlFull=`<div style="padding:0 2px 4px">
     <div class="elim-seg">
-      <button class="elim-seg-llave ${segLlaveOn?'on':''}" onclick="setElimView('llave')">⚽ Llave</button>
-      <button class="elim-seg-grupos ${segGruposOn?'on':''}" onclick="setElimView('grupos')">📊 Grupos</button>
+      <button class="elim-seg-camino ${segCam?'on':''}" onclick="setElimView('camino')">🗺️ Camino</button>
+      <button class="elim-seg-llave ${segLlave?'on':''}" onclick="setElimView('llave')">⚽ Llave</button>
+      <button class="elim-seg-grupos ${segGru?'on':''}" onclick="setElimView('grupos')">📊 Grupos</button>
     </div>
-    <div class="elim-view-llave" style="display:${segLlaveOn?'block':'none'}">
+    <div class="elim-view-camino" style="display:${segCam?'block':'none'}">
+      <div id="caminoPanel" class="camino-panel"></div>
+      <div id="caminoWrap" class="camino-wrap"></div>
+    </div>
+    <div class="elim-view-llave" style="display:${segLlave?'block':'none'}">
       <div class="sec-title" style="margin-bottom:8px">⚽ Llaves eliminatorias</div>
       <div style="font-size:10px;color:var(--muted2);margin-bottom:6px">Proyectado según posiciones actuales · desliza →</div>
       <div class="bk-wrap">${lblRow}${treeHtml}</div>
       ${champHtml}
     </div>
-    <div class="elim-view-grupos" style="display:${segGruposOn?'block':'none'}">
+    <div class="elim-view-grupos" style="display:${segGru?'block':'none'}">
       <div class="sec-title">📊 Posiciones por grupo</div>
       <div class="elim-legend" style="font-size:10px;color:var(--muted2);margin-bottom:10px;gap:0 16px">
         <div>🟢 Avanza · 🟡 Posible 3er lugar · 🔴 En vivo (provisional)</div>
@@ -4135,15 +4148,18 @@ function renderElim(){
     </div>
   </div>`;
   const elU=document.getElementById('listaElim');if(elU)elU.innerHTML=elimHtmlFull;
+  if(elimView==='camino')renderCaminoView();
 }
 // Toggle Llave/Grupos en Eliminatorias. Opera sobre TODAS las instancias (usuario + admin)
 // para que ambas vistas queden sincronizadas. Sin re-render completo.
 function setElimView(v){
   elimView=v;
-  document.querySelectorAll('.elim-view-llave').forEach(e=>e.style.display=v==='grupos'?'none':'block');
-  document.querySelectorAll('.elim-view-grupos').forEach(e=>e.style.display=v==='grupos'?'block':'none');
-  document.querySelectorAll('.elim-seg-llave').forEach(b=>b.classList.toggle('on',v!=='grupos'));
+  const sh=(cls,on)=>document.querySelectorAll(cls).forEach(e=>e.style.display=on?'block':'none');
+  sh('.elim-view-camino',v==='camino');sh('.elim-view-llave',v==='llave');sh('.elim-view-grupos',v==='grupos');
+  document.querySelectorAll('.elim-seg-camino').forEach(b=>b.classList.toggle('on',v==='camino'));
+  document.querySelectorAll('.elim-seg-llave').forEach(b=>b.classList.toggle('on',v==='llave'));
   document.querySelectorAll('.elim-seg-grupos').forEach(b=>b.classList.toggle('on',v==='grupos'));
+  if(v==='camino')renderCaminoView();
 }
 // Selector de campeón (lista de selecciones ordenadas por momio)
 function openCampeonPicker(){
@@ -5349,12 +5365,12 @@ async function resetTodo(){
 // ── HELPERS ───────────────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeModal(){const o=document.getElementById('overlay');o.style.display='none';o.classList.remove('cm-center');}
-// ── DEMO: vista radial "El Camino" (bracket eliminatoria, simétrico) ──────
-const CAMINO_TEAMS=['FRA','SWE','KOR','SUI','NED','MAR','POR','ESP','AUT','USA','ALG','EGY','CZE','BRA','JPN','CIV','NOR','MEX','SCO','ENG','CPV','ARG','URU','AUS','IRN','CAN','BEL','COL','CRO','GER','PAR','NZL'];
-// momios demo por partido (16): [local, empate, visita, avanzaLocal, avanzaVisita]
-const CAMINO_ODDS=[[2.1,3.3,3.4,1.7,2.0],[1.5,4.2,6,1.25,3.6],[1.35,5,9,1.18,4.5],[2.6,3.2,2.7,1.9,1.8],[1.9,3.4,4,1.55,2.3],[1.25,6,12,1.1,5.5],[1.7,3.7,4.8,1.4,2.7],[3,3.3,2.3,2.1,1.6],[2.2,3.2,3.3,1.75,1.95],[1.6,4,5.5,1.35,2.9],[2.4,3.1,3,1.85,1.85],[1.45,4.3,7,1.22,3.8],[1.8,3.5,4.4,1.5,2.4],[1.3,5.5,10,1.12,5],[2,3.4,3.7,1.65,2.1],[2.7,3.2,2.6,1.95,1.75]];
-let caminoSel=null;
-function renderCaminoDemo(){
+// ── Vista radial "El Camino" (bracket eliminatoria, simétrico) ────────────
+// caminoMatches: 16 cruces R32 con equipos reales pronosticados (lo llena renderElim).
+let caminoMatches=[], caminoSel=null, caminoSlip=[];
+function caminoTeamAt(i){const m=caminoMatches[i>>1]||{};return i%2===0?m.h:m.a;}
+function caminoConfAt(i){const m=caminoMatches[i>>1]||{};return i%2===0?m.hConf:m.aConf;}
+function renderCaminoView(){
   const wrap=document.getElementById('caminoWrap');if(!wrap)return;
   const CX=500,CY=500,TOP=14,stepH=(180-2*TOP)/15;
   const pos=(R,phi)=>{const a=phi*Math.PI/180;return [CX+R*Math.sin(a),CY-R*Math.cos(a)];};
@@ -5385,28 +5401,92 @@ function renderCaminoDemo(){
   half(rIdx,Rt);half(lIdx,Lt);
   lines+=line(pos(R4,Rt.l4),[CX,CY],2,.6)+line(pos(R4,Lt.l4),[CX,CY],2,.6);
   for(let i=0;i<32;i++){
-    const p=pos(R0,teamPhi(i)),r=28,m=i>>1,sel=caminoSel===m,url=flagUrl(CAMINO_TEAMS[i])||'';
+    const p=pos(R0,teamPhi(i)),r=28,m=i>>1,sel=caminoSel===m,team=caminoTeamAt(i),conf=caminoConfAt(i);
+    const url=team?(flagUrl(team)||''):'';
     clips+=`<clipPath id="cf${i}"><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}"/></clipPath>`;
-    flags+=`<g class="cam-flag" onclick="caminoSelect(${m})" style="cursor:pointer"><image href="${url}" xlink:href="${url}" x="${(p[0]-r).toFixed(1)}" y="${(p[1]-r).toFixed(1)}" width="${2*r}" height="${2*r}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cf${i})"/><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="none" stroke="${sel?'#ffd400':'#fff'}" stroke-opacity="${sel?1:.85}" stroke-width="${sel?3.6:2.2}"/></g>`;
+    let inner;
+    if(url)inner=`<image href="${url}" xlink:href="${url}" x="${(p[0]-r).toFixed(1)}" y="${(p[1]-r).toFixed(1)}" width="${2*r}" height="${2*r}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cf${i})" opacity="${conf?1:.5}"/>`;
+    else inner=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="rgba(255,255,255,.06)"/><text x="${p[0].toFixed(1)}" y="${(p[1]+7).toFixed(1)}" text-anchor="middle" font-size="22" fill="rgba(255,255,255,.4)">?</text>`;
+    const stroke=sel?'#ffd400':(conf?'#fff':'rgba(255,255,255,.45)');
+    const ring=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="none" stroke="${stroke}" stroke-opacity="${sel?1:(conf?.9:.6)}" stroke-width="${sel?3.8:2.2}"/>`;
+    flags+=`<g class="cam-flag" onclick="caminoSelect(${m})" style="cursor:pointer">${inner}${ring}</g>`;
   }
-  const center=`<circle cx="${CX}" cy="${CY-2}" r="36" fill="rgba(10,15,30,.45)" stroke="#ffd400" stroke-width="3"/><text x="${CX}" y="${CY+8}" text-anchor="middle" font-size="30">🏆</text><text x="${CX}" y="${CY+62}" text-anchor="middle" fill="#ffd400" font-size="24" font-weight="900" letter-spacing="3">CAMPEÓN</text>`;
+  const center=`<circle cx="${CX}" cy="${CY-2}" r="36" fill="rgba(10,15,30,.4)" stroke="#ffd400" stroke-width="3"/><text x="${CX}" y="${CY+8}" text-anchor="middle" font-size="30">🏆</text><text x="${CX}" y="${CY+62}" text-anchor="middle" fill="#ffd400" font-size="24" font-weight="900" letter-spacing="3">CAMPEÓN</text>`;
   wrap.innerHTML=`<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>${clips}</defs>${lines}${dots}${center}${flags}</svg>`;
   renderCaminoPanel();
 }
-function caminoSelect(m){caminoSel=m;renderCaminoDemo();}
+function caminoSelect(m){caminoSel=m;renderCaminoView();const el=document.getElementById('caminoPanel');if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+function caminoCollapse(){caminoSel=null;renderCaminoView();}
+// Momios demo deterministas por cruce (estables entre renders).
+function caminoOdds(m){
+  const h=k=>{const x=Math.sin((m*7+k)*99.13)*1e4;return x-Math.floor(x);};
+  const f=(min,max,k)=>+(min+h(k)*(max-min)).toFixed(2);
+  return {l:f(1.4,3,1),e:f(3.1,3.9,2),v:f(2.2,5,3),avl:f(1.2,2.1,4),avv:f(1.5,3.4,5),
+    ovG:f(1.7,2.2,6),unG:f(1.7,2.2,7),ovC:f(1.8,2.1,8),unC:f(1.8,2.1,9),ovT:f(1.85,2.1,10),unT:f(1.85,2.1,11),
+    bsi:f(1.7,2.3,12),bno:f(1.6,2.2,13),psi:f(3,5.5,14),pno:f(1.18,1.45,15)};
+}
+function caminoLegLabel(m,mkt,pick){
+  const mt=caminoMatches[m]||{},a=teamName(mt.h||'?'),b=teamName(mt.a||'?');
+  if(mkt==='1x2')return pick==='local'?a+' gana':pick==='visita'?b+' gana':'Empate';
+  if(mkt==='av')return 'Avanza '+(pick==='avl'?a:b);
+  if(mkt==='g')return (pick==='over'?'Over':'Under')+' 2.5 goles';
+  if(mkt==='c')return (pick==='over'?'Over':'Under')+' 9.5 córners';
+  if(mkt==='t')return (pick==='over'?'Over':'Under')+' 4.5 tarjetas';
+  if(mkt==='b')return 'Ambos anotan: '+(pick==='si'?'Sí':'No');
+  if(mkt==='p')return '¿Penales? '+(pick==='si'?'Sí':'No');
+  return pick;
+}
+function caminoPickSel(m,mkt,pick){return caminoSlip.some(l=>l.m===m&&l.mkt===mkt&&l.pick===pick);}
+function caminoTogglePick(m,mkt,pick,odd){
+  const i=caminoSlip.findIndex(l=>l.m===m&&l.mkt===mkt);
+  if(i>=0&&caminoSlip[i].pick===pick)caminoSlip.splice(i,1);
+  else{if(i>=0)caminoSlip.splice(i,1);caminoSlip.push({m,mkt,pick,odd});}
+  renderCaminoPanel();
+}
+function caminoClearSlip(){caminoSlip=[];renderCaminoPanel();}
 function renderCaminoPanel(){
   const el=document.getElementById('caminoPanel');if(!el)return;
-  if(caminoSel==null){el.innerHTML=`<div class="cam-panel-empty">👆 Toca una bandera para ver su partido y apostar</div>`;return;}
-  const m=caminoSel,a=CAMINO_TEAMS[2*m],b=CAMINO_TEAMS[2*m+1],o=CAMINO_ODDS[m]||[2,3.3,3,1.7,1.9];
-  const pk=(lbl,od)=>`<div class="pick" style="cursor:pointer" onclick="toast('Demo · aquí se colocaría: ${lbl} (${od}x)')"><div class="pt">${lbl}</div><div class="pm">${od}x</div></div>`;
-  el.innerHTML=`<div class="cam-card">
-    <div class="cam-card-h">${flagImg(a,22)} ${teamName(a)} <span style="color:var(--muted2);font-size:13px">vs</span> ${teamName(b)} ${flagImg(b,22)} <span class="cam-demo-tag">DEMO</span></div>
-    <div style="text-align:center;font-size:11px;color:var(--muted2);margin-bottom:12px">Dieciseisavos · toca un momio (demostración, no apuesta real)</div>
-    <div class="ou-label">🏆 Ganador del partido</div>
-    <div class="picks">${pk(teamName(a),o[0])}${pk('Empate',o[1])}${pk(teamName(b),o[2])}</div>
-    <div class="ou-label" style="margin-top:12px">🏆 ¿Quién avanza?</div>
-    <div class="ou-row">${pk('Avanza '+teamName(a),o[3])}${pk('Avanza '+teamName(b),o[4])}</div>
-  </div>`;
+  let html='';
+  if(caminoSlip.length){
+    const cuota=caminoSlip.reduce((a,l)=>a*l.odd,1);
+    const legs=caminoSlip.map(l=>`<span class="cam-leg">${caminoLegLabel(l.m,l.mkt,l.pick)} <b>${l.odd}x</b> <span class="cam-leg-x" onclick="caminoTogglePick(${l.m},'${l.mkt}','${l.pick}',${l.odd})">✕</span></span>`).join('');
+    html+=`<div class="cam-boleto">
+      <div class="cam-boleto-h"><span>🎫 Boleto · ${caminoSlip.length} ${caminoSlip.length>1?'selecciones':'selección'}</span><span class="cam-boleto-cuota">${cuota.toFixed(2)}x</span></div>
+      <div class="cam-boleto-legs">${legs}</div>
+      <div class="cam-boleto-act"><button class="btn btn-primary btn-sm" style="flex:1" onclick="toast('Boleto demo · ${caminoSlip.length} selección(es) · cuota ${cuota.toFixed(2)}x')">Apostar (demo)</button><button class="cam-clear" onclick="caminoClearSlip()">Vaciar</button></div>
+    </div>`;
+  }
+  if(caminoSel!=null){
+    const m=caminoSel,mt=caminoMatches[m]||{},a=mt.h,b=mt.a,o=caminoOdds(m);
+    const collapse=`<button class="cam-collapse" onclick="caminoCollapse()">✕ Contraer</button>`;
+    if(!a||!b){
+      html+=`<div class="cam-match"><div class="cam-match-h"><span>Cruce por definir</span>${collapse}</div><div style="font-size:12px;color:var(--muted);padding:8px 2px">Este enfrentamiento se confirmará cuando avancen las fases previas.</div></div>`;
+    }else{
+      const tn=t=>teamName(t),fl=t=>flagImg(t,20);
+      const mk=(mkt,pick,lbl,od,cls)=>`<div class="pick${caminoPickSel(m,mkt,pick)?' '+(cls||'sel-local'):''}" style="cursor:pointer" onclick="caminoTogglePick(${m},'${mkt}','${pick}',${od})"><div class="pt">${lbl}</div><div class="pm">${od}x</div></div>`;
+      html+=`<div class="cam-match">
+        <div class="cam-match-h"><span>${fl(a)} ${tn(a)} <span class="cam-vs">vs</span> ${tn(b)} ${fl(b)}</span>${collapse}</div>
+        <div class="cam-demo-note">${(mt.hConf&&mt.aConf)?'Cruce confirmado':'Proyectado'} · 16avos · momios de demostración</div>
+        <div class="ou-label">🏆 Ganador del partido</div>
+        <div class="picks">${mk('1x2','local',tn(a),o.l,'sel-local')}${mk('1x2','empate','Empate',o.e,'sel-empate')}${mk('1x2','visita',tn(b),o.v,'sel-visita')}</div>
+        <div class="ou-label" style="margin-top:12px">🏆 ¿Quién avanza?</div>
+        <div class="ou-row">${mk('av','avl','Avanza '+tn(a),o.avl,'sel-local')}${mk('av','avv','Avanza '+tn(b),o.avv,'sel-visita')}</div>
+        <div class="ou-label" style="margin-top:12px">⚽ Total de goles · 2.5</div>
+        <div class="ou-row">${mk('g','over','Over 2.5',o.ovG,'sel-local')}${mk('g','under','Under 2.5',o.unG,'sel-visita')}</div>
+        <div class="ou-label" style="margin-top:12px">🚩 Córners · 9.5</div>
+        <div class="ou-row">${mk('c','over','Over 9.5',o.ovC,'sel-local')}${mk('c','under','Under 9.5',o.unC,'sel-visita')}</div>
+        <div class="ou-label" style="margin-top:12px">🟨 Tarjetas · 4.5</div>
+        <div class="ou-row">${mk('t','over','Over 4.5',o.ovT,'sel-local')}${mk('t','under','Under 4.5',o.unT,'sel-visita')}</div>
+        <div class="ou-label" style="margin-top:12px">🤝 Ambos anotan</div>
+        <div class="ou-row">${mk('b','si','Sí',o.bsi,'sel-local')}${mk('b','no','No',o.bno,'sel-visita')}</div>
+        <div class="ou-label" style="margin-top:12px">🥅 ¿Habrá penales?</div>
+        <div class="ou-row">${mk('p','si','Sí',o.psi,'sel-local')}${mk('p','no','No',o.pno,'sel-visita')}</div>
+      </div>`;
+    }
+  }else if(!caminoSlip.length){
+    html+=`<div class="cam-panel-empty">👆 Toca una bandera para ver su partido, los momios y armar tu boleto (puedes combinar varios = parlay)</div>`;
+  }
+  el.innerHTML=html;
 }
 // Pop-up único: chiste local "Es que, yo sé que no… Pero ¿y si sí?" (México pasó de grupos).
 // Se muestra UNA sola vez por dispositivo (flag en localStorage).
