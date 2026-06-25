@@ -1012,6 +1012,22 @@ select option{background:#161c30;color:#fff}
 .eg-name{min-width:0;display:flex;align-items:center;gap:5px;font-size:11px}
 .eg-tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .eg-pts{font-size:12.5px;font-weight:900;color:#fff}
+/* Tabla comparativa de mejores terceros */
+.t3-table{margin-bottom:20px}
+.t3-row{display:grid;grid-template-columns:18px 1fr 20px 22px 30px 24px 26px 26px;align-items:center;gap:2px;padding:4px 0;font-size:11px;color:rgba(255,255,255,.5)}
+.t3-row>span:not(.t3-team){text-align:center;font-size:10px;font-variant-numeric:tabular-nums}
+.t3-row.t3-head{color:var(--muted2);font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--glass-brd);padding-bottom:5px;margin-bottom:2px}
+.t3-row.t3-head>span:not(.t3-team){font-size:8.5px}
+.t3-row.t3-head .t3-team{color:#fff;font-size:10.5px;font-weight:800;letter-spacing:.06em}
+.t3-team{min-width:0;display:flex;align-items:center;gap:5px;font-size:10.5px;text-align:left}
+.t3-team img{flex-shrink:0}
+.t3-tn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.t3-row.t3-q{color:#fff;font-weight:700;border-left:2px solid var(--green);padding-left:5px;margin-left:-3px;background:rgba(93,202,165,.07)}
+.t3-row.t3-out{opacity:.45}
+.t3-row.t3-cut{border-bottom:1px dashed rgba(255,219,0,.4);padding-bottom:7px;margin-bottom:3px}
+.t3-pts{font-weight:900;color:#fff}
+.t3-row.t3-out .t3-pts{color:rgba(255,255,255,.65)}
+.t3-legend{font-size:9.5px;color:var(--muted2);margin-top:7px;line-height:1.4}
 .et3-head{font-size:9.5px;font-weight:800;color:rgba(255,219,0,.7);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .et3-head::after{content:'';flex:1;height:1px;background:rgba(255,219,0,.2)}
 .et3-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:20px}
@@ -1784,7 +1800,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.43.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.43.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4096,9 +4112,20 @@ function renderElim(){
     return `<div class="eg-card">${head}${rows}</div>`;
   }).join('');
 
-  // Mejores terceros
-  const tEmpty=Array.from({length:Math.max(0,8-thirds.length)},()=>`<div class="et3-chip out"><div class="et3-flag">❓</div><div class="et3-name">—</div></div>`).join('');
-  const thirdsHtml=`<div class="et3-head">Mejores terceros clasificados</div><div class="et3-grid">${thirds.map(t=>`<div class="et3-chip"><div class="et3-flag">${flagImg(t.team,18)||'🏳️'}</div><div class="et3-name">${teamName(t.team)}</div><div class="et3-pts">${t.pts}pts·${t.grupo}</div></div>`).join('')}${tEmpty}</div>`;
+  // Mejores terceros: tabla comparativa de TODOS los terceros, ordenada por desempate FIFA,
+  // resaltando los 8 que por ahora clasifican.
+  const allThirds=GRUPOS.map(g=>{const s=allS[g];return s&&s.length>=3?{...s[2],grupo:g}:null;})
+    .filter(Boolean).sort((a,b)=>b.pts-a.pts||b.gd-a.gd||b.gf-a.gf||fpScore(b.team)-fpScore(a.team)||rankProxy(b.team)-rankProxy(a.team)||a.team.localeCompare(b.team));
+  const t3rows=allThirds.map((t,i)=>{
+    const q=i<8,dg=(t.gd>0?'+':'')+t.gd,cut=i===7?' t3-cut':'';
+    return `<div class="t3-row${q?' t3-q':' t3-out'}${cut}"><span>${i+1}</span><span class="t3-team">${flagImg(t.team,14)||'🏳️'}<span class="t3-tn">${teamName(t.team)}</span></span><span>${t.grupo}</span><span>${t.pj}</span><span>${dg}</span><span>${t.gf}</span><span>${fpScore(t.team)}</span><span class="t3-pts">${t.pts}</span></div>`;
+  }).join('');
+  const thirdsHtml=`<div class="et3-head">Mejores terceros · clasifican los 8 primeros</div>
+    <div class="t3-table">
+      <div class="t3-row t3-head"><span>#</span><span class="t3-team">Equipo</span><span>Gr</span><span>PJ</span><span>DG</span><span>GF</span><span title="Fair Play (puntaje de tarjetas)">🟨</span><span>PTS</span></div>
+      ${t3rows}
+    </div>
+    <div class="t3-legend">🟢 Clasificados (mejores 8 terceros) · desempate: Pts → Dif. de goles → Goles a favor → Fair Play</div>`;
 
   // Eliminados: terceros fuera + cuartos de grupo (con grupo para checar eliminación matemática)
   const qualSet=new Set(thirds.map(t=>t.team));
