@@ -1070,6 +1070,11 @@ select option{background:#161c30;color:#fff}
 .camino-wrap svg{position:relative;z-index:1;display:block;width:100%;height:auto}
 .cam-chips{display:flex;gap:6px;margin:4px 0 6px;flex-wrap:wrap}
 .cam-mkt-sub{font-size:9.5px;color:var(--muted2);font-weight:600}
+.cam-stake{margin:10px 0 4px}
+.cam-stake-quick{display:flex;gap:6px;margin-bottom:7px}
+.cam-stake-quick button{flex:1;padding:7px 2px;font-size:12px;font-weight:700;border-radius:9px;border:1px solid var(--line2);background:rgba(255,255,255,.05);color:#fff;cursor:pointer}
+.cam-stake-in{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line2);background:rgba(255,255,255,.06);color:#fff;font-size:15px;font-weight:700;box-sizing:border-box}
+.cam-stake-prev{font-size:12px;color:var(--green);margin-top:8px;text-align:center;min-height:15px}
 .cam-flag:hover circle{stroke:#ffd400}
 /* Panel de apuestas ARRIBA del radial */
 .camino-panel{max-width:640px;margin:0 auto 12px}
@@ -1762,7 +1767,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.42.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.42.3';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -5372,7 +5377,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function closeModal(){const o=document.getElementById('overlay');o.style.display='none';o.classList.remove('cm-center');}
 // ── Vista radial "El Camino" (bracket eliminatoria, simétrico) ────────────
 // caminoMatches: 16 cruces R32 con equipos reales pronosticados (lo llena renderElim).
-let caminoMatches=[], caminoSel=null, caminoSlip=[], caminoCollapsed=false, caminoLines={g:2.5,c:9.5,t:4.5};
+let caminoMatches=[], caminoSel=null, caminoSlip=[], caminoCollapsed=false, caminoLines={g:2.5,c:9.5,t:4.5}, caminoMonto='';
 function caminoTeamAt(i){const m=caminoMatches[i>>1]||{};return i%2===0?m.h:m.a;}
 function caminoConfAt(i){const m=caminoMatches[i>>1]||{};return i%2===0?m.hConf:m.aConf;}
 function renderCaminoView(){
@@ -5422,7 +5427,8 @@ function renderCaminoView(){
 }
 function caminoSelect(m){caminoSel=m;caminoCollapsed=false;renderCaminoView();const el=document.getElementById('caminoPanel');if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});}
 function caminoToggleCollapse(){caminoCollapsed=!caminoCollapsed;renderCaminoPanel();}
-const CAMINO_LINES={g:[1.5,2.5,3.5],c:[8.5,9.5,10.5],t:[3.5,4.5,5.5]};
+// Mismas líneas que el resto de la app (rangos completos, no recortados).
+function caminoLineSet(mkt){return mkt==='g'?(state.lineas_ou||[0.5,1.5,2.5,3.5,4.5,5.5]):mkt==='c'?(state.lineas_corners||[6.5,7.5,8.5,9.5,10.5,11.5]):(state.lineas_tarjetas||[2.5,3.5,4.5,5.5,6.5,7.5]);}
 const CAMINO_LBL={g:'goles',c:'córners',t:'tarjetas'};
 const CAMINO_EXP={g:2.6,c:9.4,t:4.3};
 function caminoSetLine(mkt,line){caminoLines[mkt]=line;renderCaminoPanel();}
@@ -5455,17 +5461,36 @@ function caminoTogglePick(m,mkt,pick,odd,line){
   else{if(i>=0)caminoSlip.splice(i,1);caminoSlip.push({m,mkt,pick,odd,line});}
   renderCaminoPanel();
 }
-function caminoClearSlip(){caminoSlip=[];renderCaminoPanel();}
+function caminoClearSlip(){caminoSlip=[];caminoMonto='';renderCaminoPanel();}
+function caminoMontoPreview(){
+  const inp=document.getElementById('caminoMonto');if(!inp)return;
+  caminoMonto=inp.value;
+  const v=+inp.value||0,cuota=caminoSlip.reduce((a,l)=>a*l.odd,1),pv=document.getElementById('caminoPreview');
+  if(pv)pv.innerHTML=v>0?`Posible ganancia: <b>$${Math.round(v*cuota).toLocaleString()}</b> <span style="color:var(--muted)">(neto +$${Math.round(v*cuota-v).toLocaleString()})</span>`:'Ingresa el monto para ver tu posible ganancia';
+}
+function caminoSetMonto(v){const inp=document.getElementById('caminoMonto');if(inp)inp.value=v;caminoMonto=String(v);caminoMontoPreview();}
+function caminoApostarDemo(){
+  const v=+caminoMonto||0,cuota=caminoSlip.reduce((a,l)=>a*l.odd,1);
+  if(!v)return toast('Ingresa un monto para tu boleto demo 💸');
+  toast(`Boleto demo · $${v.toLocaleString()} × ${cuota.toFixed(2)}x = posible $${Math.round(v*cuota).toLocaleString()}`);
+}
 function renderCaminoPanel(){
   const el=document.getElementById('caminoPanel');if(!el)return;
   let html='';
   if(caminoSlip.length){
     const cuota=caminoSlip.reduce((a,l)=>a*l.odd,1);
     const legs=caminoSlip.map(l=>`<span class="cam-leg">${caminoLegLabel(l.m,l.mkt,l.pick,l.line)} <b>${l.odd}x</b> <span class="cam-leg-x" onclick="caminoTogglePick(${l.m},'${l.mkt}','${l.pick}',${l.odd},${l.line==null?'null':l.line})">✕</span></span>`).join('');
+    const mv=+caminoMonto||0;
+    const prev=mv>0?`Posible ganancia: <b>$${Math.round(mv*cuota).toLocaleString()}</b> <span style="color:var(--muted)">(neto +$${Math.round(mv*cuota-mv).toLocaleString()})</span>`:'Ingresa el monto para ver tu posible ganancia';
     html+=`<div class="cam-boleto">
-      <div class="cam-boleto-h"><span>🎫 Boleto · ${caminoSlip.length} ${caminoSlip.length>1?'selecciones':'selección'}</span><span class="cam-boleto-cuota">${cuota.toFixed(2)}x</span></div>
+      <div class="cam-boleto-h"><span>🎫 Boleto · ${caminoSlip.length} ${caminoSlip.length>1?'selecciones':'selección'}${caminoSlip.length>1?' <span class="cam-mkt-sub">(parlay)</span>':''}</span><span class="cam-boleto-cuota">${cuota.toFixed(2)}x</span></div>
       <div class="cam-boleto-legs">${legs}</div>
-      <div class="cam-boleto-act"><button class="btn btn-primary btn-sm" style="flex:1" onclick="toast('Boleto demo · ${caminoSlip.length} selección(es) · cuota ${cuota.toFixed(2)}x')">Apostar (demo)</button><button class="cam-clear" onclick="caminoClearSlip()">Vaciar</button></div>
+      <div class="cam-stake">
+        <div class="cam-stake-quick">${[100,500,1000,2000].map(v=>`<button onclick="caminoSetMonto(${v})">$${v.toLocaleString()}</button>`).join('')}</div>
+        <input id="caminoMonto" class="cam-stake-in" type="tel" inputmode="numeric" placeholder="Monto a apostar" value="${caminoMonto}" oninput="caminoMontoPreview()">
+        <div class="cam-stake-prev" id="caminoPreview">${prev}</div>
+      </div>
+      <div class="cam-boleto-act"><button class="btn btn-primary btn-sm" style="flex:1" onclick="caminoApostarDemo()">Apostar (demo)</button><button class="cam-clear" onclick="caminoClearSlip()">Vaciar</button></div>
     </div>`;
   }
   if(caminoSel!=null){
@@ -5476,7 +5501,7 @@ function renderCaminoPanel(){
     }else{
       const tn=t=>teamName(t),fl=t=>flagImg(t,20);
       const mk=(mkt,pick,lbl,od,cls,line)=>`<div class="pick${caminoPickSel(m,mkt,pick,line)?' '+(cls||'sel-local'):''}" style="cursor:pointer" onclick="caminoTogglePick(${m},'${mkt}','${pick}',${od},${line==null?'null':line})"><div class="pt">${lbl}</div><div class="pm">${od}x</div></div>`;
-      const ouBlock=(mkt,icon)=>{const ln=caminoLines[mkt],od=caminoOddsLine(m,mkt,ln);const chips=CAMINO_LINES[mkt].map(L=>`<button class="ouchip${L===ln?' on':''}" onclick="caminoSetLine('${mkt}',${L})">${L}</button>`).join('');return `<div class="ou-label" style="margin-top:12px">${icon}</div><div class="cam-chips">${chips}</div><div class="ou-row">${mk(mkt,'over','Over '+ln,od.over,'sel-local',ln)}${mk(mkt,'under','Under '+ln,od.under,'sel-visita',ln)}</div>`;};
+      const ouBlock=(mkt,icon)=>{const set=caminoLineSet(mkt);let ln=caminoLines[mkt];if(!set.includes(ln))ln=set[Math.floor(set.length/2)];const od=caminoOddsLine(m,mkt,ln);const chips=set.map(L=>`<button class="ouchip${L===ln?' on':''}" onclick="caminoSetLine('${mkt}',${L})">${L}</button>`).join('');return `<div class="ou-label" style="margin-top:12px">${icon}</div><div class="cam-chips">${chips}</div><div class="ou-row">${mk(mkt,'over','Over '+ln,od.over,'sel-local',ln)}${mk(mkt,'under','Under '+ln,od.under,'sel-visita',ln)}</div>`;};
       const markets=`
         <div class="cam-demo-note">${(mt.hConf&&mt.aConf)?'Cruce confirmado':'Proyectado'} · 16avos · momios de demostración</div>
         <div class="ou-label">🏆 Ganador del partido <span class="cam-mkt-sub">(en los 90 min)</span></div>
