@@ -1800,7 +1800,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.43.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.43.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2981,9 +2981,13 @@ function validarIncongruenciasSlip(legs){
     if(ou&&ou.pick==='under'&&ouLinea<1){
       if(r1x2&&r1x2.pick!=='empate')return `En ${matchName}: "Under ${ouLinea}" obliga al 0-0, no puede haber ganador (${r1x2.pick==='local'?p.local:p.visita}).`;
       if(btts&&btts.pick==='si')return `En ${matchName}: "Under ${ouLinea}" obliga al 0-0, "Ambos anotan: Sí" es imposible.`;
+      if(r1x2&&r1x2.pick==='empate')return `En ${matchName}: "Under ${ouLinea}" implica 0-0, que YA es Empate. Esa pata no agrega riesgo (inflaría el momio). Juégalas por separado.`;
+      if(btts&&btts.pick==='no')return `En ${matchName}: "Under ${ouLinea}" implica 0-0, que YA garantiza "Ambos anotan: No". No agrega riesgo. Juégalas por separado.`;
     }
     if(r1x2&&r1x2.pick==='empate'&&btts&&btts.pick==='no'&&ou&&ou.pick==='over')
       return `En ${matchName}: Empate + "Ambos anotan: No" obliga al 0-0, "Over ${ouLinea}" exige goles.`;
+    if(r1x2&&r1x2.pick==='empate'&&btts&&btts.pick==='no'&&!ou)
+      return `En ${matchName}: "Empate + Ambos anotan: No" solo puede ser 0-0; son patas correlacionadas. Juégalas por separado.`;
   }
   return null;
 }

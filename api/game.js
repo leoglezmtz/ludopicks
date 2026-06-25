@@ -210,6 +210,21 @@ function validarIncongruenciasParlay(legs) {
       const ganador = r1x2.pick === "local" ? m.local : m.visita;
       return `Parlay inválido en ${matchName}: si ${ganador} gana, siempre habrá al menos 1 gol, así que "Over ${ouLinea}" no agrega riesgo real. Juégalos por separado.`;
     }
+    // "Under <1" = 0-0, que YA garantiza Empate y "Ambos anotan: No". Combinarlos infla el
+    // momio sin riesgo adicional (el error del parlay Empate + Under 0.5).
+    if (ou && ou.pick === "under" && ouLinea < 1) {
+      if (r1x2 && r1x2.pick === "empate") {
+        return `Parlay inválido en ${matchName}: "Under ${ouLinea}" implica 0-0, que YA es Empate. La pata de Empate no agrega riesgo y dispararía el momio sin razón. Juégalas por separado.`;
+      }
+      if (btts && btts.pick === "no") {
+        return `Parlay inválido en ${matchName}: "Under ${ouLinea}" implica 0-0, que YA garantiza "Ambos anotan: No". No agrega riesgo real. Juégalas por separado.`;
+      }
+    }
+    // Empate + "Ambos anotan: No" obliga a 0-0 (un empate sin que ambos anoten solo puede ser 0-0):
+    // patas correlacionadas, su producto no representa la probabilidad real.
+    if (r1x2 && r1x2.pick === "empate" && btts && btts.pick === "no" && !ou) {
+      return `Parlay inválido en ${matchName}: "Empate + Ambos anotan: No" solo puede ser 0-0; son patas correlacionadas. Juégalas por separado.`;
+    }
   }
   return null;
 }
