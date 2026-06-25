@@ -1733,7 +1733,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.38.3';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.38.4';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3806,7 +3806,13 @@ function isSlotConfirmed(slot,team,winMap){
   if(slot.startsWith('W'))return !!winMap[slot.slice(1)];
   if(slot.startsWith('3')){const grps=slot.slice(1).split('');return grps.every(g=>isGroupDone(g));}
   const pos=parseInt(slot[0]),grp=slot.slice(1);
-  if(pos===1){const v=groupVerdicts(grp);return !!(v[team]?.first);}
+  if(pos===1){
+    // Grupo terminado → el 1° ya es definitivo (aunque el desempate haya sido por
+    // diferencia de goles, que groupVerdicts no considera). resolveSlot ya puso al
+    // 1° real en este slot, así que confirmamos.
+    if(isGroupDone(grp))return true;
+    const v=groupVerdicts(grp);return !!(v[team]?.first); // mid-grupo: solo certeza por H2H
+  }
   return isGroupDone(grp);
 }
 function buildElimWinnerMap(){
@@ -3989,13 +3995,16 @@ function renderElim(){
   const groupsHtml=GRUPOS.map(g=>{
     const st=allS[g];if(!st||!st.length)return '';
     const V=groupVerdicts(g);
+    const gDone=isGroupDone(g); // grupo completo → posiciones definitivas (desempate real por DG/GF)
     const head=`<div class="eg-row eg-head"><span class="eg-name">Grupo ${g}</span><span title="Partidos jugados">PJ</span><span title="Diferencia de goles">DG</span><span title="Goles a favor">GF</span><span title="Puntaje de tarjetas (fair play)">🟨</span><span>PTS</span></div>`;
     const rows=st.slice(0,4).map((r,i)=>{
       const isT=i===2&&thirds.find(t=>t.team===r.team);
       const cls=i===0?'r1':i===1?'r2':isT?'r3q':'';
       const liveDot=r.live?'<span style="color:#ff3b3b;font-size:9px;margin-right:2px" title="En vivo">🔴</span>':'';
       const v=V[r.team]||{};
-      const badge=v.first?'<span title="1° de grupo asegurado">⭐</span>':v.top2?'<span title="Clasificado a 16avos">✅</span>':v.elim?'<span title="Eliminado del Mundial">❌</span>':'';
+      // Grupo terminado: badge por posición real (i); mid-grupo: certeza matemática (v).
+      const fst=gDone?i===0:v.first, t2=gDone?i<2:v.top2, elm=gDone?i===3:v.elim;
+      const badge=fst?'<span title="1° de grupo asegurado">⭐</span>':t2?'<span title="Clasificado a 16avos">✅</span>':elm?'<span title="Eliminado del Mundial">❌</span>':'';
       const dg=(r.gd>0?'+':'')+r.gd;
       const fp=fpScore(r.team);
       return `<div class="eg-row ${cls}"><span class="eg-name"><span class="eg-flag">${flagImg(r.team,13)||'🏳️'}</span><span class="eg-tn">${liveDot}${teamName(r.team)}</span>${badge}</span><span>${r.pj}</span><span>${dg}</span><span>${r.gf}</span><span>${fp}</span><span class="eg-pts">${r.pts}</span></div>`;
