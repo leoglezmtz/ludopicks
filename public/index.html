@@ -1737,7 +1737,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.39.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.40.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2077,7 +2077,9 @@ function pickLabel(p,pick,linea,mercado){
   const sufijo=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
   if(pick==='over')return 'Over '+linea+sufijo;
   if(pick==='under')return 'Under '+linea+sufijo;
-  if(pick==='si')return 'Ambos anotan: Sí';if(pick==='no')return 'Ambos anotan: No';return pick;
+  if(pick==='si')return 'Ambos anotan: Sí';if(pick==='no')return 'Ambos anotan: No';
+  if(pick==='avl')return 'Avanza '+p.local;if(pick==='avv')return 'Avanza '+p.visita;
+  return pick;
 }
 function pickWinsClient(p,r,pick,linea,mercado){
   if(p&&p.pa&&r.pa){if(pick==='local'&&r.pa.l)return true;if(pick==='visita'&&r.pa.v)return true;}
@@ -2090,7 +2092,9 @@ function pickWinsClient(p,r,pick,linea,mercado){
     if(t==null)return false;
     return pick==='over'?t>linea:t<linea;
   }
-  if(pick==='si')return r.gl>0&&r.gv>0;if(pick==='no')return !(r.gl>0&&r.gv>0);return false;
+  if(pick==='si')return r.gl>0&&r.gv>0;if(pick==='no')return !(r.gl>0&&r.gv>0);
+  if(pick==='avl'||pick==='avv'){if(r.gl==null||r.gv==null)return false;const aL=r.gl>r.gv||(r.gl===r.gv&&r.pen_l!=null&&r.pen_l>r.pen_v);const aV=r.gv>r.gl||(r.gl===r.gv&&r.pen_l!=null&&r.pen_v>r.pen_l);return pick==='avl'?aL:aV;}
+  return false;
 }
 // ── INIT ──────────────────────────────────────────────────────
 async function init(){
@@ -2754,6 +2758,26 @@ function bttsSection(p,done,locked){
   };
   return `<div class="ou-label">Ambos anotan</div><div class="ou-row">${pk('si','Sí',p.btts.si,'sel-local')}${pk('no','No',p.btts.no,'sel-visita')}</div>`;
 }
+// ¿Es partido de eliminatoria? (tiene mercado de avance y se define por penales si empatan)
+function esKO(p){return p&&['R32','R16','QF','SF','Final'].includes(p.grupo);}
+// Mercado "¿Quién avanza?" — solo en partidos de eliminatoria (p.avanza presente).
+function avanzaSection(p,done,locked){
+  if(!p.avanza)return '';
+  if(done){
+    const r=state.resultados[p.id];if(!r||r.gl==null)return '';
+    const aL=r.gl>r.gv||(r.gl===r.gv&&r.pen_l!=null&&r.pen_l>r.pen_v);
+    const aV=r.gv>r.gl||(r.gl===r.gv&&r.pen_l!=null&&r.pen_v>r.pen_l);
+    const who=aL?p.local:aV?p.visita:null;
+    const pens=(r.gl===r.gv&&r.pen_l!=null)?` (penales ${r.pen_l}-${r.pen_v})`:'';
+    return `<div class="ou-label">¿Quién avanza?</div><div style="font-size:12px;color:var(--muted);padding:3px 0">${who?`✅ Avanza <b style="color:#fff">${teamName(who)}</b>${pens}`:'Por definir'}</div>`;
+  }
+  const pk=(pick,team,momio,sel)=>{
+    let cls='pick';if(locked)cls+=' locked';else if(slipSelected(p.id,pick,null))cls+=' '+sel;
+    const onc=locked?'':` onclick="toggleSlip(${p.id},'${pick}',null,${momio},'avanza')"`;
+    return `<div class="${cls}"${onc}><div class="pt">${flagImg(team,13)} ${team}</div><div class="pm">${momio}x</div></div>`;
+  };
+  return `<div class="ou-label">🏆 ¿Quién avanza?</div><div class="ou-row">${pk('avl',p.local,p.avanza.local,'sel-local')}${pk('avv',p.visita,p.avanza.visita,'sel-visita')}</div>`;
+}
 function matchCard(p,res,i,skipAnim,animBody){
   const hasFinal=!!res&&res.gl!=null;
   const paParcial=!!res&&res.gl==null&&!!res.pa; // PA aplicado en vivo, sin marcador final
@@ -2784,6 +2808,7 @@ function matchCard(p,res,i,skipAnim,animBody){
       let key;
       if(['local','empate','visita'].includes(b.pick))key='1x2';
       else if(b.pick==='si'||b.pick==='no')key='btts';
+      else if(b.pick==='avl'||b.pick==='avv')key='avanza';
       else if(b.pick==='over'||b.pick==='under')key='ou-'+(mk||'goles');
       if(key)mySimple[key]=b;
     });
@@ -2797,12 +2822,13 @@ function matchCard(p,res,i,skipAnim,animBody){
       return `<div class="${cls}"${onc}><div class="pt">${label}</div><div class="pm">${momio}x</div></div>`;
     };
     const picks1x2=`<div class="picks">${pk1('local',`${flagImg(p.local,13)} ${p.local}`,p.momios.local,'sel-local')}${pk1('empate','Empate',p.momios.empate,'sel-empate')}${pk1('visita',`${flagImg(p.visita,13)} ${p.visita}`,p.momios.visita,'sel-visita')}</div>`;
+    const rowavanza=avanzaSection(p,done,locked||paParcial);
     const rowou=ouSection(p,done,locked||paParcial);
     const rowbtts=bttsSection(p,done,locked||paParcial);
     const rowcorners=cornersSection(p,done,locked||paParcial);
     const rowtarjetas=tarjetasSection(p,done,locked||paParcial);
     let hint='';
-    ['1x2','ou-goles','btts','ou-corners','ou-tarjetas'].forEach(mk=>{
+    ['1x2','avanza','ou-goles','btts','ou-corners','ou-tarjetas'].forEach(mk=>{
       const b=mySimple[mk];if(!b)return;
       const subM=b.mercado==='corners'?'corners':b.mercado==='tarjetas'?'tarjetas':'goles';
       const lbl=pickLabel(p,b.pick,b.linea,subM);
@@ -2826,7 +2852,7 @@ function matchCard(p,res,i,skipAnim,animBody){
     const row1x2=p.pa
       ? `<div class="winner-pa-box"><div class="winner-pa-h">🏆 Ganador del partido</div>${picks1x2}${paNotice}</div>`
       : picks1x2;
-    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
+    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowavanza}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
   }
   return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}${isOpen?' open':''}" style="${animStyle}">${header}${body}</div>`;
 }
@@ -4765,6 +4791,16 @@ function openScore(pid){
       </div>
     </div>
 
+    ${esKO(p)?`
+    <div class="adm-sect">
+      <div class="adm-sect-h">🥅 Penales <span class="adm-sect-tag">solo si empatan en 90'</span></div>
+      <div class="adm-sect-note">Llénalo SOLO si el partido se definió por penales — decide quién avanza y liquida "¿Quién avanza?".</div>
+      <div class="adm-mkt-grid">
+        <div class="adm-mkt-cell"><label>${flagImg(p.local,16)} ${p.local}</label><div class="adm-mkt-ctrl"><button class="adm-bump minus adm-bump-sm" onclick="bumpScore('penL',-1)">−</button><input class="adm-score-in adm-score-in-sm" id="penL" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${res&&res.pen_l!=null?res.pen_l:''}"><button class="adm-bump plus adm-bump-sm" onclick="bumpScore('penL',1)">+</button></div></div>
+        <div class="adm-mkt-cell"><label>${flagImg(p.visita,16)} ${p.visita}</label><div class="adm-mkt-ctrl"><button class="adm-bump minus adm-bump-sm" onclick="bumpScore('penV',-1)">−</button><input class="adm-score-in adm-score-in-sm" id="penV" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${res&&res.pen_v!=null?res.pen_v:''}"><button class="adm-bump plus adm-bump-sm" onclick="bumpScore('penV',1)">+</button></div></div>
+      </div>
+    </div>`:''}
+
     ${(res&&res.pa)?`
     <div class="adm-sect" style="background:rgba(255,219,0,.06);border-color:rgba(255,219,0,.25)">
       <div class="adm-sect-h" style="color:var(--gold)">⚡ Pago Anticipado aplicado</div>
@@ -4890,12 +4926,19 @@ async function saveScore(pid){
   if(p.pa){const cl=document.getElementById('paL'),cv=document.getElementById('paV');pa={l:!!(cl&&cl.value),v:!!(cv&&cv.value)};}
   const corners=document.getElementById('cornersIn').value.trim();
   const tarjetas=document.getElementById('tarjetasIn').value.trim();
+  // Penales (solo eliminatoria): deciden quién avanza si hay empate en 90'.
+  const penLel=document.getElementById('penL'),penVel=document.getElementById('penV');
+  const pen_l=penLel&&penLel.value.trim()!==''?penLel.value.trim():null;
+  const pen_v=penVel&&penVel.value.trim()!==''?penVel.value.trim():null;
+  if(esKO(p)&&gl===gv&&(pen_l==null||pen_v==null)){
+    if(!confirm('Empate en 90′ sin penales: el ganador del bracket y las apuestas de "¿Quién avanza?" quedarán PENDIENTES hasta que captures los penales. ¿Guardar así?'))return;
+  }
   if(state.resultados[pid]){
     const rv=await api({action:'revertirResultado',payload:{adminKey,partidoId:pid}});
     if(rv.error)return toast(rv.error);
     state.resultados=rv.resultados;state.jugadores=rv.jugadores;state.apuestas=rv.apuestas;
   }
-  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,gl,gv,pa,corners:corners===''?null:corners,tarjetas:tarjetas===''?null:tarjetas}});
+  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,gl,gv,pa,corners:corners===''?null:corners,tarjetas:tarjetas===''?null:tarjetas,pen_l,pen_v}});
   if(r.error)return toast(r.error);
   state.resultados=r.resultados;state.jugadores=r.jugadores;state.apuestas=r.apuestas;
   closeModal();
@@ -4947,6 +4990,8 @@ async function verApuestas(pid){
       if(pick==='local')return `${p.local} gana`;
       if(pick==='visita')return `${p.visita} gana`;
       if(pick==='empate')return 'Empate';
+      if(pick==='avl')return `${p.local} avanza`;
+      if(pick==='avv')return `${p.visita} avanza`;
       if(pick==='si')return 'Ambos anotan: Sí';
       if(pick==='no')return 'Ambos anotan: No';
       const sub=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
@@ -5313,6 +5358,7 @@ function pickLabelLong(p,pick,linea,mercado){
   if(pick==='local')return p.local+' gana';
   if(pick==='visita')return p.visita+' gana';
   if(pick==='empate')return 'Empate';
+  if(pick==='avl')return p.local+' avanza';if(pick==='avv')return p.visita+' avanza';
   const sufijo=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
   if(pick==='over')return 'Over '+linea+sufijo;
   if(pick==='under')return 'Under '+linea+sufijo;

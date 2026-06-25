@@ -122,6 +122,12 @@ function pickWins(partidoId, r, pick, linea, mercado) {
   }
   if (pick === "si") return r.gl > 0 && r.gv > 0;
   if (pick === "no") return !(r.gl > 0 && r.gv > 0);
+  if (pick === "avl" || pick === "avv") { // ¿quién avanza? (penales deciden si hay empate)
+    if (r.gl == null || r.gv == null) return false;
+    const localAdv  = r.gl > r.gv || (r.gl === r.gv && r.pen_l != null && r.pen_l > r.pen_v);
+    const visitaAdv = r.gv > r.gl || (r.gl === r.gv && r.pen_l != null && r.pen_v > r.pen_l);
+    return pick === "avl" ? localAdv : visitaAdv;
+  }
   return false;
 }
 
@@ -137,10 +143,12 @@ function momioPick(partidoId, pick, linea, mercado) {
     return row ? row[pick] : null;
   }
   if (pick === "si" || pick === "no") return m.btts ? m.btts[pick] : null;
+  if (pick === "avl" || pick === "avv") return m.avanza ? m.avanza[pick === "avl" ? "local" : "visita"] : null;
   return null;
 }
 function esMercadoOU(pick) { return pick === "over" || pick === "under"; }
 function esBtts(pick) { return pick === "si" || pick === "no"; }
+function esAvanza(pick) { return pick === "avl" || pick === "avv"; }
 function mercadoDe(pick) { return esMercadoOU(pick) ? "ou" : esBtts(pick) ? "btts" : "1x2"; }
 
 // Sub-mercado de una apuesta O/U: 'goles' (default, legacy), 'corners', 'tarjetas'.
@@ -153,6 +161,7 @@ function ouSub(b) {
 function mercadoKey(pick, subMercado) {
   if (esMercadoOU(pick)) return 'ou-' + (subMercado || 'goles');
   if (esBtts(pick)) return 'btts';
+  if (esAvanza(pick)) return 'avanza';
   return '1x2';
 }
 const SUB_VALIDOS = new Set(['goles', 'corners', 'tarjetas']);
@@ -305,6 +314,11 @@ function legStatus(partidoId, r, pick, linea, mercado, liveScore) {
   // Si el liveScore ya tiene la pata DEFINITIVAMENTE cumplida (insta-pagable), 'won'
   if (liveScore && pickInstaWonLive(pick, linea, mercado, liveScore)) return "won";
   if (!r) return "pending";
+  if (mercado === "avanza") {
+    if (r.gl == null || r.gv == null) return "pending";
+    if (r.gl === r.gv && r.pen_l == null) return "pending"; // empate en 90' sin penales aún
+    return pickWins(partidoId, r, pick, linea, "avanza") ? "won" : "lost";
+  }
   if (mercado === "corners") {
     if (r.corners == null) return "pending";
     return pickWins(partidoId, r, pick, linea, "corners") ? "won" : "lost";
@@ -461,7 +475,8 @@ export default async function handler(req, res) {
     const m = BY_ID[partidoId];
     if (!m) return res.status(400).json({ error: "Partido no existe" });
     const esOU = esMercadoOU(pick);
-    if (!PICKS_1X2.includes(pick) && !esOU && !esBtts(pick)) return res.status(400).json({ error: "Pick inválido" });
+    if (!PICKS_1X2.includes(pick) && !esOU && !esBtts(pick) && !esAvanza(pick)) return res.status(400).json({ error: "Pick inválido" });
+    if (esAvanza(pick) && !m.avanza) return res.status(400).json({ error: "Este partido no tiene mercado de avance" });
     const subMercado = (esOU && SUB_VALIDOS.has(subMkt)) ? subMkt : 'goles';
     const lineaUsada = esOU ? Number(linea) : null;
     // Validar línea según sub-mercado
@@ -498,7 +513,7 @@ export default async function handler(req, res) {
 
     j.saldo = saldoDisp - mInt;
     const id = "b" + Date.now() + Math.random().toString(36).slice(2, 6);
-    apuestas[id] = { id, tipo: "simple", mercado: esOU ? subMercado : (esBtts(pick) ? 'btts' : '1x2'), nombre, partidoId, pick, linea: lineaUsada, monto: mInt, momio, status: "pending", payout: 0, ts: Date.now() };
+    apuestas[id] = { id, tipo: "simple", mercado: esOU ? subMercado : (esBtts(pick) ? 'btts' : esAvanza(pick) ? 'avanza' : '1x2'), nombre, partidoId, pick, linea: lineaUsada, monto: mInt, momio, status: "pending", payout: 0, ts: Date.now() };
     await kv.set("jugadores", jugadores);
     await kv.set("apuestas", apuestas);
     return res.json({ ok: true, jugadores: publicJugadores(jugadores), apuestas });
@@ -1060,7 +1075,7 @@ export default async function handler(req, res) {
 
   if (action === "resultado") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { partidoId, gl, gv, pa, corners, tarjetas } = payload;
+    const { partidoId, gl, gv, pa, corners, tarjetas, pen_l, pen_v } = payload;
     if (partidoId === -1) return res.json({ ok: true });
     const m = BY_ID[partidoId];
     if (!m) return res.status(400).json({ error: "Partido no existe" });
@@ -1095,6 +1110,11 @@ export default async function handler(req, res) {
       const paV = pa && typeof pa.v === "boolean" ? pa.v : (golV - golL >= 2);
       rEntry.pa = { l: paL, v: paV };
     }
+    // Penales (eliminatoria): si hubo empate en 90', deciden quién avanza.
+    if (golL === golV && pen_l != null && pen_l !== '' && pen_v != null && pen_v !== '') {
+      const pl = Math.floor(Number(pen_l)), pv = Math.floor(Number(pen_v));
+      if (!isNaN(pl) && !isNaN(pv) && pl >= 0 && pv >= 0 && pl !== pv) { rEntry.pen_l = pl; rEntry.pen_v = pv; }
+    } else if (golL === golV && prevR.pen_l != null) { rEntry.pen_l = prevR.pen_l; rEntry.pen_v = prevR.pen_v; }
     resultados[partidoId] = rEntry;
     settleAll(jugadores, apuestas, resultados, campeon, especialesMap, (await kv.get("liveScores")) || {});
     await kv.set("resultados", resultados);
