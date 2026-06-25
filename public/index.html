@@ -1066,8 +1066,10 @@ select option{background:#161c30;color:#fff}
 .el-name{color:rgba(226,75,74,.8)}
 /* ── Vista radial "El Camino" (bracket eliminatoria) ── */
 .camino-wrap{position:relative;width:100%;max-width:640px;margin:0 auto;border-radius:16px;overflow:hidden;background-color:#0a0f1e}
-.camino-wrap::before{content:'';position:absolute;inset:0;background:url('https://c.files.bbci.co.uk/977C/production/_102008783_mediaitem102008782.jpg') center/cover no-repeat;opacity:.5;z-index:0}
+.camino-wrap::before{content:'';position:absolute;inset:-3%;background:url('https://c.files.bbci.co.uk/977C/production/_102008783_mediaitem102008782.jpg') center/cover no-repeat;opacity:.5;z-index:0;-webkit-mask-image:radial-gradient(ellipse at 50% 50%,#000 20%,rgba(0,0,0,.5) 48%,transparent 74%);mask-image:radial-gradient(ellipse at 50% 50%,#000 20%,rgba(0,0,0,.5) 48%,transparent 74%)}
 .camino-wrap svg{position:relative;z-index:1;display:block;width:100%;height:auto}
+.cam-chips{display:flex;gap:6px;margin:4px 0 6px;flex-wrap:wrap}
+.cam-mkt-sub{font-size:9.5px;color:var(--muted2);font-weight:600}
 .cam-flag:hover circle{stroke:#ffd400}
 /* Panel de apuestas ARRIBA del radial */
 .camino-panel{max-width:640px;margin:0 auto 12px}
@@ -1760,7 +1762,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.42.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.42.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -5370,7 +5372,7 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function closeModal(){const o=document.getElementById('overlay');o.style.display='none';o.classList.remove('cm-center');}
 // ── Vista radial "El Camino" (bracket eliminatoria, simétrico) ────────────
 // caminoMatches: 16 cruces R32 con equipos reales pronosticados (lo llena renderElim).
-let caminoMatches=[], caminoSel=null, caminoSlip=[];
+let caminoMatches=[], caminoSel=null, caminoSlip=[], caminoCollapsed=false, caminoLines={g:2.5,c:9.5,t:4.5};
 function caminoTeamAt(i){const m=caminoMatches[i>>1]||{};return i%2===0?m.h:m.a;}
 function caminoConfAt(i){const m=caminoMatches[i>>1]||{};return i%2===0?m.hConf:m.aConf;}
 function renderCaminoView(){
@@ -5418,32 +5420,39 @@ function renderCaminoView(){
   wrap.innerHTML=`<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>${clips}</defs>${lines}${dots}${center}${flags}</svg>`;
   renderCaminoPanel();
 }
-function caminoSelect(m){caminoSel=m;renderCaminoView();const el=document.getElementById('caminoPanel');if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});}
-function caminoCollapse(){caminoSel=null;renderCaminoView();}
-// Momios demo deterministas por cruce (estables entre renders).
+function caminoSelect(m){caminoSel=m;caminoCollapsed=false;renderCaminoView();const el=document.getElementById('caminoPanel');if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+function caminoToggleCollapse(){caminoCollapsed=!caminoCollapsed;renderCaminoPanel();}
+const CAMINO_LINES={g:[1.5,2.5,3.5],c:[8.5,9.5,10.5],t:[3.5,4.5,5.5]};
+const CAMINO_LBL={g:'goles',c:'córners',t:'tarjetas'};
+const CAMINO_EXP={g:2.6,c:9.4,t:4.3};
+function caminoSetLine(mkt,line){caminoLines[mkt]=line;renderCaminoPanel();}
+// O/U demo: la cuota cambia con la línea (probabilidad logística alrededor del total esperado).
+function caminoOddsLine(m,mkt,line){
+  const exp=CAMINO_EXP[mkt],h=k=>{const x=Math.sin((m*13+line*7.7+k)*51.7)*1e4;return x-Math.floor(x);};
+  let pOver=1/(1+Math.exp((line-exp)*0.85));
+  pOver=Math.min(.9,Math.max(.1,pOver+(h(1)-.5)*.06));
+  return {over:+Math.max(1.08,0.93/pOver).toFixed(2),under:+Math.max(1.08,0.93/(1-pOver)).toFixed(2)};
+}
 function caminoOdds(m){
   const h=k=>{const x=Math.sin((m*7+k)*99.13)*1e4;return x-Math.floor(x);};
   const f=(min,max,k)=>+(min+h(k)*(max-min)).toFixed(2);
-  return {l:f(1.4,3,1),e:f(3.1,3.9,2),v:f(2.2,5,3),avl:f(1.2,2.1,4),avv:f(1.5,3.4,5),
-    ovG:f(1.7,2.2,6),unG:f(1.7,2.2,7),ovC:f(1.8,2.1,8),unC:f(1.8,2.1,9),ovT:f(1.85,2.1,10),unT:f(1.85,2.1,11),
-    bsi:f(1.7,2.3,12),bno:f(1.6,2.2,13),psi:f(3,5.5,14),pno:f(1.18,1.45,15)};
+  return {l:f(1.4,3,1),e:f(3.1,3.9,2),v:f(2.2,5,3),avl:f(1.2,2.1,4),avv:f(1.5,3.4,5),bsi:f(1.7,2.3,12),bno:f(1.6,2.2,13),psi:f(3,5.5,14),pno:f(1.18,1.45,15)};
 }
-function caminoLegLabel(m,mkt,pick){
+function caminoLegLabel(m,mkt,pick,line){
   const mt=caminoMatches[m]||{},a=teamName(mt.h||'?'),b=teamName(mt.a||'?');
-  if(mkt==='1x2')return pick==='local'?a+' gana':pick==='visita'?b+' gana':'Empate';
+  if(mkt==='1x2')return (pick==='local'?a+' gana':pick==='visita'?b+' gana':'Empate')+" (90')";
   if(mkt==='av')return 'Avanza '+(pick==='avl'?a:b);
-  if(mkt==='g')return (pick==='over'?'Over':'Under')+' 2.5 goles';
-  if(mkt==='c')return (pick==='over'?'Over':'Under')+' 9.5 córners';
-  if(mkt==='t')return (pick==='over'?'Over':'Under')+' 4.5 tarjetas';
+  if(mkt==='g'||mkt==='c'||mkt==='t')return (pick==='over'?'Over':'Under')+' '+line+' '+CAMINO_LBL[mkt];
   if(mkt==='b')return 'Ambos anotan: '+(pick==='si'?'Sí':'No');
   if(mkt==='p')return '¿Penales? '+(pick==='si'?'Sí':'No');
   return pick;
 }
-function caminoPickSel(m,mkt,pick){return caminoSlip.some(l=>l.m===m&&l.mkt===mkt&&l.pick===pick);}
-function caminoTogglePick(m,mkt,pick,odd){
+function caminoPickSel(m,mkt,pick,line){return caminoSlip.some(l=>l.m===m&&l.mkt===mkt&&l.pick===pick&&(line==null||l.line===line));}
+function caminoTogglePick(m,mkt,pick,odd,line){
+  line=line==null?null:line;
   const i=caminoSlip.findIndex(l=>l.m===m&&l.mkt===mkt);
-  if(i>=0&&caminoSlip[i].pick===pick)caminoSlip.splice(i,1);
-  else{if(i>=0)caminoSlip.splice(i,1);caminoSlip.push({m,mkt,pick,odd});}
+  if(i>=0&&caminoSlip[i].pick===pick&&caminoSlip[i].line===line)caminoSlip.splice(i,1);
+  else{if(i>=0)caminoSlip.splice(i,1);caminoSlip.push({m,mkt,pick,odd,line});}
   renderCaminoPanel();
 }
 function caminoClearSlip(){caminoSlip=[];renderCaminoPanel();}
@@ -5452,7 +5461,7 @@ function renderCaminoPanel(){
   let html='';
   if(caminoSlip.length){
     const cuota=caminoSlip.reduce((a,l)=>a*l.odd,1);
-    const legs=caminoSlip.map(l=>`<span class="cam-leg">${caminoLegLabel(l.m,l.mkt,l.pick)} <b>${l.odd}x</b> <span class="cam-leg-x" onclick="caminoTogglePick(${l.m},'${l.mkt}','${l.pick}',${l.odd})">✕</span></span>`).join('');
+    const legs=caminoSlip.map(l=>`<span class="cam-leg">${caminoLegLabel(l.m,l.mkt,l.pick,l.line)} <b>${l.odd}x</b> <span class="cam-leg-x" onclick="caminoTogglePick(${l.m},'${l.mkt}','${l.pick}',${l.odd},${l.line==null?'null':l.line})">✕</span></span>`).join('');
     html+=`<div class="cam-boleto">
       <div class="cam-boleto-h"><span>🎫 Boleto · ${caminoSlip.length} ${caminoSlip.length>1?'selecciones':'selección'}</span><span class="cam-boleto-cuota">${cuota.toFixed(2)}x</span></div>
       <div class="cam-boleto-legs">${legs}</div>
@@ -5461,29 +5470,29 @@ function renderCaminoPanel(){
   }
   if(caminoSel!=null){
     const m=caminoSel,mt=caminoMatches[m]||{},a=mt.h,b=mt.a,o=caminoOdds(m);
-    const collapse=`<button class="cam-collapse" onclick="caminoCollapse()">✕ Contraer</button>`;
+    const chev=`<button class="cam-collapse" onclick="caminoToggleCollapse()" title="${caminoCollapsed?'Abrir partido':'Contraer partido'}">${caminoCollapsed?'▾':'▴'}</button>`;
     if(!a||!b){
-      html+=`<div class="cam-match"><div class="cam-match-h"><span>Cruce por definir</span>${collapse}</div><div style="font-size:12px;color:var(--muted);padding:8px 2px">Este enfrentamiento se confirmará cuando avancen las fases previas.</div></div>`;
+      html+=`<div class="cam-match"><div class="cam-match-h"><span>Cruce por definir</span>${chev}</div>${caminoCollapsed?'':`<div style="font-size:12px;color:var(--muted);padding:8px 2px">Este enfrentamiento se confirmará cuando avancen las fases previas.</div>`}</div>`;
     }else{
       const tn=t=>teamName(t),fl=t=>flagImg(t,20);
-      const mk=(mkt,pick,lbl,od,cls)=>`<div class="pick${caminoPickSel(m,mkt,pick)?' '+(cls||'sel-local'):''}" style="cursor:pointer" onclick="caminoTogglePick(${m},'${mkt}','${pick}',${od})"><div class="pt">${lbl}</div><div class="pm">${od}x</div></div>`;
-      html+=`<div class="cam-match">
-        <div class="cam-match-h"><span>${fl(a)} ${tn(a)} <span class="cam-vs">vs</span> ${tn(b)} ${fl(b)}</span>${collapse}</div>
+      const mk=(mkt,pick,lbl,od,cls,line)=>`<div class="pick${caminoPickSel(m,mkt,pick,line)?' '+(cls||'sel-local'):''}" style="cursor:pointer" onclick="caminoTogglePick(${m},'${mkt}','${pick}',${od},${line==null?'null':line})"><div class="pt">${lbl}</div><div class="pm">${od}x</div></div>`;
+      const ouBlock=(mkt,icon)=>{const ln=caminoLines[mkt],od=caminoOddsLine(m,mkt,ln);const chips=CAMINO_LINES[mkt].map(L=>`<button class="ouchip${L===ln?' on':''}" onclick="caminoSetLine('${mkt}',${L})">${L}</button>`).join('');return `<div class="ou-label" style="margin-top:12px">${icon}</div><div class="cam-chips">${chips}</div><div class="ou-row">${mk(mkt,'over','Over '+ln,od.over,'sel-local',ln)}${mk(mkt,'under','Under '+ln,od.under,'sel-visita',ln)}</div>`;};
+      const markets=`
         <div class="cam-demo-note">${(mt.hConf&&mt.aConf)?'Cruce confirmado':'Proyectado'} · 16avos · momios de demostración</div>
-        <div class="ou-label">🏆 Ganador del partido</div>
+        <div class="ou-label">🏆 Ganador del partido <span class="cam-mkt-sub">(en los 90 min)</span></div>
         <div class="picks">${mk('1x2','local',tn(a),o.l,'sel-local')}${mk('1x2','empate','Empate',o.e,'sel-empate')}${mk('1x2','visita',tn(b),o.v,'sel-visita')}</div>
-        <div class="ou-label" style="margin-top:12px">🏆 ¿Quién avanza?</div>
+        <div class="ou-label" style="margin-top:12px">🏆 ¿Quién avanza? <span class="cam-mkt-sub">(quién pasa de ronda)</span></div>
         <div class="ou-row">${mk('av','avl','Avanza '+tn(a),o.avl,'sel-local')}${mk('av','avv','Avanza '+tn(b),o.avv,'sel-visita')}</div>
-        <div class="ou-label" style="margin-top:12px">⚽ Total de goles · 2.5</div>
-        <div class="ou-row">${mk('g','over','Over 2.5',o.ovG,'sel-local')}${mk('g','under','Under 2.5',o.unG,'sel-visita')}</div>
-        <div class="ou-label" style="margin-top:12px">🚩 Córners · 9.5</div>
-        <div class="ou-row">${mk('c','over','Over 9.5',o.ovC,'sel-local')}${mk('c','under','Under 9.5',o.unC,'sel-visita')}</div>
-        <div class="ou-label" style="margin-top:12px">🟨 Tarjetas · 4.5</div>
-        <div class="ou-row">${mk('t','over','Over 4.5',o.ovT,'sel-local')}${mk('t','under','Under 4.5',o.unT,'sel-visita')}</div>
+        ${ouBlock('g','⚽ Total de goles')}
+        ${ouBlock('c','🚩 Tiros de esquina')}
+        ${ouBlock('t','🟨 Tarjetas')}
         <div class="ou-label" style="margin-top:12px">🤝 Ambos anotan</div>
         <div class="ou-row">${mk('b','si','Sí',o.bsi,'sel-local')}${mk('b','no','No',o.bno,'sel-visita')}</div>
         <div class="ou-label" style="margin-top:12px">🥅 ¿Habrá penales?</div>
-        <div class="ou-row">${mk('p','si','Sí',o.psi,'sel-local')}${mk('p','no','No',o.pno,'sel-visita')}</div>
+        <div class="ou-row">${mk('p','si','Sí',o.psi,'sel-local')}${mk('p','no','No',o.pno,'sel-visita')}</div>`;
+      html+=`<div class="cam-match">
+        <div class="cam-match-h"><span>${fl(a)} ${tn(a)} <span class="cam-vs">vs</span> ${tn(b)} ${fl(b)}</span>${chev}</div>
+        ${caminoCollapsed?'':markets}
       </div>`;
     }
   }else if(!caminoSlip.length){
