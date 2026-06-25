@@ -1733,7 +1733,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.38.4';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.39.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2029,7 +2029,9 @@ function teamName(code){return NOMBRES[code]||code;}
 function flagUrl(code){const fc=FLAGS[code];return fc?`https://flagcdn.com/w40/${fc}.png`:'';}
 function flagImg(code,h){const u=flagUrl(code);if(!u)return '';return `<img src="${u}" alt="${code}" style="height:${h||14}px;width:auto;border-radius:2px;vertical-align:middle;object-fit:cover" loading="lazy">`;}
 function teamFlag(code,h){const f=flagImg(code,h);return f?`<span style="display:inline-flex;align-items:center;gap:5px">${f}${code}</span>`:code;}
-function isLocked(p){return eNow()>=p.kickoff;}
+function isLocked(p){return eNow()>=p.kickoff && eNow()>=((state.betOpen&&state.betOpen[p.id])||0);}
+// ¿Apuestas reabiertas manualmente por el admin pese a que ya empezó?
+function isReabierto(p){return eNow()>=p.kickoff && eNow()<((state.betOpen&&state.betOpen[p.id])||0);}
 function lineas(){return state.lineas_ou||[0.5,1.5,2.5,3.5,4.5,5.5];}
 function lineasMercado(m){
   if(m==='corners')return state.lineas_corners||[6.5,7.5,8.5,9.5,10.5,11.5];
@@ -2759,6 +2761,7 @@ function matchCard(p,res,i,skipAnim,animBody){
   let meta;
   if(done)meta=`<span class="rb rb-info">${res.gl} - ${res.gv}</span>`;
   else if(paParcial)meta=`<span class="locktag">🔒 En juego</span>`;
+  else if(isReabierto(p))meta=`<span class="locktag" style="background:rgba(255,219,0,.18);color:var(--gold);border-color:rgba(255,219,0,.35)">⏱️ Apuestas reabiertas</span>`;
   else if(locked)meta=`<span class="locktag">🔒 En juego</span>`;
   else{
     const ms=p.kickoff-eNow();const urg=ms<3600000;

@@ -385,7 +385,7 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     const jugadores  = await grantTicketsAllIfNeeded(); // concede tickets diarios (puede escribir KV)
-    const [apuestas, resultados, rankPrev, campeon, especiales, jackpot, ruletaHist, liveScores, tabla_orden, fairplay] = await Promise.all([
+    const [apuestas, resultados, rankPrev, campeon, especiales, jackpot, ruletaHist, liveScores, tabla_orden, fairplay, betOpen] = await Promise.all([
       kv.get("apuestas").then(v => v || {}),
       kv.get("resultados").then(v => v || {}),
       kv.get("rankPrev").then(v => v || {}),
@@ -396,6 +396,7 @@ export default async function handler(req, res) {
       kv.get("liveScores").then(v => v || {}),
       kv.get("tabla_orden").then(v => v || {}),
       kv.get("fairplay").then(v => v || {}),
+      kv.get("betOpen").then(v => v || {}),
     ]);
     return res.json({
       jugadores: publicJugadores(jugadores, req.query.nombre || null), apuestas, resultados, rankPrev,
@@ -405,7 +406,7 @@ export default async function handler(req, res) {
       lineas_tarjetas: LINEAS_TARJETAS, linea_tarjetas_default: LINEA_TARJETAS_DEFAULT, momios_tarjetas: MOMIOS_TARJETAS,
       campeon_odds: CAMPEON, campeon_cierra: CAMPEON_CIERRA, campeon,
       especiales,
-      ruleta: RULETA, jackpot, ruletaHist, liveScores, tabla_orden, fairplay,
+      ruleta: RULETA, jackpot, ruletaHist, liveScores, tabla_orden, fairplay, betOpen,
       now: Date.now(),
     });
   }
@@ -478,7 +479,8 @@ export default async function handler(req, res) {
       if (subMercado === 'corners' && r.corners != null) return res.status(400).json({ error: "Los córners ya se liquidaron" });
       if (subMercado === 'tarjetas' && r.tarjetas != null) return res.status(400).json({ error: "Las tarjetas ya se liquidaron" });
     }
-    if (Date.now() >= m.kickoff) return res.status(400).json({ error: "El partido ya empezó, apuestas cerradas" });
+    const betOpen = (await kv.get("betOpen")) || {};
+    if (Date.now() >= m.kickoff && Date.now() >= (betOpen[m.id] || 0)) return res.status(400).json({ error: "El partido ya empezó, apuestas cerradas" });
     const mInt = Math.floor(Number(monto));
     if (!mInt || mInt < APUESTA_MIN) return res.status(400).json({ error: `Mínimo $${APUESTA_MIN}` });
 
@@ -815,10 +817,11 @@ export default async function handler(req, res) {
   // ── APOSTAR PARLAY (permite 1X2 + O/U del mismo partido) ───────────
   if (action === "apostarParlay") {
     const { nombre, legs, monto } = payload;
-    const [jugadores, apuestas, resultados] = await Promise.all([
+    const [jugadores, apuestas, resultados, betOpenP] = await Promise.all([
       kv.get("jugadores").then(v => v || {}),
       kv.get("apuestas").then(v => v || {}),
       kv.get("resultados").then(v => v || {}),
+      kv.get("betOpen").then(v => v || {}),
     ]);
     const j = jugadores[nombre];
     if (!j) return res.status(400).json({ error: "Jugador no existe" });
@@ -847,7 +850,7 @@ export default async function handler(req, res) {
         if (subMercado === 'corners' && r.corners != null) return res.status(400).json({ error: `Córners de ${m.local} vs ${m.visita} ya liquidados` });
         if (subMercado === 'tarjetas' && r.tarjetas != null) return res.status(400).json({ error: `Tarjetas de ${m.local} vs ${m.visita} ya liquidadas` });
       }
-      if (Date.now() >= m.kickoff) return res.status(400).json({ error: `${m.local} vs ${m.visita} ya empezó` });
+      if (Date.now() >= m.kickoff && Date.now() >= (betOpenP[m.id] || 0)) return res.status(400).json({ error: `${m.local} vs ${m.visita} ya empezó` });
       const lineaUsada = esOU ? Number(l.linea) : null;
       if (esOU) {
         if (subMercado === 'corners' && !LINEAS_CORNERS.includes(lineaUsada)) return res.status(400).json({ error: "Línea de córners inválida en el parlay" });
@@ -1220,6 +1223,26 @@ export default async function handler(req, res) {
     }
     await Promise.all([kv.set("jugadores", jugadores), kv.set("apuestas", apuestas)]);
     return res.json({ ok: true, reLiquidadas: reLiquidadas.length, detalle: reLiquidadas, negativosCorregidos: negativos, jugadores: publicJugadores(jugadores), apuestas });
+  }
+
+  // ── ADMIN: reabrir apuestas de un partido por X min (override del cierre por kickoff) ──
+  // Pone betOpen[partidoId] = ahora + min. El lock de apostar/apostarParlay permite apostar
+  // mientras Date.now() < ese timestamp, aunque el partido ya haya arrancado. Se auto-cierra.
+  if (action === "reabrirApuestas") {
+    if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
+    const pid = Number(payload.partidoId);
+    const m = BY_ID[pid];
+    if (!m) return res.status(400).json({ error: "Partido no existe" });
+    const betOpen = (await kv.get("betOpen")) || {};
+    const minutos = Number(payload.minutos);
+    if (payload.cerrar === true || minutos <= 0) {
+      delete betOpen[pid]; // cerrar ya
+    } else {
+      const mins = isNaN(minutos) ? 2 : Math.min(60, minutos);
+      betOpen[pid] = Date.now() + mins * 60 * 1000;
+    }
+    await kv.set("betOpen", betOpen);
+    return res.json({ ok: true, betOpen, hasta: betOpen[pid] || null });
   }
 
   if (action === "bonusTodos") {
