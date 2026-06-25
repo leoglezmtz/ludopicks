@@ -1733,7 +1733,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.39.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.39.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2217,7 +2217,7 @@ function enterApp(){
   const sb=document.getElementById('switchBtn');
   if(sb)sb.style.display=(isAdmin||me==='Leonidas')?'block':'none';
   refreshHero();renderSlipBar();
-  if(!isAdmin){checkNotifStatus();setTimeout(checkCancelledBets,1200);setTimeout(()=>{ if(maybeShowGiftClaim())return; if(maybeShowPushPromo())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
+  if(!isAdmin){checkNotifStatus();setTimeout(checkCancelledBets,1200);setTimeout(()=>{ if(maybeShowYSiSiPop())return; if(maybeShowGiftClaim())return; if(maybeShowPushPromo())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
 }
 async function switchMode(){
   if(isAdmin){
@@ -5282,6 +5282,22 @@ async function resetTodo(){
 // ── HELPERS ───────────────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeModal(){document.getElementById('overlay').style.display='none';}
+// Pop-up único: chiste local "Es que, yo sé que no… Pero ¿y si sí?" (México pasó de grupos).
+// Se muestra UNA sola vez por dispositivo (flag en localStorage).
+function maybeShowYSiSiPop(){
+  try{ if(localStorage.getItem('lp_pop_ysisi')) return false; }catch(e){}
+  document.getElementById('mTitle').innerHTML='🇲🇽 ✨';
+  document.getElementById('mBody').innerHTML=`
+    <div style="text-align:center;padding:4px 4px 6px">
+      <div style="font-size:48px;line-height:1;margin-bottom:12px">🇲🇽🤞</div>
+      <div style="font-size:21px;font-weight:800;color:#fff;line-height:1.35;margin-bottom:7px">Es que, yo sé que no…</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:20px">(ya sabes cómo acaba esto cada 4 años… 😮‍💨)</div>
+      <button class="btn btn-primary" style="width:100%;font-size:17px;font-weight:900" onclick="closeModal()">Pero… ¿y si sí? 👀</button>
+    </div>`;
+  document.getElementById('overlay').style.display='flex';
+  try{ localStorage.setItem('lp_pop_ysisi','1'); }catch(e){}
+  return true;
+}
 function modalOpen(){return document.getElementById('overlay').style.display==='flex'||document.getElementById('ruletaOv').classList.contains('show');}
 function shareText(text){
   if(navigator.share){navigator.share({text}).catch(()=>{});}
