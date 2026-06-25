@@ -1064,6 +1064,15 @@ select option{background:#161c30;color:#fff}
 .el-chip.el-confirmed{position:relative;opacity:.95;background:rgba(226,75,74,.12);border-color:rgba(226,75,74,.5)}
 .el-chip.el-confirmed::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(to top right,transparent calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% + 1.1px),transparent calc(50% + 1.1px)),linear-gradient(to bottom right,transparent calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% - 1.1px),rgba(255,95,95,.85) calc(50% + 1.1px),transparent calc(50% + 1.1px))}
 .el-name{color:rgba(226,75,74,.8)}
+/* ── Vista radial "El Camino" (bracket eliminatoria) ── */
+.camino-wrap{position:relative;width:100%;max-width:640px;margin:0 auto;border-radius:16px;overflow:hidden;background-color:#0a0f1e;background-image:radial-gradient(circle at 50% 47%,rgba(255,212,0,.18),rgba(255,212,0,.05) 28%,transparent 52%),url('/img/copa.jpg');background-size:cover;background-position:center}
+.camino-wrap svg{display:block;width:100%;height:auto}
+.cam-flag:hover circle{stroke:#ffd400}
+.camino-panel{max-width:640px;margin:12px auto 0}
+.cam-panel-empty{text-align:center;color:var(--muted2);font-size:12.5px;padding:16px}
+.cam-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px}
+.cam-card-h{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;font-size:15px;font-weight:800;color:#fff;margin-bottom:2px}
+.cam-demo-tag{font-size:10px;color:#2b1d00;background:var(--gold);padding:2px 8px;border-radius:10px;font-weight:800}
 @media(min-width:900px){
   /* Elimis grupos: 2 columnas, stats más anchos y legibles */
   .eg-grid{grid-template-columns:repeat(2,1fr);gap:12px}
@@ -1257,6 +1266,7 @@ select option{background:#161c30;color:#fff}
         <button class="fbtn" id="atab-casino" onclick="setAdminTab('casino',this)">🎰 Casino</button>
         <button class="fbtn" id="atab-tablas" onclick="setAdminTab('tablas',this)">📋 Tablas</button>
         <button class="fbtn" id="atab-fairplay" onclick="setAdminTab('fairplay',this)">🟨 Fair Play</button>
+        <button class="fbtn" id="atab-camino" onclick="setAdminTab('camino',this)">🗺️ Camino (demo)</button>
       </div>
       <div id="admin-content-wrap">
       <div id="admin-resultados">
@@ -1426,6 +1436,12 @@ select option{background:#161c30;color:#fff}
     <div id="fpEquiposList"></div>
   </div>
 </div>
+      <div id="admin-camino" style="display:none">
+        <div class="sec-title" style="margin-bottom:4px">🗺️ El Camino — vista radial (demo)</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.5">Maqueta funcional del bracket radial que reemplazará la Llave al terminar los grupos. Toca una bandera para ver su partido y los momios. Datos de demostración.</div>
+        <div id="caminoWrap" class="camino-wrap"></div>
+        <div id="caminoPanel" class="camino-panel"></div>
+      </div>
       <button class="btn btn-danger btn-sm" style="width:100%;margin-top:16px" onclick="resetTodo()">⚠️ Reset total</button>
       </div>
     </div>
@@ -1737,7 +1753,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.40.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.41.0';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2580,7 +2596,9 @@ function setAdminTab(name,btn){
   document.getElementById('admin-notif').style.display=name==='notif'?'block':'none';
   document.getElementById('admin-tablas').style.display=name==='tablas'?'block':'none';
   document.getElementById('admin-fairplay').style.display=name==='fairplay'?'block':'none';
+  document.getElementById('admin-camino').style.display=name==='camino'?'block':'none';
   if(name==='fairplay') renderFairPlayAdmin();
+  if(name==='camino') renderCaminoDemo();
   if(name==='saldos'){const sel=document.getElementById('adjJugador');if(sel)sel.innerHTML=Object.values(state.jugadores).map(j=>`<option value="${j.nombre}">${j.nombre} ($${Math.round(j.saldo).toLocaleString()})</option>`).join('');
     const cs=document.getElementById('campSel');if(cs){const odds=state.campeon_odds||{};const teams=Object.keys(odds).sort((a,b)=>odds[a]-odds[b]);cs.innerHTML='<option value="">— Sin campeón (revertir) —</option>'+teams.map(c=>`<option value="${c}"${state.campeon===c?' selected':''}>${teamName(c)} (${odds[c]}x)</option>`).join('');}
     // Inicializar panel unificado
@@ -5331,6 +5349,65 @@ async function resetTodo(){
 // ── HELPERS ───────────────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function closeModal(){const o=document.getElementById('overlay');o.style.display='none';o.classList.remove('cm-center');}
+// ── DEMO: vista radial "El Camino" (bracket eliminatoria, simétrico) ──────
+const CAMINO_TEAMS=['FRA','SWE','KOR','SUI','NED','MAR','POR','ESP','AUT','USA','ALG','EGY','CZE','BRA','JPN','CIV','NOR','MEX','SCO','ENG','CPV','ARG','URU','AUS','IRN','CAN','BEL','COL','CRO','GER','PAR','NZL'];
+// momios demo por partido (16): [local, empate, visita, avanzaLocal, avanzaVisita]
+const CAMINO_ODDS=[[2.1,3.3,3.4,1.7,2.0],[1.5,4.2,6,1.25,3.6],[1.35,5,9,1.18,4.5],[2.6,3.2,2.7,1.9,1.8],[1.9,3.4,4,1.55,2.3],[1.25,6,12,1.1,5.5],[1.7,3.7,4.8,1.4,2.7],[3,3.3,2.3,2.1,1.6],[2.2,3.2,3.3,1.75,1.95],[1.6,4,5.5,1.35,2.9],[2.4,3.1,3,1.85,1.85],[1.45,4.3,7,1.22,3.8],[1.8,3.5,4.4,1.5,2.4],[1.3,5.5,10,1.12,5],[2,3.4,3.7,1.65,2.1],[2.7,3.2,2.6,1.95,1.75]];
+let caminoSel=null;
+function renderCaminoDemo(){
+  const wrap=document.getElementById('caminoWrap');if(!wrap)return;
+  const CX=500,CY=500,TOP=14,stepH=(180-2*TOP)/15;
+  const pos=(R,phi)=>{const a=phi*Math.PI/180;return [CX+R*Math.sin(a),CY-R*Math.cos(a)];};
+  const teamPhi=i=> i<16 ? (TOP+i*stepH) : (360-(TOP+(i-16)*stepH));
+  const R0=448,R1=366,R2=286,R3=208,R4=130;
+  const mid=arr=>arr.reduce((a,b)=>a+b,0)/arr.length;
+  function levelsFor(idx){
+    const ph=idx.map(teamPhi),l1=[],l2=[],l3=[];
+    for(let j=0;j<8;j++)l1.push(mid([ph[2*j],ph[2*j+1]]));
+    for(let j=0;j<4;j++)l2.push(mid([l1[2*j],l1[2*j+1]]));
+    for(let j=0;j<2;j++)l3.push(mid([l2[2*j],l2[2*j+1]]));
+    return {l1,l2,l3,l4:mid([l3[0],l3[1]])};
+  }
+  const rIdx=[...Array(16).keys()], lIdx=[...Array(16).keys()].map(k=>16+k);
+  const Rt=levelsFor(rIdx), Lt=levelsFor(lIdx);
+  let lines='',dots='',flags='',clips='';
+  const line=(p1,p2,w,op)=>`<line x1="${p1[0].toFixed(1)}" y1="${p1[1].toFixed(1)}" x2="${p2[0].toFixed(1)}" y2="${p2[1].toFixed(1)}" stroke="#ffd400" stroke-opacity="${op}" stroke-width="${w}"/>`;
+  const dot=(p,r)=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="#0a0f1e" stroke="rgba(255,212,0,.5)" stroke-width="1.3"/>`;
+  function half(idx,lv){
+    const ph=idx.map(teamPhi);
+    for(let i=0;i<16;i++)lines+=line(pos(R0,ph[i]),pos(R1,lv.l1[i>>1]),1.5,.28);
+    for(let j=0;j<8;j++)lines+=line(pos(R1,lv.l1[j]),pos(R2,lv.l2[j>>1]),1.5,.32);
+    for(let j=0;j<4;j++)lines+=line(pos(R2,lv.l2[j]),pos(R3,lv.l3[j>>1]),1.6,.38);
+    for(let j=0;j<2;j++)lines+=line(pos(R3,lv.l3[j]),pos(R4,lv.l4),1.7,.46);
+    lv.l1.forEach(a=>dots+=dot(pos(R1,a),4));lv.l2.forEach(a=>dots+=dot(pos(R2,a),4.5));
+    lv.l3.forEach(a=>dots+=dot(pos(R3,a),5));dots+=dot(pos(R4,lv.l4),6);
+  }
+  half(rIdx,Rt);half(lIdx,Lt);
+  lines+=line(pos(R4,Rt.l4),[CX,CY],2,.6)+line(pos(R4,Lt.l4),[CX,CY],2,.6);
+  for(let i=0;i<32;i++){
+    const p=pos(R0,teamPhi(i)),r=28,m=i>>1,sel=caminoSel===m,url=flagUrl(CAMINO_TEAMS[i])||'';
+    clips+=`<clipPath id="cf${i}"><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}"/></clipPath>`;
+    flags+=`<g class="cam-flag" onclick="caminoSelect(${m})" style="cursor:pointer"><image href="${url}" xlink:href="${url}" x="${(p[0]-r).toFixed(1)}" y="${(p[1]-r).toFixed(1)}" width="${2*r}" height="${2*r}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cf${i})"/><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="none" stroke="${sel?'#ffd400':'#fff'}" stroke-opacity="${sel?1:.85}" stroke-width="${sel?3.6:2.2}"/></g>`;
+  }
+  const center=`<circle cx="${CX}" cy="${CY-2}" r="36" fill="rgba(10,15,30,.45)" stroke="#ffd400" stroke-width="3"/><text x="${CX}" y="${CY+8}" text-anchor="middle" font-size="30">🏆</text><text x="${CX}" y="${CY+62}" text-anchor="middle" fill="#ffd400" font-size="24" font-weight="900" letter-spacing="3">CAMPEÓN</text>`;
+  wrap.innerHTML=`<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>${clips}</defs>${lines}${dots}${center}${flags}</svg>`;
+  renderCaminoPanel();
+}
+function caminoSelect(m){caminoSel=m;renderCaminoDemo();}
+function renderCaminoPanel(){
+  const el=document.getElementById('caminoPanel');if(!el)return;
+  if(caminoSel==null){el.innerHTML=`<div class="cam-panel-empty">👆 Toca una bandera para ver su partido y apostar</div>`;return;}
+  const m=caminoSel,a=CAMINO_TEAMS[2*m],b=CAMINO_TEAMS[2*m+1],o=CAMINO_ODDS[m]||[2,3.3,3,1.7,1.9];
+  const pk=(lbl,od)=>`<div class="pick" style="cursor:pointer" onclick="toast('Demo · aquí se colocaría: ${lbl} (${od}x)')"><div class="pt">${lbl}</div><div class="pm">${od}x</div></div>`;
+  el.innerHTML=`<div class="cam-card">
+    <div class="cam-card-h">${flagImg(a,22)} ${teamName(a)} <span style="color:var(--muted2);font-size:13px">vs</span> ${teamName(b)} ${flagImg(b,22)} <span class="cam-demo-tag">DEMO</span></div>
+    <div style="text-align:center;font-size:11px;color:var(--muted2);margin-bottom:12px">Dieciseisavos · toca un momio (demostración, no apuesta real)</div>
+    <div class="ou-label">🏆 Ganador del partido</div>
+    <div class="picks">${pk(teamName(a),o[0])}${pk('Empate',o[1])}${pk(teamName(b),o[2])}</div>
+    <div class="ou-label" style="margin-top:12px">🏆 ¿Quién avanza?</div>
+    <div class="ou-row">${pk('Avanza '+teamName(a),o[3])}${pk('Avanza '+teamName(b),o[4])}</div>
+  </div>`;
+}
 // Pop-up único: chiste local "Es que, yo sé que no… Pero ¿y si sí?" (México pasó de grupos).
 // Se muestra UNA sola vez por dispositivo (flag en localStorage).
 function maybeShowYSiSiPop(){
