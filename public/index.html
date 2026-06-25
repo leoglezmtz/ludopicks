@@ -1760,11 +1760,11 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.42.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.42.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
-let elimView='camino';   // 'camino' | 'llave' | 'grupos' — sub-pestaña dentro de Eliminatorias
+let elimView='llave';   // 'llave' | 'grupos' (jugadores) | 'camino' (solo admin, preview) — sub-pestaña Eliminatorias
 let expanded=new Set();   // ids de partidos con la tarjeta desplegada
 let daysToShow=3;          // cuántos días de partidos mostrar (Todos)
 
@@ -4115,21 +4115,24 @@ function renderElim(){
     champHtml+=`<div class="info-card"><div style="font-size:13px;color:var(--muted);line-height:1.5">Apuesta <b style="color:var(--gold)">una sola vez</b> al campeón. Mientras más improbable, ¡más paga!</div><div style="text-align:center;margin:10px 0;font-size:12px;color:var(--gold);font-weight:800">⏳ Cierra en ${fmtCountdown(ms).replace('¡Ya!','¡ya casi!')}</div>${myBet?`<div class="campeon-mybet">Tu pick: ${flagImg(myBet.equipo,18)} <b>${teamName(myBet.equipo)}</b> · ${myBet.momio}x<div style="font-size:12px;color:var(--muted)">$${myBet.monto.toLocaleString()} → posible $${Math.round(myBet.monto*myBet.momio).toLocaleString()}</div></div>`:''}<button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="openCampeonPicker()">${myBet?'Cambiar mi campeón':'🏆 Elegir campeón'}</button></div>`;
   }
 
-  const segCam=elimView==='camino', segLlave=elimView==='llave', segGru=elimView==='grupos';
+  // El radial "Camino" es SOLO para admin (preview); los jugadores ven la Llave normal.
+  const camAdmin=isAdmin;
+  const ev=(elimView==='camino'&&!camAdmin)?'llave':elimView;
+  const segCam=ev==='camino', segLlave=ev==='llave', segGru=ev==='grupos';
   // Cruces R32 con equipos reales pronosticados (misma lógica del bracket) para el radial.
   const bkM=def=>{const h=resolveSlot(def.h,allS,thirdsMap,winMap),a=resolveSlot(def.a,allS,thirdsMap,winMap);return {h,a,bracketId:def.id,hConf:isSlotConfirmed(def.h,h,winMap),aConf:isSlotConfirmed(def.a,a,winMap)};};
   caminoMatches=[...BK_L32.map(bkM),...BK_R32.map(bkM)];
   // Toggle vía clases (no IDs) para evitar colisiones si el bloque se montara más de una vez.
   const elimHtmlFull=`<div style="padding:0 2px 4px">
     <div class="elim-seg">
-      <button class="elim-seg-camino ${segCam?'on':''}" onclick="setElimView('camino')">🗺️ Camino</button>
+      ${camAdmin?`<button class="elim-seg-camino ${segCam?'on':''}" onclick="setElimView('camino')">🗺️ Camino</button>`:''}
       <button class="elim-seg-llave ${segLlave?'on':''}" onclick="setElimView('llave')">⚽ Llave</button>
       <button class="elim-seg-grupos ${segGru?'on':''}" onclick="setElimView('grupos')">📊 Grupos</button>
     </div>
-    <div class="elim-view-camino" style="display:${segCam?'block':'none'}">
+    ${camAdmin?`<div class="elim-view-camino" style="display:${segCam?'block':'none'}">
       <div id="caminoPanel" class="camino-panel"></div>
       <div id="caminoWrap" class="camino-wrap"></div>
-    </div>
+    </div>`:''}
     <div class="elim-view-llave" style="display:${segLlave?'block':'none'}">
       <div class="sec-title" style="margin-bottom:8px">⚽ Llaves eliminatorias</div>
       <div style="font-size:10px;color:var(--muted2);margin-bottom:6px">Proyectado según posiciones actuales · desliza →</div>
@@ -4148,7 +4151,7 @@ function renderElim(){
     </div>
   </div>`;
   const elU=document.getElementById('listaElim');if(elU)elU.innerHTML=elimHtmlFull;
-  if(elimView==='camino')renderCaminoView();
+  if(camAdmin&&ev==='camino')renderCaminoView();
 }
 // Toggle Llave/Grupos en Eliminatorias. Opera sobre TODAS las instancias (usuario + admin)
 // para que ambas vistas queden sincronizadas. Sin re-render completo.
