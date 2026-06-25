@@ -817,6 +817,10 @@ select option{background:#161c30;color:#fff}
 .sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
 .sheet-head h3{font-size:18px;font-weight:800}
 .sheet-close{background:rgba(255,255,255,.08);border:none;color:var(--muted);font-size:20px;width:32px;height:32px;border-radius:50%;cursor:pointer}
+/* Modal flotante centrado (no hoja pegada abajo) — se activa con .cm-center en el overlay */
+.overlay.cm-center{align-items:center}
+.overlay.cm-center .sheet{width:calc(100% - 44px);max-width:340px;border-radius:24px;padding:26px 22px;box-shadow:0 24px 60px -15px rgba(0,0,0,.85);animation:cmPop .25s cubic-bezier(.2,.8,.3,1)}
+@keyframes cmPop{from{opacity:0;transform:translateY(8px) scale(.92)}to{opacity:1;transform:none}}
 .quick-amts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .quick-amts button{flex:1;min-width:60px;padding:8px;border-radius:10px;border:1.5px solid var(--line2);background:rgba(255,255,255,.05);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
 .preview-box{background:rgba(93,202,165,.12);border:1px solid rgba(93,202,165,.25);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--green);margin:14px 0;display:none}
@@ -1733,7 +1737,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.39.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.39.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -5281,21 +5285,21 @@ async function resetTodo(){
 
 // ── HELPERS ───────────────────────────────────────────────────
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function closeModal(){document.getElementById('overlay').style.display='none';}
+function closeModal(){const o=document.getElementById('overlay');o.style.display='none';o.classList.remove('cm-center');}
 // Pop-up único: chiste local "Es que, yo sé que no… Pero ¿y si sí?" (México pasó de grupos).
 // Se muestra UNA sola vez por dispositivo (flag en localStorage).
 function maybeShowYSiSiPop(){
-  try{ if(localStorage.getItem('lp_pop_ysisi')) return false; }catch(e){}
-  document.getElementById('mTitle').innerHTML='🇲🇽 ✨';
+  try{ if(localStorage.getItem('lp_pop_ysisi2')) return false; }catch(e){}
+  document.getElementById('mTitle').innerHTML='';
   document.getElementById('mBody').innerHTML=`
     <div style="text-align:center;padding:4px 4px 6px">
-      <div style="font-size:48px;line-height:1;margin-bottom:12px">🇲🇽🤞</div>
-      <div style="font-size:21px;font-weight:800;color:#fff;line-height:1.35;margin-bottom:7px">Es que, yo sé que no…</div>
-      <div style="font-size:12.5px;color:var(--muted);margin-bottom:20px">(ya sabes cómo acaba esto cada 4 años… 😮‍💨)</div>
-      <button class="btn btn-primary" style="width:100%;font-size:17px;font-weight:900" onclick="closeModal()">Pero… ¿y si sí? 👀</button>
+      <div style="font-size:56px;line-height:1;margin-bottom:16px">🇲🇽</div>
+      <div style="font-size:22px;font-weight:800;color:#fff;line-height:1.35;margin-bottom:24px">Es que, yo sé que no…</div>
+      <button class="btn btn-primary" style="width:100%;font-size:18px;font-weight:900;letter-spacing:.3px" onclick="closeModal()">¡¿PERO Y SI SÍ?!</button>
     </div>`;
+  document.getElementById('overlay').classList.add('cm-center');
   document.getElementById('overlay').style.display='flex';
-  try{ localStorage.setItem('lp_pop_ysisi','1'); }catch(e){}
+  try{ localStorage.setItem('lp_pop_ysisi2','1'); }catch(e){}
   return true;
 }
 function modalOpen(){return document.getElementById('overlay').style.display==='flex'||document.getElementById('ruletaOv').classList.contains('show');}
