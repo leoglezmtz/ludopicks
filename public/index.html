@@ -1030,6 +1030,7 @@ select option{background:#161c30;color:#fff}
 .t3-sub{font-size:8.5px;font-weight:800;color:rgba(226,75,74,.8);text-transform:uppercase;letter-spacing:.05em;padding:9px 0 4px;border-top:1px dashed rgba(226,75,74,.25);margin-top:7px}
 .t3-row.t3-elim{opacity:.55;border-left:2px solid rgba(226,75,74,.4);padding-left:5px;margin-left:-3px}
 .t3-row.t3-elim .t3-pts{color:rgba(255,255,255,.6)}
+.t3-row.t3-alive{opacity:.85;border-left:2px solid rgba(255,219,0,.5);padding-left:5px;margin-left:-3px}
 .t3-legend{font-size:9.5px;color:var(--muted2);margin-top:7px;line-height:1.4}
 .et3-head{font-size:9.5px;font-weight:800;color:rgba(255,219,0,.7);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 .et3-head::after{content:'';flex:1;height:1px;background:rgba(255,219,0,.2)}
@@ -1803,7 +1804,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.43.3';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.43.4';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4126,15 +4127,19 @@ function renderElim(){
   const allFourths=sortStd(GRUPOS.map(g=>{const s=allS[g];return s&&s.length>=4?{...s[3],grupo:g}:null;}));
   const t3row=(t,n,cls)=>{const dg=(t.gd>0?'+':'')+t.gd;return `<div class="t3-row ${cls}"><span>${n}</span><span class="t3-team">${flagImg(t.team,14)||'🏳️'}<span class="t3-tn">${teamName(t.team)}</span></span><span>${t.grupo}</span><span>${t.pj}</span><span>${dg}</span><span>${t.gf}</span><span>${fpScore(t.team)}</span><span class="t3-pts">${t.pts}</span></div>`;};
   const t3rows=allThirds.map((t,i)=>t3row(t,i+1,(i<8?'t3-q':'t3-out')+(i===7?' t3-cut':''))).join('');
-  const t4rows=allFourths.map((t,i)=>t3row(t,i+1,'t3-elim')).join('');
+  // 4°: rojo solo si está MATEMÁTICAMENTE eliminado o el grupo ya terminó; si no, aún con chance.
+  const t4rows=allFourths.map((t,i)=>{
+    const elim=isGroupDone(t.grupo)||!!(groupVerdicts(t.grupo)[t.team]||{}).elim;
+    return t3row(t,i+1,elim?'t3-elim':'t3-alive');
+  }).join('');
   const thirdsHtml=`<div class="et3-head">Terceros y cuartos lugares</div>
     <div class="t3-table">
       <div class="t3-row t3-head"><span>#</span><span class="t3-team">Equipo</span><span>Gr</span><span>PJ</span><span>DG</span><span>GF</span><span title="Fair Play (puntaje de tarjetas)">🟨</span><span>PTS</span></div>
       ${t3rows}
-      <div class="t3-sub">4° lugares · eliminados</div>
+      <div class="t3-sub">4° lugares</div>
       ${t4rows}
     </div>
-    <div class="t3-legend">🟢 Clasifican (mejores 8 terceros) · 🔴 4° lugar = eliminado · desempate: Pts → Dif. goles → Goles a favor → Fair Play</div>`;
+    <div class="t3-legend">🟢 Clasifican (mejores 8 terceros) · 🟡 4° aún con posibilidades · 🔴 Eliminado (matemático) · desempate: Pts → Dif. goles → Goles a favor → Fair Play</div>`;
 
   // Eliminados: terceros fuera + cuartos de grupo (con grupo para checar eliminación matemática)
   const qualSet=new Set(thirds.map(t=>t.team));
