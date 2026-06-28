@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.44.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.44.3';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -4121,18 +4121,8 @@ function groupVerdicts(grupo,extra){
 function matchInsight(p){
   if(!p||!p.grupo)return '';
   const g=p.grupo,L=p.local,Vt=p.visita;
-  // ── Eliminatoria: tips de mata-o-muere (no de clasificación de grupo) ──
-  if(['R32','R16','QF','SF','Final'].includes(g)){
-    const ml=p.momios||{};const ll=ml.local??99,lv=ml.visita??99;
-    const lo=Math.min(ll,lv),fav=ll<=lv?L:Vt;
-    const ronda={R32:'16avos',R16:'8vos',QF:'cuartos',SF:'semis',Final:'la final'}[g]||'';
-    if(g==='Final')return `🏆 ${teamName(L)} vs ${teamName(Vt)} · ¡la final, el último partido!`;
-    if(lo<=1.45)return `🏆 ${teamName(fav)} llega como gran favorito · eliminación directa`;
-    if(lo<=1.9)return `🎯 ${teamName(fav)} parte con ventaja, pero el que pierde se va a casa`;
-    // Parejo: rota entre frases de mata-o-muere (determinista por id).
-    const flavor=[`⚔️ Parejísimo · mata o muere`,`🥅 Si empatan en 90', se define por penales`,`🔥 El que pierde queda eliminado · el ganador a ${ronda==='16avos'?'8vos':ronda}`];
-    return flavor[(p.id||0)%flavor.length];
-  }
+  // Eliminatoria: sin tip (los de "mata o muere" eran demasiado obvios).
+  if(['R32','R16','QF','SF','Final'].includes(g))return '';
   const base=groupVerdicts(g);
   if(!base[L]||!base[Vt])return '';
   const winL=groupVerdicts(g,[{id:p.id,gl:1,gv:0}]);
