@@ -2,8 +2,9 @@
 # Contiene credenciales de sesión de WhatsApp, historial y media.
 .whatsapp/
 
-# Lanzador local del agente (específico de la máquina)
+# Lanzadores locales (específicos de la máquina)
 iniciar-whatsapp-agent.ps1
+login-claude.ps1
 
 # Temporales de validación / node
 _check.js
