@@ -1098,6 +1098,10 @@ select option{background:#161c30;color:#fff}
 /* Preview admin: pastillas Camino/Calendario (futuro layout de Apuestas) */
 .cam-preview-note{text-align:center;font-size:10.5px;color:var(--muted2);margin:0 auto 8px;max-width:640px}
 .cam-browse{display:flex;gap:6px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:22px;padding:4px;margin:0 auto 12px;max-width:640px}
+.ap-pills{display:flex;gap:6px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:22px;padding:4px;margin:0 0 12px}
+.ap-pill{flex:1;padding:10px;font-size:13.5px;font-weight:800;border-radius:18px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
+.ap-pill.on{background:var(--gold);color:#2b1d00;box-shadow:0 2px 8px rgba(255,212,0,.25)}
+.cam-tip{text-align:center;font-size:11.5px;color:var(--muted2);margin-bottom:8px}
 .cam-bpill{flex:1;padding:9px;font-size:13px;font-weight:800;border-radius:18px;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s}
 .cam-bpill.on{background:var(--gold);color:#2b1d00;box-shadow:0 2px 8px rgba(255,212,0,.25)}
 .camino-list{max-width:640px;margin:0 auto}
@@ -1307,7 +1311,10 @@ select option{background:#161c30;color:#fff}
     <button id="tab-admin" onclick="showTab('admin')" style="display:none"><i class="ti ti-settings"></i>Admin</button>
   </nav>
   <div class="body">
-    <div id="tabc-partidos" class="tabc"><div id="pushBannerSlot"></div><div id="especialBanner"></div><div id="installCard"></div><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
+    <div id="tabc-partidos" class="tabc"><div id="pushBannerSlot"></div><div id="especialBanner"></div><div id="installCard"></div>
+      <div id="apuestasPills" class="ap-pills" style="display:none"><button class="ap-pill on" id="appill-cal" onclick="setApuestasView('calendario')">📅 Calendario</button><button class="ap-pill" id="appill-cam" onclick="setApuestasView('camino')">🗺️ Camino</button></div>
+      <div id="apuestasCal"><div id="countdownBox"></div><div class="filters" id="grupoFilters"></div><div id="listaPartidos"></div></div>
+      <div id="apuestasCamino" style="display:none"></div></div>
     <div id="tabc-mis" class="tabc"><div id="listaMis"></div></div>
     <div id="tabc-ranking" class="tabc"><div id="listaRanking"></div></div>
     <div id="tabc-records" class="tabc"><div id="listaRecords"></div></div>
@@ -1804,11 +1811,12 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.44.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.44.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
 let elimView='llave';   // 'llave' | 'grupos' (jugadores) | 'camino' (solo admin, preview) — sub-pestaña Eliminatorias
+let apuestasView='calendario';   // 'calendario' | 'camino' — pastillas dentro de la pestaña Apuestas/Partidos
 let expanded=new Set();   // ids de partidos con la tarjeta desplegada
 let daysToShow=3;          // cuántos días de partidos mostrar (Todos)
 
@@ -2282,10 +2290,10 @@ function enterApp(){
   const recNavBtn=document.getElementById('tab-records');if(recNavBtn)recNavBtn.style.display='none';
   // Records top button: only for players, not admin
   const recTopBtn=document.getElementById('recordsTopBtn');if(recTopBtn)recTopBtn.style.display=isAdmin?'none':'inline-flex';
-  // Elimis tab visible para todos (jugadores y admin: el admin también quiere ver la llave)
-  const elimTab=document.getElementById('tab-elim');if(elimTab)elimTab.style.display='flex';
-  // Apuestas KO: pestaña de PREVIEW, solo admin por ahora.
-  const koTab=document.getElementById('tab-ko');if(koTab)koTab.style.display=isAdmin?'flex':'none';
+  // Eliminatorias y el preview "Apuestas KO" se retiran: la eliminatoria ahora vive en
+  // la pestaña Apuestas (pastillas Camino/Calendario) para todos.
+  const elimTab=document.getElementById('tab-elim');if(elimTab)elimTab.style.display='none';
+  const koTab=document.getElementById('tab-ko');if(koTab)koTab.style.display='none';
   if(isAdmin){document.getElementById('appWho').textContent='⚙️ Modo administrador';showTab('admin');}
   else{document.getElementById('appWho').textContent='Jugando como '+me;showTab('partidos');}
   // Persistir credenciales del switch en claves dedicadas (sobreviven logout)
@@ -2758,6 +2766,10 @@ function goToMatch(pid){
 // ── PARTIDOS ──────────────────────────────────────────────────
 function renderPartidos(skipAnim){
   const j=state.jugadores[me];if(!j&&!isAdmin)return;
+  // Pastillas Camino/Calendario: solo en fase de eliminatoria (hay partidos KO publicados).
+  const hayKO=(state.partidos||[]).some(p=>['R32','R16','QF','SF','Final'].includes(p.grupo));
+  const pills=document.getElementById('apuestasPills');if(pills)pills.style.display=hayKO?'flex':'none';
+  if(!hayKO&&apuestasView==='camino')apuestasView='calendario';
   renderCountdown();
   renderFilters('grupoFilters',grupoF,'setGrupoF');
   let ps=grupoF==='Todos'?state.partidos:state.partidos.filter(p=>'Gr.'+p.grupo===grupoF);
@@ -2784,6 +2796,34 @@ function renderPartidos(skipAnim){
   document.getElementById('listaPartidos').innerHTML=html;
 }
 function verMasDias(){daysToShow+=3;renderPartidos(true);}
+// Pastillas Camino/Calendario dentro de Apuestas. Calendario = lista clásica (default).
+function setApuestasView(v){
+  apuestasView=v;
+  const cal=document.getElementById('apuestasCal'),cam=document.getElementById('apuestasCamino');
+  if(cal)cal.style.display=v==='calendario'?'block':'none';
+  if(cam)cam.style.display=v==='camino'?'block':'none';
+  const pc=document.getElementById('appill-cal'),pm=document.getElementById('appill-cam');
+  if(pc)pc.classList.toggle('on',v==='calendario');
+  if(pm)pm.classList.toggle('on',v==='camino');
+  if(v==='camino')renderApuestasCamino();
+}
+function renderApuestasCamino(){
+  const cont=document.getElementById('apuestasCamino');if(!cont)return;
+  caminoBrowse='camino'; // en Apuestas, Camino = radial siempre (la lista es la pastilla Calendario)
+  const allS=calcAllStandings(),thirds=calcBestThirds(allS),thirdsMap=buildThirdsMap(thirds),winMap=buildElimWinnerMap();
+  const bkM=def=>{const h=resolveSlot(def.h,allS,thirdsMap,winMap),a=resolveSlot(def.a,allS,thirdsMap,winMap);return {h,a,bracketId:def.id,hConf:isSlotConfirmed(def.h,h,winMap),aConf:isSlotConfirmed(def.a,a,winMap)};};
+  caminoMatches=[...BK_L32.map(bkM),...BK_R32.map(bkM)];
+  cont.innerHTML='<div class="cam-tip">🗺️ Toca un equipo para ir a apostar su partido</div><div id="caminoWrap" class="camino-wrap"></div>';
+  renderCaminoView();
+}
+// Clic en una bandera del Camino → abre el partido REAL para apostar (en Calendario).
+function caminoGoReal(m){
+  const mt=caminoMatches[m];if(!mt)return;
+  const real=(state.partidos||[]).find(p=>p.bracketId===mt.bracketId);
+  if(!real){toast('Ese cruce aún no está disponible para apostar');return;}
+  setApuestasView('calendario');
+  goToMatch(real.id);
+}
 function ouSection(p,done,locked){
   if(done){const r=state.resultados[p.id];return `<div class="ou-label">Total goles</div><div style="font-size:12px;color:var(--muted);padding:3px 0">Resultado: <strong style="color:#fff">${r.gl+r.gv} goles</strong></div>`;}
   const L=getLinea(p.id,'goles');const row=p.ou[String(L)];
@@ -5504,7 +5544,7 @@ function renderCaminoView(){
     else inner=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="rgba(255,255,255,.06)"/><text x="${p[0].toFixed(1)}" y="${(p[1]+7).toFixed(1)}" text-anchor="middle" font-size="22" fill="rgba(255,255,255,.4)">?</text>`;
     const stroke=sel?'#ffd400':(conf?'#fff':'rgba(255,255,255,.45)');
     const ring=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="none" stroke="${stroke}" stroke-opacity="${sel?1:(conf?.9:.6)}" stroke-width="${sel?3.8:2.2}"/>`;
-    flags+=`<g class="cam-flag" onclick="caminoSelect(${m})" style="cursor:pointer">${inner}${ring}</g>`;
+    flags+=`<g class="cam-flag" onclick="caminoGoReal(${m})" style="cursor:pointer">${inner}${ring}</g>`;
   }
   const center=`<circle cx="${CX}" cy="${CY-2}" r="36" fill="rgba(10,15,30,.4)" stroke="#ffd400" stroke-width="3"/><text x="${CX}" y="${CY+8}" text-anchor="middle" font-size="30">🏆</text><text x="${CX}" y="${CY+62}" text-anchor="middle" fill="#ffd400" font-size="24" font-weight="900" letter-spacing="3">CAMPEÓN</text>`;
   wrap.innerHTML=`<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>${clips}</defs>${lines}${dots}${center}${flags}</svg>`;
