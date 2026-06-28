@@ -1,0 +1,14 @@
+# Datos del agente de WhatsApp (claude-whatsapp) — NUNCA subir.
+# Contiene credenciales de sesión de WhatsApp, historial y media.
+.whatsapp/
+
+# Lanzador local del agente (específico de la máquina)
+iniciar-whatsapp-agent.ps1
+
+# Temporales de validación / node
+_check.js
+_live.js
+_live.html
+_st.json
+node_modules/
+npm-debug.log*
