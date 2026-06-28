@@ -1074,6 +1074,8 @@ select option{background:#161c30;color:#fff}
 .bkm-sc.w{color:var(--gold)}
 /* Records button in top hero */
 .hero-rec-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.8);font-weight:700;font-size:12.5px;padding:8px 11px;border-radius:14px;cursor:pointer;margin-top:0;transition:all .15s}
+.gift-claim-btn{background:rgba(255,219,0,.18);border-color:rgba(255,219,0,.5);color:var(--gold);box-shadow:0 0 0 0 rgba(255,219,0,.4);animation:giftPulse 1.7s infinite}
+@keyframes giftPulse{0%{box-shadow:0 0 0 0 rgba(255,219,0,.45)}70%{box-shadow:0 0 0 9px rgba(255,219,0,0)}100%{box-shadow:0 0 0 0 rgba(255,219,0,0)}}
 .hero-rec-btn:hover{background:rgba(255,255,255,.13)}
 /* Eliminados chips */
 .el-head{color:rgba(226,75,74,.7)}
@@ -1294,6 +1296,9 @@ select option{background:#161c30;color:#fff}
       </button>
       <button id="recordsTopBtn" class="hero-rec-btn" onclick="showTab('records')" style="display:none" aria-label="Ver Récords">
         <span style="font-size:16px">⭐</span> Récords
+      </button>
+      <button id="giftClaimBtn" class="hero-rec-btn gift-claim-btn" onclick="doReclamarRegalos()" style="display:none" aria-label="Cobrar regalo">
+        <span style="font-size:16px">🎁</span> <span id="giftClaimBtnTxt">Cobrar regalo</span>
       </button>
       <button onclick="shareLudo()" style="display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);font-weight:700;font-size:12.5px;padding:8px 11px;border-radius:14px;cursor:pointer;margin-top:0;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.13)'" onmouseout="this.style.background='rgba(255,255,255,.07)'" aria-label="Compartir LudoPicks">
         <span style="font-size:16px">📲</span> Invitar
@@ -1811,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.44.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.44.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2154,6 +2159,7 @@ function pickLabel(p,pick,linea,mercado){
   if(pick==='under')return 'Under '+linea+sufijo;
   if(pick==='si')return 'Ambos anotan: Sí';if(pick==='no')return 'Ambos anotan: No';
   if(pick==='avl')return 'Avanza '+p.local;if(pick==='avv')return 'Avanza '+p.visita;
+  if(pick==='psi')return '¿Penales? Sí';if(pick==='pno')return '¿Penales? No';
   return pick;
 }
 function pickWinsClient(p,r,pick,linea,mercado){
@@ -2169,6 +2175,7 @@ function pickWinsClient(p,r,pick,linea,mercado){
   }
   if(pick==='si')return r.gl>0&&r.gv>0;if(pick==='no')return !(r.gl>0&&r.gv>0);
   if(pick==='avl'||pick==='avv'){if(r.gl==null||r.gv==null)return false;const aL=r.gl>r.gv||(r.gl===r.gv&&r.pen_l!=null&&r.pen_l>r.pen_v);const aV=r.gv>r.gl||(r.gl===r.gv&&r.pen_l!=null&&r.pen_v>r.pen_l);return pick==='avl'?aL:aV;}
+  if(pick==='psi'||pick==='pno'){if(r.gl==null||r.gv==null)return false;return pick==='psi'?(r.gl===r.gv):(r.gl!==r.gv);}
   return false;
 }
 // ── INIT ──────────────────────────────────────────────────────
@@ -2302,7 +2309,7 @@ function enterApp(){
   const sb=document.getElementById('switchBtn');
   if(sb)sb.style.display=(isAdmin||me==='Leonidas')?'block':'none';
   refreshHero();renderSlipBar();
-  if(!isAdmin){checkNotifStatus();setTimeout(checkCancelledBets,1200);setTimeout(()=>{ if(maybeShowYSiSiPop())return; if(maybeShowGiftClaim())return; if(maybeShowPushPromo())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
+  if(!isAdmin){checkNotifStatus();setTimeout(checkCancelledBets,1200);setTimeout(()=>{ if(maybeShowYSiSiPop())return; if(maybeShowPushPromo())return; if(maybeShowRuletaPromo())return; if(maybeShowPaPromo())return; if(!maybeShowNewsPop())maybeShowEspecialPop(); },2000);maybeToastTickets();}
 }
 async function switchMode(){
   if(isAdmin){
@@ -2347,6 +2354,18 @@ function refreshHero(){
   updateRuletaBtn();
   const jpBadge=document.getElementById('heroJpBadge');
   if(jpBadge&&state.jackpot>0){jpBadge.textContent='JP $'+Math.round(state.jackpot/1000)+'K';jpBadge.style.display='inline';}
+  // Botón temporal para cobrar regalos pendientes (reemplaza/complementa el popup).
+  const gb=document.getElementById('giftClaimBtn');
+  if(gb){
+    const regs=j.regalos||[];
+    if(regs.length){
+      const tf=regs.filter(r=>r.kind==='feria').reduce((s,r)=>s+r.cantidad,0);
+      const tt=regs.filter(r=>r.kind==='tickets').reduce((s,r)=>s+r.cantidad,0);
+      const txt=(tf>0&&tt>0)?`Cobrar $${tf.toLocaleString()} +🎟️${tt}`:tf>0?`Cobrar $${tf.toLocaleString()}`:tt>0?`Cobrar ${tt}🎟️`:'Cobrar regalo';
+      const t=document.getElementById('giftClaimBtnTxt');if(t)t.textContent=txt;
+      gb.style.display='inline-flex';
+    }else gb.style.display='none';
+  }
 }
 function maybeToastTickets(){
   const key='ludo_ticket_toast_'+new Date().toDateString();
@@ -2889,6 +2908,17 @@ function avanzaSection(p,done,locked){
   };
   return `<div class="ou-label">🏆 ¿Quién avanza?</div><div class="ou-row">${pk('avl',p.local,p.avanza.local,'sel-local')}${pk('avv',p.visita,p.avanza.visita,'sel-visita')}</div>`;
 }
+// Mercado "¿Habrá penales?" — solo eliminatoria (p.penales). Gana "Sí" si hay empate en 90'.
+function penalesSection(p,done,locked){
+  if(!p.penales)return '';
+  if(done){const r=state.resultados[p.id];if(!r||r.gl==null)return '';const hay=r.gl===r.gv;return `<div class="ou-label">🥅 ¿Hubo penales?</div><div style="font-size:12px;color:var(--muted);padding:3px 0">${hay?'Sí — se definió por penales':'No — hubo ganador en los 90\\''}</div>`;}
+  const pk=(pick,label,momio,sel)=>{
+    let cls='pick';if(locked)cls+=' locked';else if(slipSelected(p.id,pick,null))cls+=' '+sel;
+    const onc=locked?'':` onclick="toggleSlip(${p.id},'${pick}',null,${momio},'penales')"`;
+    return `<div class="${cls}"${onc}><div class="pt">${label}</div><div class="pm">${momio}x</div></div>`;
+  };
+  return `<div class="ou-label">🥅 ¿Habrá penales?</div><div class="ou-row">${pk('psi','Sí',p.penales.si,'sel-local')}${pk('pno','No',p.penales.no,'sel-visita')}</div>`;
+}
 function matchCard(p,res,i,skipAnim,animBody){
   const hasFinal=!!res&&res.gl!=null;
   const paParcial=!!res&&res.gl==null&&!!res.pa; // PA aplicado en vivo, sin marcador final
@@ -2920,6 +2950,7 @@ function matchCard(p,res,i,skipAnim,animBody){
       if(['local','empate','visita'].includes(b.pick))key='1x2';
       else if(b.pick==='si'||b.pick==='no')key='btts';
       else if(b.pick==='avl'||b.pick==='avv')key='avanza';
+      else if(b.pick==='psi'||b.pick==='pno')key='penales';
       else if(b.pick==='over'||b.pick==='under')key='ou-'+(mk||'goles');
       if(key)mySimple[key]=b;
     });
@@ -2934,12 +2965,13 @@ function matchCard(p,res,i,skipAnim,animBody){
     };
     const picks1x2=`<div class="picks">${pk1('local',`${flagImg(p.local,13)} ${p.local}`,p.momios.local,'sel-local')}${pk1('empate','Empate',p.momios.empate,'sel-empate')}${pk1('visita',`${flagImg(p.visita,13)} ${p.visita}`,p.momios.visita,'sel-visita')}</div>`;
     const rowavanza=avanzaSection(p,done,locked||paParcial);
+    const rowpenales=penalesSection(p,done,locked||paParcial);
     const rowou=ouSection(p,done,locked||paParcial);
     const rowbtts=bttsSection(p,done,locked||paParcial);
     const rowcorners=cornersSection(p,done,locked||paParcial);
     const rowtarjetas=tarjetasSection(p,done,locked||paParcial);
     let hint='';
-    ['1x2','avanza','ou-goles','btts','ou-corners','ou-tarjetas'].forEach(mk=>{
+    ['1x2','avanza','penales','ou-goles','btts','ou-corners','ou-tarjetas'].forEach(mk=>{
       const b=mySimple[mk];if(!b)return;
       const subM=b.mercado==='corners'?'corners':b.mercado==='tarjetas'?'tarjetas':'goles';
       const lbl=pickLabel(p,b.pick,b.linea,subM);
@@ -2963,7 +2995,7 @@ function matchCard(p,res,i,skipAnim,animBody){
     const row1x2=p.pa
       ? `<div class="winner-pa-box"><div class="winner-pa-h">🏆 Ganador del partido</div>${picks1x2}${paNotice}</div>`
       : picks1x2;
-    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowavanza}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
+    body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowavanza}${rowpenales}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
   }
   return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}${isOpen?' open':''}" style="${animStyle}">${header}${body}</div>`;
 }
@@ -4089,6 +4121,18 @@ function groupVerdicts(grupo,extra){
 function matchInsight(p){
   if(!p||!p.grupo)return '';
   const g=p.grupo,L=p.local,Vt=p.visita;
+  // ── Eliminatoria: tips de mata-o-muere (no de clasificación de grupo) ──
+  if(['R32','R16','QF','SF','Final'].includes(g)){
+    const ml=p.momios||{};const ll=ml.local??99,lv=ml.visita??99;
+    const lo=Math.min(ll,lv),fav=ll<=lv?L:Vt;
+    const ronda={R32:'16avos',R16:'8vos',QF:'cuartos',SF:'semis',Final:'la final'}[g]||'';
+    if(g==='Final')return `🏆 ${teamName(L)} vs ${teamName(Vt)} · ¡la final, el último partido!`;
+    if(lo<=1.45)return `🏆 ${teamName(fav)} llega como gran favorito · eliminación directa`;
+    if(lo<=1.9)return `🎯 ${teamName(fav)} parte con ventaja, pero el que pierde se va a casa`;
+    // Parejo: rota entre frases de mata-o-muere (determinista por id).
+    const flavor=[`⚔️ Parejísimo · mata o muere`,`🥅 Si empatan en 90', se define por penales`,`🔥 El que pierde queda eliminado · el ganador a ${ronda==='16avos'?'8vos':ronda}`];
+    return flavor[(p.id||0)%flavor.length];
+  }
   const base=groupVerdicts(g);
   if(!base[L]||!base[Vt])return '';
   const winL=groupVerdicts(g,[{id:p.id,gl:1,gv:0}]);
@@ -5124,6 +5168,8 @@ async function verApuestas(pid){
       if(pick==='empate')return 'Empate';
       if(pick==='avl')return `${p.local} avanza`;
       if(pick==='avv')return `${p.visita} avanza`;
+      if(pick==='psi')return 'Habrá penales';
+      if(pick==='pno')return 'No habrá penales';
       if(pick==='si')return 'Ambos anotan: Sí';
       if(pick==='no')return 'Ambos anotan: No';
       const sub=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
@@ -5678,6 +5724,7 @@ function pickLabelLong(p,pick,linea,mercado){
   if(pick==='visita')return p.visita+' gana';
   if(pick==='empate')return 'Empate';
   if(pick==='avl')return p.local+' avanza';if(pick==='avv')return p.visita+' avanza';
+  if(pick==='psi')return 'Habrá penales';if(pick==='pno')return 'No habrá penales';
   const sufijo=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
   if(pick==='over')return 'Over '+linea+sufijo;
   if(pick==='under')return 'Under '+linea+sufijo;
