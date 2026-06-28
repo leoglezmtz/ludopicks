@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.44.3';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.44.4';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2911,7 +2911,7 @@ function avanzaSection(p,done,locked){
 // Mercado "¿Habrá penales?" — solo eliminatoria (p.penales). Gana "Sí" si hay empate en 90'.
 function penalesSection(p,done,locked){
   if(!p.penales)return '';
-  if(done){const r=state.resultados[p.id];if(!r||r.gl==null)return '';const hay=r.gl===r.gv;return `<div class="ou-label">🥅 ¿Hubo penales?</div><div style="font-size:12px;color:var(--muted);padding:3px 0">${hay?'Sí — se definió por penales':'No — hubo ganador en los 90\\''}</div>`;}
+  if(done){const r=state.resultados[p.id];if(!r||r.gl==null)return '';const hay=r.gl===r.gv;return `<div class="ou-label">🥅 ¿Hubo penales?</div><div style="font-size:12px;color:var(--muted);padding:3px 0">${hay?'Sí — se definió por penales':'No — hubo ganador en 90 minutos'}</div>`;}
   const pk=(pick,label,momio,sel)=>{
     let cls='pick';if(locked)cls+=' locked';else if(slipSelected(p.id,pick,null))cls+=' '+sel;
     const onc=locked?'':` onclick="toggleSlip(${p.id},'${pick}',null,${momio},'penales')"`;
