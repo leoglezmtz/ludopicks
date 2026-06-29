@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.44.5';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.44.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2792,6 +2792,10 @@ function renderPartidos(skipAnim){
   renderCountdown();
   renderFilters('grupoFilters',grupoF,'setGrupoF');
   let ps=grupoF==='Todos'?state.partidos:state.partidos.filter(p=>'Gr.'+p.grupo===grupoF);
+  // Orden cronológico real: el array de datos NO está ordenado por fecha
+  // (p.ej. los R32 van por bracket M1→M16). Ordenar por kickoff arregla las
+  // etiquetas de día y el cálculo de "próximos N días".
+  ps=[...ps].sort((a,b)=>(a.kickoff||0)-(b.kickoff||0));
   let limited=false,hiddenCount=0;
   if(grupoF==='Todos'){
     // Solo próximos (con 2h de gracia para los que están en juego)
