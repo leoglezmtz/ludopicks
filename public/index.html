@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.44.8';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.44.9';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -5617,16 +5617,38 @@ function renderCaminoView(){
   }
   half(rIdx,Rt);half(lIdx,Lt);
   lines+=line(pos(R4,Rt.l4),[CX,CY],2,.6)+line(pos(R4,Lt.l4),[CX,CY],2,.6);
+  // Resultados reales: quién ganó cada cruce de 16avos (avanza) y quién quedó eliminado.
+  const winMap=buildElimWinnerMap();
+  const winnerOf=m=>winMap[(caminoMatches[m]||{}).bracketId]||null;
+  const r1NodeOf=m=> m<8 ? pos(R1,Rt.l1[m]) : pos(R1,Lt.l1[m-8]);
+  // Dibuja una bandera circular (con recorte) en p; devuelve el SVG interno.
+  const flagSVG=(p,r,team,id,opacity,gray)=>{
+    const url=team?(flagUrl(team)||''):'';
+    clips+=`<clipPath id="${id}"><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}"/></clipPath>`;
+    if(url)return `<image href="${url}" xlink:href="${url}" x="${(p[0]-r).toFixed(1)}" y="${(p[1]-r).toFixed(1)}" width="${2*r}" height="${2*r}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})" opacity="${opacity}"${gray?' style="filter:grayscale(1)"':''}/>`;
+    return `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="rgba(255,255,255,.06)"/><text x="${p[0].toFixed(1)}" y="${(p[1]+7).toFixed(1)}" text-anchor="middle" font-size="${r*.8}" fill="rgba(255,255,255,.4)">?</text>`;
+  };
   for(let i=0;i<32;i++){
     const p=pos(R0,teamPhi(i)),r=28,m=i>>1,sel=caminoSel===m,team=caminoTeamAt(i),conf=caminoConfAt(i);
-    const url=team?(flagUrl(team)||''):'';
-    clips+=`<clipPath id="cf${i}"><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}"/></clipPath>`;
-    let inner;
-    if(url)inner=`<image href="${url}" xlink:href="${url}" x="${(p[0]-r).toFixed(1)}" y="${(p[1]-r).toFixed(1)}" width="${2*r}" height="${2*r}" preserveAspectRatio="xMidYMid slice" clip-path="url(#cf${i})" opacity="${conf?1:.5}"/>`;
-    else inner=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="rgba(255,255,255,.06)"/><text x="${p[0].toFixed(1)}" y="${(p[1]+7).toFixed(1)}" text-anchor="middle" font-size="22" fill="rgba(255,255,255,.4)">?</text>`;
-    const stroke=sel?'#ffd400':(conf?'#fff':'rgba(255,255,255,.45)');
-    const ring=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="none" stroke="${stroke}" stroke-opacity="${sel?1:(conf?.9:.6)}" stroke-width="${sel?3.8:2.2}"/>`;
-    flags+=`<g class="cam-flag" onclick="caminoGoReal(${m})" style="cursor:pointer">${inner}${ring}</g>`;
+    const W=winnerOf(m),isWin=W&&team&&team===W,isLose=W&&team&&team!==W;
+    if(isWin){ // el ganador se mudó a su siguiente cruce → deja una marca tenue en su lugar
+      flags+=`<g class="cam-flag" onclick="caminoGoReal(${m})" style="cursor:pointer"><circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="rgba(255,212,0,.05)" stroke="rgba(255,212,0,.4)" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${p[0].toFixed(1)}" y="${(p[1]+7).toFixed(1)}" text-anchor="middle" font-size="20" fill="rgba(255,212,0,.6)">↗</text></g>`;
+      continue;
+    }
+    const inner=flagSVG(p,r,team,`cf${i}`,isLose?.3:(conf?1:.5),isLose);
+    const stroke=sel?'#ffd400':isLose?'rgba(229,64,42,.85)':(conf?'#fff':'rgba(255,255,255,.45)');
+    const ring=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="none" stroke="${stroke}" stroke-opacity="${sel?1:(isLose?.85:conf?.9:.6)}" stroke-width="${sel?3.8:2.2}"/>`;
+    const xm=isLose?`<line x1="${(p[0]-r*.55).toFixed(1)}" y1="${(p[1]-r*.55).toFixed(1)}" x2="${(p[0]+r*.55).toFixed(1)}" y2="${(p[1]+r*.55).toFixed(1)}" stroke="#e5402a" stroke-width="3.2" stroke-opacity=".9"/><line x1="${(p[0]+r*.55).toFixed(1)}" y1="${(p[1]-r*.55).toFixed(1)}" x2="${(p[0]-r*.55).toFixed(1)}" y2="${(p[1]+r*.55).toFixed(1)}" stroke="#e5402a" stroke-width="3.2" stroke-opacity=".9"/>`:'';
+    flags+=`<g class="cam-flag" onclick="caminoGoReal(${m})" style="cursor:pointer">${inner}${ring}${xm}</g>`;
+  }
+  // Ganadores que avanzaron: su bandera aparece en el nodo del siguiente cruce (8vos),
+  // con una línea dorada desde su posición original mostrando el camino recorrido.
+  for(let m=0;m<16;m++){
+    const W=winnerOf(m);if(!W)continue;
+    const p1=r1NodeOf(m),wi=caminoTeamAt(2*m)===W?2*m:2*m+1,p0=pos(R0,teamPhi(wi));
+    lines+=line(p0,p1,2.6,.85);
+    const inner=flagSVG(p1,18,W,`cw${m}`,1,false);
+    flags+=`<g class="cam-flag" onclick="caminoGoReal(${m})" style="cursor:pointer">${inner}<circle cx="${p1[0].toFixed(1)}" cy="${p1[1].toFixed(1)}" r="18" fill="none" stroke="#ffd400" stroke-width="2.6"/></g>`;
   }
   const center=`<circle cx="${CX}" cy="${CY-2}" r="36" fill="rgba(10,15,30,.4)" stroke="#ffd400" stroke-width="3"/><text x="${CX}" y="${CY+8}" text-anchor="middle" font-size="30">🏆</text><text x="${CX}" y="${CY+62}" text-anchor="middle" fill="#ffd400" font-size="24" font-weight="900" letter-spacing="3">CAMPEÓN</text>`;
   wrap.innerHTML=`<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>${clips}</defs>${lines}${dots}${center}${flags}</svg>`;
