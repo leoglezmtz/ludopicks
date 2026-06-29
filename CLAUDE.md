@@ -233,7 +233,8 @@ Dos APIs no oficiales pero funcionales. Se llaman SERVER-SIDE (CORS). Liquidan a
 
 ### Marcadores → FIFA · acción `syncFifa`
 - `https://api.fifa.com/api/v3/calendar/matches?idCompetition=17&idSeason=285023&count=200&language=en`
-  - `idSeason=285023` = Canadá-México-USA 2026 · `IdStage=289273` = fase de grupos
+  - `idSeason=285023` = Canadá-México-USA 2026
+  - **IdStage por ronda** (NO filtrar a uno solo — el sync procesa todas): grupos `289273`, 16avos `289287`, 8vos `289288`, 4tos `289289`, semis `289290`, `289291`+`289292` (3er lugar + final). Antes se filtraba a `289273` y por eso los KO no sincronizaban goles (arreglado v1.44.5). Penales en KO vienen en `HomeTeamPenaltyScore`/`AwayTeamPenaltyScore` → se guardan en `resultados.pen_l/pen_v`.
   - `MatchStatus`: 0=final, 1=programado, 3=vivo · marcadores en `Home.Score`/`Away.Score`
   - Equipos: `Home.Abbreviation` (= códigos de data.js, 72/72 mapean, 0 sin mapear)
 - status 0 → resultado final (réplica de `resultado`); status 3 → liveScore + auto-PA.
