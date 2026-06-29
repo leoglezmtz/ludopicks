@@ -232,23 +232,54 @@ function validarIncongruenciasParlay(legs) {
     if (r1x2 && r1x2.pick === "empate" && btts && btts.pick === "no" && !ou) {
       return `Parlay inválido en ${matchName}: "Empate + Ambos anotan: No" solo puede ser 0-0; son patas correlacionadas. Juégalas por separado.`;
     }
-    // ── "¿Quién avanza?" + Ganador (1X2) ──
-    // Empate + avanza SÍ se permite (empatan en 90' y se define por penales/ET).
-    // Pero ganador (no empate) + avanza tiene dos casos malos:
-    const av = plegs.find(l => esAvanza(l.pick));
-    if (av && r1x2 && (r1x2.pick === "local" || r1x2.pick === "visita")) {
-      const avTeam = av.pick === "avl" ? "local" : "visita";
-      const winName = r1x2.pick === "local" ? m.local : m.visita;
-      const advName = avTeam === "local" ? m.local : m.visita;
-      if (r1x2.pick === avTeam) {
-        // Ganar en 90' YA implica avanzar → pleonasmo (inflaría el momio sin riesgo real).
-        return `Parlay inválido en ${matchName}: si ${winName} gana, ya avanza. "Avanza ${advName}" no agrega riesgo real. Juégalas por separado.`;
-      }
-      // Ganador ≠ quien avanza → contradicción (quien gana en 90' avanza).
-      return `Imposible en ${matchName}: si gana ${winName}, avanza ${winName}, no ${advName}.`;
-    }
+    // (Las correlaciones de KO — 1X2/avanza/penales — se manejan con pricing en
+    //  momioParlayCorrel: contradicciones se bloquean, pleonasmos se reprecian.)
   }
   return null;
+}
+
+// ── Pricing estilo "Same Game Parlay" para patas correlacionadas del MISMO partido ──
+// En vez de multiplicar ingenuamente (exploit), reduce la pata redundante a un ligero
+// boost, y bloquea las contradicciones imposibles. Devuelve {error} o {momio}.
+const BOOST_CORR = 1.10; // +10% por partido con redundancia (no se compone)
+// pick CLAVE ⟹ estos picks quedan REDUNDANTES (su evento ya está contenido):
+//  gana local (90') ⟹ avanza local y no-penales · gana visita ⟹ avanza visita y no-penales
+//  hay penales (psi) ⟹ empate (no hay tanda sin empate)
+const IMPLICA_CORR = { local: ["avl", "pno"], visita: ["avv", "pno"], psi: ["empate"] };
+// Pares que NO pueden coexistir (probabilidad 0):
+const CONTRADICE_CORR = [["local", "avv"], ["visita", "avl"], ["psi", "local"], ["psi", "visita"]];
+function _pickLbl(m, pick) {
+  if (pick === "local") return m ? m.local : "local";
+  if (pick === "visita") return m ? m.visita : "visita";
+  if (pick === "empate") return "Empate";
+  if (pick === "avl") return "Avanza " + (m ? m.local : "local");
+  if (pick === "avv") return "Avanza " + (m ? m.visita : "visita");
+  if (pick === "psi") return "Penales: Sí";
+  if (pick === "pno") return "Penales: No";
+  return pick;
+}
+function momioParlayCorrel(cleanLegs) {
+  const byMatch = {};
+  cleanLegs.forEach((l, i) => { (byMatch[l.partidoId] = byMatch[l.partidoId] || []).push({ pick: l.pick, i }); });
+  const factor = cleanLegs.map(l => l.momio);
+  let boostMult = 1;
+  for (const [pid, plegs] of Object.entries(byMatch)) {
+    const m = BY_ID[pid]; const mn = m ? `${m.local} vs ${m.visita}` : "este partido";
+    const picks = plegs.map(l => l.pick);
+    for (const [a, b] of CONTRADICE_CORR) {
+      if (picks.includes(a) && picks.includes(b)) {
+        return { error: `Imposible en ${mn}: "${_pickLbl(m, a)}" y "${_pickLbl(m, b)}" no pueden pasar a la vez.` };
+      }
+    }
+    let redund = false;
+    for (const l of plegs) {
+      const esRedundante = plegs.some(o => o.i !== l.i && IMPLICA_CORR[o.pick] && IMPLICA_CORR[o.pick].includes(l.pick));
+      if (esRedundante) { factor[l.i] = 1; redund = true; }
+    }
+    if (redund) boostMult *= BOOST_CORR; // un solo boost por partido con redundancia
+  }
+  let total = boostMult; for (const f of factor) total *= f;
+  return { momio: Math.round(total * 100) / 100 };
 }
 
 // Motor recalculable: ajusta saldos solo por transiciones de estado.
@@ -888,16 +919,15 @@ export default async function handler(req, res) {
     if (j.saldo < 0 || mInt > j.saldo) return res.status(400).json({ error: "Saldo insuficiente" });
 
     const vistos = new Set();
-    let momioTotal = 1;
     const cleanLegs = [];
     for (const l of legs) {
       const m = BY_ID[l.partidoId];
       if (!m) return res.status(400).json({ error: "Partido inválido en el parlay" });
       const esOU = esMercadoOU(l.pick);
-      // Permitidos en parlay: 1X2, O/U, BTTS y "¿quién avanza?" (avl/avv).
-      // Penales (psi/pno) NO: es redundante con empate (mismo gl===gv) → solo simple.
-      if (!PICKS_1X2.includes(l.pick) && !esOU && !esBtts(l.pick) && !esAvanza(l.pick)) {
-        return res.status(400).json({ error: esPenales(l.pick) ? "El mercado de penales solo se puede como apuesta simple" : "Pick inválido en el parlay" });
+      // Permitidos en parlay: 1X2, O/U, BTTS, "¿quién avanza?" (avl/avv) y penales (psi/pno).
+      // Las correlaciones entre estos (mismo partido) se reprecian en momioParlayCorrel.
+      if (!PICKS_1X2.includes(l.pick) && !esOU && !esBtts(l.pick) && !esAvanza(l.pick) && !esPenales(l.pick)) {
+        return res.status(400).json({ error: "Pick inválido en el parlay" });
       }
       const subMercado = (esOU && SUB_VALIDOS.has(l.mercado)) ? l.mercado : 'goles';
       const mktKey = mercadoKey(l.pick, subMercado);
@@ -920,14 +950,16 @@ export default async function handler(req, res) {
       }
       const mo = momioPick(l.partidoId, l.pick, lineaUsada, subMercado);
       if (mo == null) return res.status(400).json({ error: "Línea o pick inválido en el parlay" });
-      momioTotal *= mo;
-      cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, linea: lineaUsada, mercado: esOU ? subMercado : (esBtts(l.pick) ? 'btts' : esAvanza(l.pick) ? 'avanza' : '1x2'), momio: mo });
+      cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, linea: lineaUsada, mercado: esOU ? subMercado : (esBtts(l.pick) ? 'btts' : esAvanza(l.pick) ? 'avanza' : esPenales(l.pick) ? 'penales' : '1x2'), momio: mo });
     }
-    momioTotal = Math.round(momioTotal * 100) / 100;
 
-    // Bloquear parlays con incongruencias matemáticas (ej. Under 1.5 + Ambos anotan: Sí)
+    // Bloquear incongruencias O/U/BTTS (ej. Under 1.5 + Ambos anotan: Sí)
     const incongruencia = validarIncongruenciasParlay(cleanLegs);
     if (incongruencia) return res.status(400).json({ error: incongruencia, incongruencia: true });
+    // Correlación KO (1X2/avanza/penales): bloquea contradicciones y reprecia pleonasmos.
+    const corr = momioParlayCorrel(cleanLegs);
+    if (corr.error) return res.status(400).json({ error: corr.error, incongruencia: true });
+    const momioTotal = corr.momio;
 
     j.saldo -= mInt;
     const id = "p" + Date.now() + Math.random().toString(36).slice(2, 6);
@@ -1374,13 +1406,14 @@ export default async function handler(req, res) {
     for (const b of Object.values(apuestas)) {
       if (b.status !== "pending") continue; // solo pendientes; las liquidadas ya pagaron
       if (b.tipo === "parlay") {
-        let total = 1, cambio = false;
+        let cambio = false;
         for (const leg of b.legs) {
           const nm = momioPick(leg.partidoId, leg.pick, leg.linea, leg.mercado);
           if (nm != null && nm !== leg.momio) { leg.momio = nm; cambio = true; }
-          total *= (leg.momio || 1);
         }
-        total = Math.round(total * 100) / 100;
+        // Recalcula con el mismo motor de correlación (SGP), no producto ingenuo.
+        const corr = momioParlayCorrel(b.legs);
+        const total = corr.momio != null ? corr.momio : b.momioTotal;
         if (total !== b.momioTotal) { b.momioTotal = total; cambio = true; }
         if (cambio) actualizadas++;
       } else {
