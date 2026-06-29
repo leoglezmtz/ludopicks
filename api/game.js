@@ -1616,7 +1616,9 @@ export default async function handler(req, res) {
     let firstTouched = null;
 
     for (const mt of matches) {
-      if (String(mt.IdStage) !== ID_STAGE) continue;
+      // Procesa TODAS las etapas (grupos + eliminatoria). Antes filtraba solo la
+      // fase de grupos (ID_STAGE), por eso los KO dejaron de sincronizar goles.
+      // El mapeo por par de abreviaciones contra PARTIDOS ya descarta lo ajeno.
       const home = mt.Home?.Abbreviation, away = mt.Away?.Abbreviation;
       if (!home || !away) continue;
       const pid = pairToId[home + "|" + away];
@@ -1627,20 +1629,35 @@ export default async function handler(req, res) {
       const asRaw = mt.AwayTeamScore != null ? mt.AwayTeamScore : mt.Away?.Score;
       const hs = hsRaw != null ? Number(hsRaw) : null;
       const as = asRaw != null ? Number(asRaw) : null;
+      // Penales (solo eliminatoria con empate en el tiempo reglamentario/ET).
+      const hpRaw = mt.HomeTeamPenaltyScore != null ? mt.HomeTeamPenaltyScore : mt.Home?.PenaltyScore;
+      const apRaw = mt.AwayTeamPenaltyScore != null ? mt.AwayTeamPenaltyScore : mt.Away?.PenaltyScore;
+      const hp = hpRaw != null ? Number(hpRaw) : null;
+      const ap = apRaw != null ? Number(apRaw) : null;
+      const isKO = ["R32", "R16", "QF", "SF", "Final"].includes(m.grupo);
 
       if (st === 0 && hs != null && as != null) {
         // FINAL — réplica de la acción "resultado"
-        const ex = resultados[pid];
-        if (ex && !ex.parcial && ex.gl === hs && ex.gv === as) continue; // ya está idéntico
         const prevR = resultados[pid] || {};
+        // Si es KO y hubo empate, el avance se define por penales.
+        let penL = null, penV = null;
+        if (isKO && hs === as) {
+          if (hp != null && ap != null && hp !== ap) { penL = hp; penV = ap; }
+          else if (prevR.pen_l != null) { penL = prevR.pen_l; penV = prevR.pen_v; }
+        }
+        const ex = resultados[pid];
+        // Ya idéntico (incluidos penales si aplica) → nada que hacer.
+        if (ex && !ex.parcial && ex.gl === hs && ex.gv === as &&
+            (ex.pen_l ?? null) === penL && (ex.pen_v ?? null) === penV) continue;
         const rEntry = { gl: hs, gv: as };
         if (prevR.corners  != null) rEntry.corners  = prevR.corners;   // córners se conservan (manual)
         if (prevR.tarjetas != null) rEntry.tarjetas = prevR.tarjetas;
+        if (penL != null) { rEntry.pen_l = penL; rEntry.pen_v = penV; }
         if (m.pa) rEntry.pa = { l: (hs - as) >= 2, v: (as - hs) >= 2 };
         resultados[pid] = rEntry;
         if (live[pid]) delete live[pid];
         if (firstTouched == null) firstTouched = pid;
-        aplicados.push({ partidoId: pid, tipo: "final", label: `${m.local} ${hs}-${as} ${m.visita}` });
+        aplicados.push({ partidoId: pid, tipo: "final", label: `${m.local} ${hs}-${as} ${m.visita}${penL != null ? ` (pen ${penL}-${penV})` : ""}` });
       } else if (st === 3) {
         // EN VIVO — actualiza liveScores (nunca pisa un final ya guardado)
         if (resultados[pid] && resultados[pid].gl != null && !resultados[pid].parcial) continue;
