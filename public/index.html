@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.44.6';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.44.7';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2151,7 +2151,10 @@ function slipSelected(pid,pick,linea,mercado){
 }
 function esOU(pick){return pick==='over'||pick==='under';}
 function esBtts(pick){return pick==='si'||pick==='no';}
-function marketOf(pick){return esOU(pick)?'ou':esBtts(pick)?'btts':'1x2';}
+function esAvanza(pick){return pick==='avl'||pick==='avv';}
+function esPenales(pick){return pick==='psi'||pick==='pno';}
+// OJO: avanza/penales son mercados PROPIOS (no 1X2), si no se mezclarían con el empate.
+function marketOf(pick){return esOU(pick)?'ou':esBtts(pick)?'btts':esAvanza(pick)?'avanza':esPenales(pick)?'penales':'1x2';}
 function pickLabel(p,pick,linea,mercado){
   if(pick==='local')return p.local;if(pick==='empate')return 'Empate';if(pick==='visita')return p.visita;
   const sufijo=mercado==='corners'?' córners':mercado==='tarjetas'?' tarjetas':' goles';
@@ -3045,6 +3048,9 @@ function showBetError(msg){
 function closeBetErr(){document.getElementById('betErr').classList.remove('show');}
 // Detecta incongruencias matemáticas entre patas del mismo partido (espejo del backend).
 function validarIncongruenciasSlip(legs){
+  // Penales solo como apuesta simple (es redundante con empate: mismo gl===gv).
+  if(legs.length>1&&legs.some(l=>esPenales(l.pick)))
+    return 'El mercado de "¿Habrá penales?" solo se puede como apuesta simple, no en parlay.';
   const byMatch={};
   for(const l of legs){if(!byMatch[l.partidoId])byMatch[l.partidoId]=[];byMatch[l.partidoId].push(l);}
   for(const [pid,plegs] of Object.entries(byMatch)){
@@ -3068,6 +3074,16 @@ function validarIncongruenciasSlip(legs){
       return `En ${matchName}: Empate + "Ambos anotan: No" obliga al 0-0, "Over ${ouLinea}" exige goles.`;
     if(r1x2&&r1x2.pick==='empate'&&btts&&btts.pick==='no'&&!ou)
       return `En ${matchName}: "Empate + Ambos anotan: No" solo puede ser 0-0; son patas correlacionadas. Juégalas por separado.`;
+    // ¿Quién avanza? + Ganador 1X2. Empate + avanza SÍ se permite.
+    const av=plegs.find(l=>esAvanza(l.pick));
+    if(av&&r1x2&&(r1x2.pick==='local'||r1x2.pick==='visita')){
+      const avTeam=av.pick==='avl'?'local':'visita';
+      const winName=r1x2.pick==='local'?p.local:p.visita;
+      const advName=avTeam==='local'?p.local:p.visita;
+      if(r1x2.pick===avTeam)
+        return `En ${matchName}: si ${winName} gana, ya avanza. "Avanza ${advName}" no agrega riesgo. Juégalas por separado.`;
+      return `Imposible en ${matchName}: si gana ${winName}, avanza ${winName}, no ${advName}.`;
+    }
   }
   return null;
 }

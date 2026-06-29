@@ -232,6 +232,21 @@ function validarIncongruenciasParlay(legs) {
     if (r1x2 && r1x2.pick === "empate" && btts && btts.pick === "no" && !ou) {
       return `Parlay inválido en ${matchName}: "Empate + Ambos anotan: No" solo puede ser 0-0; son patas correlacionadas. Juégalas por separado.`;
     }
+    // ── "¿Quién avanza?" + Ganador (1X2) ──
+    // Empate + avanza SÍ se permite (empatan en 90' y se define por penales/ET).
+    // Pero ganador (no empate) + avanza tiene dos casos malos:
+    const av = plegs.find(l => esAvanza(l.pick));
+    if (av && r1x2 && (r1x2.pick === "local" || r1x2.pick === "visita")) {
+      const avTeam = av.pick === "avl" ? "local" : "visita";
+      const winName = r1x2.pick === "local" ? m.local : m.visita;
+      const advName = avTeam === "local" ? m.local : m.visita;
+      if (r1x2.pick === avTeam) {
+        // Ganar en 90' YA implica avanzar → pleonasmo (inflaría el momio sin riesgo real).
+        return `Parlay inválido en ${matchName}: si ${winName} gana, ya avanza. "Avanza ${advName}" no agrega riesgo real. Juégalas por separado.`;
+      }
+      // Ganador ≠ quien avanza → contradicción (quien gana en 90' avanza).
+      return `Imposible en ${matchName}: si gana ${winName}, avanza ${winName}, no ${advName}.`;
+    }
   }
   return null;
 }
@@ -879,7 +894,11 @@ export default async function handler(req, res) {
       const m = BY_ID[l.partidoId];
       if (!m) return res.status(400).json({ error: "Partido inválido en el parlay" });
       const esOU = esMercadoOU(l.pick);
-      if (!PICKS_1X2.includes(l.pick) && !esOU && !esBtts(l.pick)) return res.status(400).json({ error: "Pick inválido en el parlay" });
+      // Permitidos en parlay: 1X2, O/U, BTTS y "¿quién avanza?" (avl/avv).
+      // Penales (psi/pno) NO: es redundante con empate (mismo gl===gv) → solo simple.
+      if (!PICKS_1X2.includes(l.pick) && !esOU && !esBtts(l.pick) && !esAvanza(l.pick)) {
+        return res.status(400).json({ error: esPenales(l.pick) ? "El mercado de penales solo se puede como apuesta simple" : "Pick inválido en el parlay" });
+      }
       const subMercado = (esOU && SUB_VALIDOS.has(l.mercado)) ? l.mercado : 'goles';
       const mktKey = mercadoKey(l.pick, subMercado);
       const clave = l.partidoId + "_" + mktKey;
@@ -902,7 +921,7 @@ export default async function handler(req, res) {
       const mo = momioPick(l.partidoId, l.pick, lineaUsada, subMercado);
       if (mo == null) return res.status(400).json({ error: "Línea o pick inválido en el parlay" });
       momioTotal *= mo;
-      cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, linea: lineaUsada, mercado: esOU ? subMercado : (esBtts(l.pick) ? 'btts' : '1x2'), momio: mo });
+      cleanLegs.push({ partidoId: l.partidoId, pick: l.pick, linea: lineaUsada, mercado: esOU ? subMercado : (esBtts(l.pick) ? 'btts' : esAvanza(l.pick) ? 'avanza' : '1x2'), momio: mo });
     }
     momioTotal = Math.round(momioTotal * 100) / 100;
 
