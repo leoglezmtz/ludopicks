@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.45.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.45.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3020,40 +3020,28 @@ function renderCard(pid,animBody){
 }
 
 // ── BETSLIP (cupón) ───────────────────────────────────────────
-// Pricing estilo "Same Game Parlay" (espejo del backend momioParlayCorrel):
-// reprecia patas correlacionadas del mismo partido y detecta contradicciones.
-const BOOST_CORR=1.10;
+// Correlación de patas del MISMO partido (espejo del backend momioParlayCorrel):
+// bloquea contradicciones (imposibles) y pleonasmos (una pata ya implica la otra).
+// empate NO implica penales (puede decidirse en tiempo extra) → Empate + Penales-No SÍ se permite.
 const IMPLICA_CORR={local:['avl','pno'],visita:['avv','pno'],psi:['empate']};
 const CONTRADICE_CORR=[['local','avv'],['visita','avl'],['psi','local'],['psi','visita']];
 function correlParlay(legs){
   const byMatch={};
-  legs.forEach((l,i)=>{(byMatch[l.partidoId]=byMatch[l.partidoId]||[]).push({pick:l.pick,i});});
-  const factor=legs.map(l=>l.momio);
-  let boost=1;
-  for(const [pid,plegs] of Object.entries(byMatch)){
+  legs.forEach(l=>{(byMatch[l.partidoId]=byMatch[l.partidoId]||[]).push(l.pick);});
+  for(const [pid,picks] of Object.entries(byMatch)){
     const p=byId(+pid);const mn=p?`${p.local} vs ${p.visita}`:'este partido';
-    const picks=plegs.map(l=>l.pick);
-    for(const [a,b] of CONTRADICE_CORR){
+    const lbl=k=>k==='local'?('Gana '+(p?p.local:'local')):k==='visita'?('Gana '+(p?p.visita:'visita')):pickLabel(p,k);
+    for(const [a,b] of CONTRADICE_CORR)
       if(picks.includes(a)&&picks.includes(b))
-        return {error:`Imposible en ${mn}: "${pickLabel(p,a)}" y "${pickLabel(p,b)}" no pueden pasar a la vez.`};
-    }
-    let red=false;
-    for(const l of plegs){
-      if(plegs.some(o=>o.i!==l.i&&IMPLICA_CORR[o.pick]&&IMPLICA_CORR[o.pick].includes(l.pick))){factor[l.i]=1;red=true;}
-    }
-    if(red)boost*=BOOST_CORR;
+        return {error:`Imposible en ${mn}: "${lbl(a)}" y "${lbl(b)}" no pueden pasar a la vez.`};
+    for(const [y,xs] of Object.entries(IMPLICA_CORR))
+      if(picks.includes(y))
+        for(const x of xs)
+          if(picks.includes(x))
+            return {error:`Pleonasmo en ${mn}: "${lbl(y)}" ya implica "${lbl(x)}". Juégalas por separado.`};
   }
-  let total=boost;for(const f of factor)total*=f;
+  let total=1;for(const l of legs)total*=l.momio;
   return {momio:Math.round(total*100)/100};
-}
-// ¿El boleto tiene alguna pata repreciada por correlación? (para avisar en la UI)
-function slipTieneCorrel(){
-  const byMatch={};
-  betslip.forEach(l=>{(byMatch[l.partidoId]=byMatch[l.partidoId]||[]).push(l.pick);});
-  for(const picks of Object.values(byMatch))
-    for(const k of picks)
-      if(IMPLICA_CORR[k]&&IMPLICA_CORR[k].some(x=>picks.includes(x)))return true;
-  return false;
 }
 function slipMomioTotal(){const c=correlParlay(betslip);return c.momio!=null?c.momio:betslip.reduce((a,s)=>a*s.momio,1);}
 function toggleSlip(pid,pick,linea,momio,mercado){
@@ -3197,7 +3185,6 @@ function openSlip(){
   document.getElementById('mTitle').innerHTML=isParlay?`Ticket <span class="parlay-tag">Parlay</span>`:'Tu apuesta';
   document.getElementById('mBody').innerHTML=`${legs}
     ${isParlay?`<div style="text-align:right;margin:10px 0;font-size:13px;color:var(--muted)">Momio combinado: <strong style="color:var(--al);font-size:17px">${tot.toFixed(2)}x</strong></div>`:''}
-    ${isParlay&&slipTieneCorrel()?`<div style="margin:-4px 0 6px;font-size:11.5px;color:var(--muted);background:rgba(255,255,255,.04);border-radius:8px;padding:7px 9px;line-height:1.35">🔗 Tienes patas <b>correlacionadas</b> del mismo partido (una ya implica la otra). Como en los casinos, el momio se ajusta para reflejar la probabilidad real, no la simple multiplicación.</div>`:''}
     <div class="field" style="margin-top:12px"><label>Monto · saldo $${Math.round(j.saldo).toLocaleString()} · mín $${min}</label>
       <input type="tel" id="slipMonto" inputmode="numeric" placeholder="${min}" oninput="slipPreview()"></div>
     <div class="quick-amts">${[500,1000,2000,5000].filter(v=>v<=j.saldo).map(v=>`<button onclick="setSlipMonto(${v})">$${v.toLocaleString()}</button>`).join('')}<button onclick="setSlipMonto(${Math.round(j.saldo)})">Todo</button></div>

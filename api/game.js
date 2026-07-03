@@ -238,19 +238,19 @@ function validarIncongruenciasParlay(legs) {
   return null;
 }
 
-// ── Pricing estilo "Same Game Parlay" para patas correlacionadas del MISMO partido ──
-// En vez de multiplicar ingenuamente (exploit), reduce la pata redundante a un ligero
-// boost, y bloquea las contradicciones imposibles. Devuelve {error} o {momio}.
-const BOOST_CORR = 1.10; // +10% por partido con redundancia (no se compone)
-// pick CLAVE ⟹ estos picks quedan REDUNDANTES (su evento ya está contenido):
+// ── Correlación de patas del MISMO partido en un parlay ──
+// Se BLOQUEAN tanto las contradicciones (imposibles) como los pleonasmos (una pata
+// ya implica la otra → no agrega riesgo). Devuelve {error} o {momio} (producto simple).
+// pick CLAVE ⟹ estos picks quedan implicados (pleonasmo si se combinan):
 //  gana local (90') ⟹ avanza local y no-penales · gana visita ⟹ avanza visita y no-penales
-//  hay penales (psi) ⟹ empate (no hay tanda sin empate)
+//  hay penales (psi) ⟹ empate (no hay tanda sin empate). OJO: empate NO implica penales
+//  (puede decidirse en tiempo extra) → Empate + Penales-No SÍ se permite.
 const IMPLICA_CORR = { local: ["avl", "pno"], visita: ["avv", "pno"], psi: ["empate"] };
 // Pares que NO pueden coexistir (probabilidad 0):
 const CONTRADICE_CORR = [["local", "avv"], ["visita", "avl"], ["psi", "local"], ["psi", "visita"]];
 function _pickLbl(m, pick) {
-  if (pick === "local") return m ? m.local : "local";
-  if (pick === "visita") return m ? m.visita : "visita";
+  if (pick === "local") return "Gana " + (m ? m.local : "local");
+  if (pick === "visita") return "Gana " + (m ? m.visita : "visita");
   if (pick === "empate") return "Empate";
   if (pick === "avl") return "Avanza " + (m ? m.local : "local");
   if (pick === "avv") return "Avanza " + (m ? m.visita : "visita");
@@ -260,25 +260,21 @@ function _pickLbl(m, pick) {
 }
 function momioParlayCorrel(cleanLegs) {
   const byMatch = {};
-  cleanLegs.forEach((l, i) => { (byMatch[l.partidoId] = byMatch[l.partidoId] || []).push({ pick: l.pick, i }); });
-  const factor = cleanLegs.map(l => l.momio);
-  let boostMult = 1;
-  for (const [pid, plegs] of Object.entries(byMatch)) {
+  cleanLegs.forEach((l) => { (byMatch[l.partidoId] = byMatch[l.partidoId] || []).push(l.pick); });
+  for (const [pid, picks] of Object.entries(byMatch)) {
     const m = BY_ID[pid]; const mn = m ? `${m.local} vs ${m.visita}` : "este partido";
-    const picks = plegs.map(l => l.pick);
-    for (const [a, b] of CONTRADICE_CORR) {
-      if (picks.includes(a) && picks.includes(b)) {
+    // Contradicciones (imposibles).
+    for (const [a, b] of CONTRADICE_CORR)
+      if (picks.includes(a) && picks.includes(b))
         return { error: `Imposible en ${mn}: "${_pickLbl(m, a)}" y "${_pickLbl(m, b)}" no pueden pasar a la vez.` };
-      }
-    }
-    let redund = false;
-    for (const l of plegs) {
-      const esRedundante = plegs.some(o => o.i !== l.i && IMPLICA_CORR[o.pick] && IMPLICA_CORR[o.pick].includes(l.pick));
-      if (esRedundante) { factor[l.i] = 1; redund = true; }
-    }
-    if (redund) boostMult *= BOOST_CORR; // un solo boost por partido con redundancia
+    // Pleonasmos (una pata ya implica la otra → no agrega riesgo, se bloquea).
+    for (const [y, xs] of Object.entries(IMPLICA_CORR))
+      if (picks.includes(y))
+        for (const x of xs)
+          if (picks.includes(x))
+            return { error: `Pleonasmo en ${mn}: "${_pickLbl(m, y)}" ya implica "${_pickLbl(m, x)}". Juégalas por separado.` };
   }
-  let total = boostMult; for (const f of factor) total *= f;
+  let total = 1; for (const l of cleanLegs) total *= l.momio;
   return { momio: Math.round(total * 100) / 100 };
 }
 
