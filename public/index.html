@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.45.1';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.45.2';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2078,6 +2078,8 @@ function evaluatePickResult(pick,linea,mercado,r){
   else if(mercado==='tarjetas')total=r.tarjetas!=null?r.tarjetas:null;
   else if(mercado==='1x2'){if(r.gl==null||r.gv==null)return null;const w=r.gl>r.gv?'local':r.gv>r.gl?'visita':'empate';return pick===w;}
   else if(mercado==='btts'){if(r.gl==null||r.gv==null)return null;const btts=r.gl>0&&r.gv>0;return pick==='si'?btts:!btts;}
+  else if(mercado==='avanza'){if(r.gl==null||r.gv==null)return null;if(r.gl===r.gv&&r.pen_l==null&&!r.etw)return null;const aL=r.gl>r.gv||(r.gl===r.gv&&(r.etw==='l'||(r.pen_l!=null&&r.pen_l>r.pen_v)));return pick==='avl'?aL:!aL;}
+  else if(mercado==='penales'){if(r.gl==null||r.gv==null)return null;if(r.gl===r.gv&&r.pen_l==null&&!r.etw)return null;const hubo=r.pen_l!=null;return pick==='psi'?hubo:!hubo;}
   else total=(r.gl||0)+(r.gv||0);
   if(total==null)return null;
   return pick==='over'?total>linea:total<linea;
@@ -2177,8 +2179,8 @@ function pickWinsClient(p,r,pick,linea,mercado){
     return pick==='over'?t>linea:t<linea;
   }
   if(pick==='si')return r.gl>0&&r.gv>0;if(pick==='no')return !(r.gl>0&&r.gv>0);
-  if(pick==='avl'||pick==='avv'){if(r.gl==null||r.gv==null)return false;const aL=r.gl>r.gv||(r.gl===r.gv&&r.pen_l!=null&&r.pen_l>r.pen_v);const aV=r.gv>r.gl||(r.gl===r.gv&&r.pen_l!=null&&r.pen_v>r.pen_l);return pick==='avl'?aL:aV;}
-  if(pick==='psi'||pick==='pno'){if(r.gl==null||r.gv==null)return false;return pick==='psi'?(r.gl===r.gv):(r.gl!==r.gv);}
+  if(pick==='avl'||pick==='avv'){if(r.gl==null||r.gv==null)return false;const aL=r.gl>r.gv||(r.gl===r.gv&&(r.etw==='l'||(r.pen_l!=null&&r.pen_l>r.pen_v)));const aV=r.gv>r.gl||(r.gl===r.gv&&(r.etw==='v'||(r.pen_l!=null&&r.pen_v>r.pen_l)));return pick==='avl'?aL:aV;}
+  if(pick==='psi'||pick==='pno'){if(r.gl==null||r.gv==null)return false;const hubo=r.pen_l!=null;return pick==='psi'?hubo:!hubo;}
   return false;
 }
 // ── INIT ──────────────────────────────────────────────────────
@@ -2902,10 +2904,10 @@ function avanzaSection(p,done,locked){
   if(!p.avanza)return '';
   if(done){
     const r=state.resultados[p.id];if(!r||r.gl==null)return '';
-    const aL=r.gl>r.gv||(r.gl===r.gv&&r.pen_l!=null&&r.pen_l>r.pen_v);
-    const aV=r.gv>r.gl||(r.gl===r.gv&&r.pen_l!=null&&r.pen_v>r.pen_l);
+    const aL=r.gl>r.gv||(r.gl===r.gv&&(r.etw==='l'||(r.pen_l!=null&&r.pen_l>r.pen_v)));
+    const aV=r.gv>r.gl||(r.gl===r.gv&&(r.etw==='v'||(r.pen_l!=null&&r.pen_v>r.pen_l)));
     const who=aL?p.local:aV?p.visita:null;
-    const pens=(r.gl===r.gv&&r.pen_l!=null)?` (penales ${r.pen_l}-${r.pen_v})`:'';
+    const pens=(r.gl===r.gv&&r.pen_l!=null)?` (penales ${r.pen_l}-${r.pen_v})`:(r.gl===r.gv&&r.etw)?' (en tiempo extra)':'';
     return `<div class="ou-label">¿Quién avanza?</div><div style="font-size:12px;color:var(--muted);padding:3px 0">${who?`✅ Avanza <b style="color:#fff">${teamName(who)}</b>${pens}`:'Por definir'}</div>`;
   }
   const pk=(pick,team,momio,sel)=>{
@@ -4034,7 +4036,7 @@ function buildElimWinnerMap(){
     const res=state.resultados?.[p.id];
     if(res&&res.gl!=null&&!res.parcial&&p.bracketId){
       const gl=+res.gl,gv=+res.gv;
-      const w=gl>gv?p.local:gv>gl?p.visita:res.pen_l!=null?(res.pen_l>res.pen_v?p.local:p.visita):null;
+      const w=gl>gv?p.local:gv>gl?p.visita:res.etw==='l'?p.local:res.etw==='v'?p.visita:res.pen_l!=null?(res.pen_l>res.pen_v?p.local:p.visita):null;
       if(w)map[p.bracketId]=w;
     }
   });
@@ -4053,8 +4055,8 @@ function bkCard(def,hTeam,aTeam,res,isFin,conf){
   const fin=res&&res.gl!=null&&!res.parcial;
   const gl=fin?+res.gl:null,gv=fin?+res.gv:null;
   const hasPen=fin&&res.pen_l!=null;
-  const hWin=fin&&(gl>gv||(gl===gv&&hasPen&&res.pen_l>res.pen_v));
-  const aWin=fin&&!hWin;
+  const hWin=fin&&(gl>gv||(gl===gv&&(res.etw==='l'||(hasPen&&res.pen_l>res.pen_v))));
+  const aWin=fin&&(gv>gl||(gl===gv&&(res.etw==='v'||(hasPen&&res.pen_v>res.pen_l))));
   const cls=isFin?'bkm fin':fin?'bkm live':'bkm';
   const rCls=(team,w,ok)=>{
     if(!team)return 'bkm-row tbd';
@@ -4998,6 +5000,15 @@ function openScore(pid){
         <div class="adm-mkt-cell"><label>${flagImg(p.local,16)} ${p.local}</label><div class="adm-mkt-ctrl"><button class="adm-bump minus adm-bump-sm" onclick="bumpScore('penL',-1)">−</button><input class="adm-score-in adm-score-in-sm" id="penL" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${res&&res.pen_l!=null?res.pen_l:''}"><button class="adm-bump plus adm-bump-sm" onclick="bumpScore('penL',1)">+</button></div></div>
         <div class="adm-mkt-cell"><label>${flagImg(p.visita,16)} ${p.visita}</label><div class="adm-mkt-ctrl"><button class="adm-bump minus adm-bump-sm" onclick="bumpScore('penV',-1)">−</button><input class="adm-score-in adm-score-in-sm" id="penV" type="tel" inputmode="numeric" maxlength="2" placeholder="—" value="${res&&res.pen_v!=null?res.pen_v:''}"><button class="adm-bump plus adm-bump-sm" onclick="bumpScore('penV',1)">+</button></div></div>
       </div>
+    </div>
+    <div class="adm-sect">
+      <div class="adm-sect-h">⏱️ Tiempo extra <span class="adm-sect-tag">se decidió en el alargue (SIN penales)</span></div>
+      <div class="adm-sect-note"><b>El marcador de arriba es a los 90'</b> (empate). Si el partido se ganó en el <b>alargue</b> (sin tanda), elige quién avanzó. Liquida "¿Quién avanza?" y Penales: <b>No</b>. Si fue por penales, usa la sección de arriba en vez de esta.</div>
+      <select id="etwIn" style="width:100%;padding:10px;border-radius:10px;background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.15);font-size:14px">
+        <option value="">— No hubo alargue (se definió en 90' o por penales) —</option>
+        <option value="l" ${res&&res.etw==='l'?'selected':''}>Ganó ${teamName(p.local)} en tiempo extra</option>
+        <option value="v" ${res&&res.etw==='v'?'selected':''}>Ganó ${teamName(p.visita)} en tiempo extra</option>
+      </select>
     </div>`:''}
 
     ${(res&&res.pa)?`
@@ -5129,15 +5140,17 @@ async function saveScore(pid){
   const penLel=document.getElementById('penL'),penVel=document.getElementById('penV');
   const pen_l=penLel&&penLel.value.trim()!==''?penLel.value.trim():null;
   const pen_v=penVel&&penVel.value.trim()!==''?penVel.value.trim():null;
-  if(esKO(p)&&gl===gv&&(pen_l==null||pen_v==null)){
-    if(!confirm('Empate en 90′ sin penales: el ganador del bracket y las apuestas de "¿Quién avanza?" quedarán PENDIENTES hasta que captures los penales. ¿Guardar así?'))return;
+  const etwEl=document.getElementById('etwIn');
+  const etw=etwEl?etwEl.value:undefined; // '', 'l' o 'v'
+  if(esKO(p)&&gl===gv&&(pen_l==null||pen_v==null)&&!etw){
+    if(!confirm('Empate en 90′ sin penales ni ganador de alargue: "¿Quién avanza?" y Penales quedarán PENDIENTES hasta que definas cómo se resolvió (penales o alargue). ¿Guardar así?'))return;
   }
   if(state.resultados[pid]){
     const rv=await api({action:'revertirResultado',payload:{adminKey,partidoId:pid}});
     if(rv.error)return toast(rv.error);
     state.resultados=rv.resultados;state.jugadores=rv.jugadores;state.apuestas=rv.apuestas;
   }
-  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,gl,gv,pa,corners:corners===''?null:corners,tarjetas:tarjetas===''?null:tarjetas,pen_l,pen_v}});
+  const r=await api({action:'resultado',payload:{adminKey,partidoId:pid,gl,gv,pa,corners:corners===''?null:corners,tarjetas:tarjetas===''?null:tarjetas,pen_l,pen_v,etw}});
   if(r.error)return toast(r.error);
   state.resultados=r.resultados;state.jugadores=r.jugadores;state.apuestas=r.apuestas;
   closeModal();

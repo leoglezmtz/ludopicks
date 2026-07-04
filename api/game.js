@@ -122,15 +122,16 @@ function pickWins(partidoId, r, pick, linea, mercado) {
   }
   if (pick === "si") return r.gl > 0 && r.gv > 0;
   if (pick === "no") return !(r.gl > 0 && r.gv > 0);
-  if (pick === "avl" || pick === "avv") { // ¿quién avanza? (penales deciden si hay empate)
+  if (pick === "avl" || pick === "avv") { // ¿quién avanza? (empate en 90' → alargue [etw] o penales)
     if (r.gl == null || r.gv == null) return false;
-    const localAdv  = r.gl > r.gv || (r.gl === r.gv && r.pen_l != null && r.pen_l > r.pen_v);
-    const visitaAdv = r.gv > r.gl || (r.gl === r.gv && r.pen_l != null && r.pen_v > r.pen_l);
+    const localAdv  = r.gl > r.gv || (r.gl === r.gv && (r.etw === "l" || (r.pen_l != null && r.pen_l > r.pen_v)));
+    const visitaAdv = r.gv > r.gl || (r.gl === r.gv && (r.etw === "v" || (r.pen_l != null && r.pen_v > r.pen_l)));
     return pick === "avl" ? localAdv : visitaAdv;
   }
-  if (pick === "psi" || pick === "pno") { // ¿habrá penales? = empate en 90' (en eliminatoria, empate → penales)
+  if (pick === "psi" || pick === "pno") { // ¿hubo tanda de penales? SOLO si se registró pen_l (no si se decidió en 90'/alargue)
     if (r.gl == null || r.gv == null) return false;
-    return pick === "psi" ? (r.gl === r.gv) : (r.gl !== r.gv);
+    const huboPenales = r.pen_l != null;
+    return pick === "psi" ? huboPenales : !huboPenales;
   }
   return false;
 }
@@ -380,11 +381,12 @@ function legStatus(partidoId, r, pick, linea, mercado, liveScore) {
   if (!r) return "pending";
   if (mercado === "avanza") {
     if (r.gl == null || r.gv == null) return "pending";
-    if (r.gl === r.gv && r.pen_l == null) return "pending"; // empate en 90' sin penales aún
+    if (r.gl === r.gv && r.pen_l == null && !r.etw) return "pending"; // empate 90' sin resolver (alargue/penales)
     return pickWins(partidoId, r, pick, linea, "avanza") ? "won" : "lost";
   }
   if (mercado === "penales") {
     if (r.gl == null || r.gv == null) return "pending";
+    if (r.gl === r.gv && r.pen_l == null && !r.etw) return "pending"; // aún no sabemos si fue tanda o alargue
     return pickWins(partidoId, r, pick, linea, "penales") ? "won" : "lost";
   }
   if (mercado === "corners") {
@@ -1149,7 +1151,7 @@ export default async function handler(req, res) {
 
   if (action === "resultado") {
     if (!isAdmin()) return res.status(403).json({ error: "No autorizado" });
-    const { partidoId, gl, gv, pa, corners, tarjetas, pen_l, pen_v } = payload;
+    const { partidoId, gl, gv, pa, corners, tarjetas, pen_l, pen_v, etw } = payload;
     if (partidoId === -1) return res.json({ ok: true });
     const m = BY_ID[partidoId];
     if (!m) return res.status(400).json({ error: "Partido no existe" });
@@ -1188,7 +1190,11 @@ export default async function handler(req, res) {
     if (golL === golV && pen_l != null && pen_l !== '' && pen_v != null && pen_v !== '') {
       const pl = Math.floor(Number(pen_l)), pv = Math.floor(Number(pen_v));
       if (!isNaN(pl) && !isNaN(pv) && pl >= 0 && pv >= 0 && pl !== pv) { rEntry.pen_l = pl; rEntry.pen_v = pv; }
-    } else if (golL === golV && prevR.pen_l != null) { rEntry.pen_l = prevR.pen_l; rEntry.pen_v = prevR.pen_v; }
+    } else if (golL === golV && prevR.pen_l != null && (etw === undefined)) { rEntry.pen_l = prevR.pen_l; rEntry.pen_v = prevR.pen_v; }
+    // Ganador en TIEMPO EXTRA (empate en 90', SIN penales): gl/gv son el marcador de 90'.
+    // etw: 'l'|'v' = quién ganó en el alargue (define avanza; penales = No).
+    if (golL === golV && rEntry.pen_l == null && (etw === "l" || etw === "v")) rEntry.etw = etw;
+    else if (golL === golV && rEntry.pen_l == null && etw === undefined && prevR.etw) rEntry.etw = prevR.etw;
     resultados[partidoId] = rEntry;
     settleAll(jugadores, apuestas, resultados, campeon, especialesMap, (await kv.get("liveScores")) || {});
     await kv.set("resultados", resultados);
@@ -1683,6 +1689,15 @@ export default async function handler(req, res) {
       const hp = hpRaw != null ? Number(hpRaw) : null;
       const ap = apRaw != null ? Number(apRaw) : null;
       const isKO = ["R32", "R16", "QF", "SF", "Final"].includes(m.grupo);
+
+      // KO decidido en TIEMPO EXTRA sin penales (ResultType=3): FIFA da el marcador FINAL
+      // (incl. alargue), NO el de los 90'. Liquidar 1X2/O-U con ese marcador paga mal
+      // (a los 90' fue empate). Se deja para captura manual (marcador 90' + ganador ET).
+      if (isKO && st === 0 && Number(mt.ResultType) === 3 && hp == null) {
+        if (!(resultados[pid] && resultados[pid].etw))
+          sinMapear.push(`${m.local} vs ${m.visita} · ALARGUE: capturar marcador de 90' + ganador del alargue a mano`);
+        continue;
+      }
 
       if (st === 0 && hs != null && as != null) {
         // FINAL — réplica de la acción "resultado"
