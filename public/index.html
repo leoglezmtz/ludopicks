@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.45.2';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.45.3';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -3001,9 +3001,12 @@ function matchCard(p,res,i,skipAnim,animBody){
     const paNotice=p.pa?(paParcial?`<div class="pa-notice pa-notice-applied"><span>⚡</span><span>PA aplicado · apuestas a este mercado cobradas anticipadamente</span></div>`:`<div class="pa-notice"><span>⚡</span><span><b>Pago Anticipado</b> en esta apuesta · cobras al instante si tu equipo gana por 2+ goles</span></div>`):'';
     // El 1X2 y su aviso PA van juntos en un bloque "Ganador" para que se entienda
     // que el Pago Anticipado aplica SOLO a esta sección (no a Over/Under, BTTS, etc.).
+    // Insignia "90'" para dejar claro que el 1X2 se define en el tiempo reglamentario
+    // (importante en eliminatoria: si va a alargue/penales, aquí gana el Empate).
+    const min90=`<span style="font-size:10px;font-weight:800;color:var(--muted);background:rgba(255,255,255,.08);padding:1px 5px;border-radius:5px;margin-left:6px;vertical-align:middle;letter-spacing:.3px">90'</span>`;
     const row1x2=p.pa
-      ? `<div class="winner-pa-box"><div class="winner-pa-h">🏆 Ganador del partido</div>${picks1x2}${paNotice}</div>`
-      : picks1x2;
+      ? `<div class="winner-pa-box"><div class="winner-pa-h">🏆 Ganador del partido${min90}</div>${picks1x2}${paNotice}</div>`
+      : `<div class="ou-label">🏆 Ganador del partido${min90}</div>${picks1x2}`;
     body=`<div class="match-body"${animBody?'':' style="animation:none"'}>${row1x2}${rowavanza}${rowpenales}${rowou}${rowbtts}${rowcorners}${rowtarjetas}${hint}</div>`;
   }
   return `<div id="match-${p.id}" class="match${(p.local==='MEX'||p.visita==='MEX')?' mx':''}${done?' done':''}${locked?' locked-m':''}${isOpen?' open':''}" style="${animStyle}">${header}${body}</div>`;
