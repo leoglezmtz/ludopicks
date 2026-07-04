@@ -141,6 +141,15 @@ Al actualizar `liveScores`, `settleAll` paga automáticamente mercados irrevocab
 - ✅ **Over X.Y** → cuando el contador superó la línea
 - ❌ NO insta-paga: 1X2, Under, BTTS No (pueden cambiar)
 
+### Eliminatoria: marcador de 90' vs tiempo extra (v1.45.2)
+En KO, `resultados[pid].gl/gv` = **marcador a los 90'** (así el 1X2, O/U y BTTS
+liquidan a los 90'). Cómo se resolvió un empate de 90':
+- **Penales:** `pen_l`/`pen_v` (gl===gv). Penales "Sí" gana ⇔ `pen_l != null`.
+- **Tiempo extra (sin tanda):** `etw: 'l'|'v'` = quién ganó en el alargue. Penales "No" gana.
+- **Avanza:** `gl>gv` → local · `gl<gv` → visita · empate → `etw` o el mayor de `pen_l/pen_v`.
+`syncFifa` NO liquida KO con `ResultType===3` (alargue sin penales): FIFA solo da el
+marcador FINAL, no el de 90' → se captura a mano (modal admin, selector "Tiempo extra").
+
 ### Pago Anticipado (PA / "2 Up")
 - Solo en partidos con `p.pa === true`
 - Admin aplica PA → pago inmediato simples, parlays esperan
