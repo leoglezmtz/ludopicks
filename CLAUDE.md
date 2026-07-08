@@ -3,7 +3,7 @@
 App de apuestas ficticias del Mundial 2026 entre ~10 amigos (sin dinero real).  
 **Producción:** https://ludopicks.vercel.app  
 **Repo:** leoglezmtz/ludopicks  
-**Versión actual en producción:** v1.44.4
+**Versión actual en producción:** v1.45.5 · Fase: **Cuartos de final** (QF)
 
 ---
 
