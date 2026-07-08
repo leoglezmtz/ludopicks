@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.45.5';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.45.6';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -5644,8 +5644,7 @@ function renderCaminoView(){
     const xm=isLose?`<line x1="${(p[0]-r*.55).toFixed(1)}" y1="${(p[1]-r*.55).toFixed(1)}" x2="${(p[0]+r*.55).toFixed(1)}" y2="${(p[1]+r*.55).toFixed(1)}" stroke="#e5402a" stroke-width="3.2" stroke-opacity=".9"/><line x1="${(p[0]+r*.55).toFixed(1)}" y1="${(p[1]-r*.55).toFixed(1)}" x2="${(p[0]-r*.55).toFixed(1)}" y2="${(p[1]+r*.55).toFixed(1)}" stroke="#e5402a" stroke-width="3.2" stroke-opacity=".9"/>`:'';
     flags+=`<g class="cam-flag" onclick="caminoGoReal(${m})" style="cursor:pointer">${inner}${ring}${xm}</g>`;
   }
-  // Ganadores que avanzaron: su bandera aparece en el nodo del siguiente cruce (8vos),
-  // con una línea dorada desde su posición original mostrando el camino recorrido.
+  // Ganadores de 16avos → su bandera aparece en el nodo de 8vos (R1), con línea dorada.
   for(let m=0;m<16;m++){
     const W=winnerOf(m);if(!W)continue;
     const p1=r1NodeOf(m),wi=caminoTeamAt(2*m)===W?2*m:2*m+1,p0=pos(R0,teamPhi(wi));
@@ -5653,7 +5652,25 @@ function renderCaminoView(){
     const inner=flagSVG(p1,18,W,`cw${m}`,1,false);
     flags+=`<g class="cam-flag" onclick="caminoGoReal(${m})" style="cursor:pointer">${inner}<circle cx="${p1[0].toFixed(1)}" cy="${p1[1].toFixed(1)}" r="18" fill="none" stroke="#ffd400" stroke-width="2.6"/></g>`;
   }
-  const center=`<circle cx="${CX}" cy="${CY-2}" r="36" fill="rgba(10,15,30,.4)" stroke="#ffd400" stroke-width="3"/><text x="${CX}" y="${CY+8}" text-anchor="middle" font-size="30">🏆</text><text x="${CX}" y="${CY+62}" text-anchor="middle" fill="#ffd400" font-size="24" font-weight="900" letter-spacing="3">CAMPEÓN</text>`;
+  // Rondas internas (8vos→cuartos→semis→final): coloca la bandera del ganador de cada
+  // cruce en el nodo del siguiente nivel. bracketId por posición del bracket real.
+  const innerNodes=[];
+  for(let j=0;j<4;j++)innerNodes.push(['M'+(17+j),pos(R2,Rt.l2[j]),16]);   // cuartos (der)
+  for(let j=0;j<4;j++)innerNodes.push(['M'+(21+j),pos(R2,Lt.l2[j]),16]);   // cuartos (izq)
+  for(let k=0;k<2;k++)innerNodes.push(['M'+(25+k),pos(R3,Rt.l3[k]),15]);   // semis (der)
+  for(let k=0;k<2;k++)innerNodes.push(['M'+(27+k),pos(R3,Lt.l3[k]),15]);   // semis (izq)
+  innerNodes.push(['M29',pos(R4,Rt.l4),17]);                                // final (der)
+  innerNodes.push(['M30',pos(R4,Lt.l4),17]);                                // final (izq)
+  innerNodes.forEach(([bid,p,r],ix)=>{
+    const W=winMap[bid];if(!W)return;
+    const inner=flagSVG(p,r,W,`cn${ix}`,1,false);
+    flags+=`<g class="cam-flag">${inner}<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="none" stroke="#ffd400" stroke-width="2.4"/></g>`;
+  });
+  // Centro: campeón (ganador de la final M31) o el trofeo si aún no hay.
+  const champ=winMap['M31'];
+  const center=champ
+    ? `<circle cx="${CX}" cy="${CY-2}" r="40" fill="rgba(10,15,30,.5)" stroke="#ffd400" stroke-width="3.5"/>${flagSVG([CX,CY-2],32,champ,'cchamp',1,false)}<circle cx="${CX}" cy="${(CY-2).toFixed(1)}" r="32" fill="none" stroke="#ffd400" stroke-width="3"/><text x="${CX}" y="${CY+62}" text-anchor="middle" fill="#ffd400" font-size="22" font-weight="900" letter-spacing="2">🏆 CAMPEÓN</text>`
+    : `<circle cx="${CX}" cy="${CY-2}" r="36" fill="rgba(10,15,30,.4)" stroke="#ffd400" stroke-width="3"/><text x="${CX}" y="${CY+8}" text-anchor="middle" font-size="30">🏆</text><text x="${CX}" y="${CY+62}" text-anchor="middle" fill="#ffd400" font-size="24" font-weight="900" letter-spacing="3">CAMPEÓN</text>`;
   wrap.innerHTML=`<svg viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>${clips}</defs>${lines}${dots}${center}${flags}</svg>`;
   renderCaminoPanel();
 }
