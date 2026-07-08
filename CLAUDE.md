@@ -205,7 +205,7 @@ Ordenados por urgencia:
 - 10 segmentos, EV ~$2,590 por giro
 - Jackpot: semilla $30K, +$100 por giro sin jackpot
 - Candado: saldo + apuestas activas ≥ $10K para poder girar
-- Robo $2,000 al líder (no de la casa — lo pierde el líder)
+- Segmento "🥷 ROBA al líder" ($2,000): **transferencia** — se lo baja al líder (excluye al propio girador) y se lo **suma al girador** (v1.45.7; antes solo se lo quitaba al líder sin dárselo a nadie). Acreditar saldo directo: acción admin `ajustarSaldo {nombre, monto, mensaje}`.
 - Tickets: 2 por día, máximo 4 acumulados (se dan en `grantTicketsIfNew`)
 
 ---
