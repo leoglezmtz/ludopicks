@@ -1816,7 +1816,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.45.6';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.45.7';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -6136,7 +6136,7 @@ function renderRuletaHist(){
     const av=isMe?'★':(e.who[0]||'?').toUpperCase();
     let chip={cls:'none',txt:'😅 Nada'};
     if(e.type==='jackpot')chip={cls:'jp',txt:'🎰 +'+fmtFeria(e.value)};
-    else if(e.type==='social')chip={cls:'soc',txt:'😈 −'+fmtFeria(2000)+' a '+(e.victima||'líder')};
+    else if(e.type==='social')chip={cls:'soc',txt:'🥷 +'+fmtFeria(e.value||2000)+' robado a '+(e.victima||'líder')};
     else if(e.type==='money')chip={cls:'win',txt:'+'+fmtFeria(e.value)};
     return `<div class="rl-hrow"><span class="rl-hav ${isMe?'me':''}">${av}</span><span class="rl-hname">${isMe?'<b>Tú</b>':e.who}</span><span class="rl-hchip ${chip.cls}">${chip.txt}</span><span class="rl-htime">${tiradaTimeAgo(e.t)}</span></div>`;
   }).join('');
@@ -6218,10 +6218,11 @@ function showRuletaResult(r){
     de.textContent='Te llevaste el pozo acumulado completo. Leyenda del grupo. 👑';
     try{confetti({particleCount:280,spread:130,origin:{y:.5},colors:['#f5c24b','#FFE34D','#fff','#27d49b']});setTimeout(()=>confetti({particleCount:180,spread:100,startVelocity:55,origin:{y:.5},colors:['#f5c24b','#fff']}),350);}catch(e){}
   }else if(p.tipo==='social'){
-    em.textContent='😈';ti.textContent='Premio social';
-    pr.classList.add('flat');pr.textContent='-$'+(r.extra&&r.extra.robo?r.extra.robo:2000).toLocaleString()+' al líder';
-    de.textContent=(r.extra&&r.extra.liderNombre)?`Le bajaste $${(r.extra.robo).toLocaleString()} a ${r.extra.liderNombre}. El chat va a arder. 🔥`:'Premio social: nadie tenía feria para quitar.';
-    try{confetti({particleCount:90,spread:70,origin:{y:.6},colors:['#e0524a','#f5c24b','#ffffff']});}catch(e){}
+    em.textContent='🥷';ti.textContent='¡ROBO al líder!';
+    if(p.ganancia>0){countUpEl(pr,p.ganancia,'$');}
+    else{pr.classList.add('flat');pr.textContent='Nadie a quién robar';}
+    de.textContent=(r.extra&&r.extra.liderNombre)?`Le robaste $${(r.extra.robo).toLocaleString()} a ${r.extra.liderNombre} y son TUYOS. 🤑 El chat va a arder 🔥`:'Nadie tenía feria para robar. 😅';
+    try{confetti({particleCount:130,spread:80,origin:{y:.6},colors:['#e0524a','#f5c24b','#27d49b','#ffffff']});}catch(e){}
   }else{
     em.textContent='😅';ti.textContent='Esta vez nada';
     pr.classList.add('flat');pr.textContent='¡Inventa Romario!';
@@ -6239,7 +6240,7 @@ async function shareRuletaResult(){
   let texto='';
   if(p.tipo==='money')texto=`🎰 Giré la Ruleta de la Suerte en LudoPicks y gané ${document.getElementById('rrPrize').textContent} de feria! ⚡`;
   else if(p.tipo==='jackpot')texto=`🎰🏆 ¡ME SAQUÉ EL JACKPOT en LudoPicks! ${document.getElementById('rrPrize').textContent} de una. Leyenda del grupo 👑`;
-  else if(p.tipo==='social')texto=`😈 Giré la Ruleta de la Suerte en LudoPicks y le bajé $${(r.extra&&r.extra.robo?r.extra.robo:2000).toLocaleString()} al líder. El chat arde 🔥`;
+  else if(p.tipo==='social')texto=`🥷 Giré la Ruleta en LudoPicks y le ROBÉ $${(r.extra&&r.extra.robo?r.extra.robo:2000).toLocaleString()} al líder. Directo a mi bolsa 🤑🔥`;
   if(navigator.share){
     try{await navigator.share({title:'LudoPicks · Ruleta de la Suerte',text:texto,url:'https://ludopicks.vercel.app/'});return;}
     catch(e){if(e.name==='AbortError')return;}

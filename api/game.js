@@ -808,8 +808,9 @@ export default async function handler(req, res) {
       const robo = lider ? Math.min(seg.valor, Math.max(0, lider.saldo)) : 0;
       if (lider && robo > 0) {
         lider.saldo -= robo;
-        premio.ganancia = 0; // el "premio social" no le da feria al girador, sólo al líder se la quita
-        premio.mensaje = `😈 Le bajaste $${robo.toLocaleString()} a ${lider.nombre}. El chat va a arder 🔥`;
+        j.saldo += robo;          // ROBO REAL: el girador SÍ se lleva lo que le baja al líder
+        premio.ganancia = robo;
+        premio.mensaje = `🥷 ¡Le robaste $${robo.toLocaleString()} a ${lider.nombre} y te los llevaste! 🤑 El chat va a arder 🔥`;
         extra.victimaRobo = lider.nombre;
         extra.robo = robo;
         extra.liderNombre = lider.nombre;
