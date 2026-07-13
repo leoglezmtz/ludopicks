@@ -469,19 +469,16 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     const jugadores  = await grantTicketsAllIfNeeded(); // concede tickets diarios (puede escribir KV)
-    const [apuestas, resultados, rankPrev, campeon, especiales, jackpot, ruletaHist, liveScores, tabla_orden, fairplay, betOpen] = await Promise.all([
-      kv.get("apuestas").then(v => v || {}),
-      kv.get("resultados").then(v => v || {}),
-      kv.get("rankPrev").then(v => v || {}),
-      kv.get("campeon").then(v => v || null),
+    // Una sola lectura batch (kv.mget = 1 comando de KV) en vez de ~10 kv.get sueltos.
+    // El GET lo dispara el poll de cada usuario cada 20s → reduce ~10x los comandos de KV.
+    const [vals, especiales] = await Promise.all([
+      kv.mget("apuestas", "resultados", "rankPrev", "campeon", "jackpot", "ruletaHist", "liveScores", "tabla_orden", "fairplay", "betOpen"),
       loadEspeciales(),
-      kv.get("jackpot").then(v => v ?? RULETA.jackpotSemilla),
-      kv.get("ruletaHist").then(v => v || []),
-      kv.get("liveScores").then(v => v || {}),
-      kv.get("tabla_orden").then(v => v || {}),
-      kv.get("fairplay").then(v => v || {}),
-      kv.get("betOpen").then(v => v || {}),
     ]);
+    let [apuestas, resultados, rankPrev, campeon, jackpot, ruletaHist, liveScores, tabla_orden, fairplay, betOpen] = vals;
+    apuestas = apuestas || {}; resultados = resultados || {}; rankPrev = rankPrev || {}; campeon = campeon ?? null;
+    jackpot = jackpot ?? RULETA.jackpotSemilla; ruletaHist = ruletaHist || []; liveScores = liveScores || {};
+    tabla_orden = tabla_orden || {}; fairplay = fairplay || {}; betOpen = betOpen || {};
     return res.json({
       jugadores: publicJugadores(jugadores, req.query.nombre || null), apuestas, resultados, rankPrev,
       partidos: PARTIDOS, saldo_inicial: SALDO_INICIAL, apuesta_min: APUESTA_MIN,
