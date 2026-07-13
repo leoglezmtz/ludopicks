@@ -1818,7 +1818,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.46.3';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.46.4';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2706,12 +2706,25 @@ function escudoLMX(ab,size){
   if(t&&t.logo) return `<img src="${t.logo}" width="${s}" height="${s}" alt="${ab}" loading="lazy" onerror="escudoFallback(this,'${ab}',${s})" style="flex-shrink:0;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.08);padding:2px">`;
   return badgeSVG(ab,s);
 }
+// Modelo Poisson (idéntico al del Mundial en data.js) para autogenerar los demás
+// mercados del preview a partir de la fuerza del favorito.
+function _lmxFact(n){let f=1;for(let i=2;i<=n;i++)f*=i;return f;}
+function _lmxPois(k,mu){return Math.exp(-mu)*Math.pow(mu,k)/_lmxFact(k);}
+function _lmxMu(fav){return fav<=1.20?3.7:fav<=1.35?3.3:fav<=1.55?3.0:fav<=1.75?2.8:fav<=2.0?2.6:fav<=2.5?2.5:2.4;}
+function _lmxOu(mu,L){const M=1.05,F=1.02,C=26,pk=[];for(let k=0;k<=15;k++)pk.push(_lmxPois(k,mu));let pO=0;for(let k=Math.ceil(L);k<=15;k++)pO+=pk[k];const pU=1-pO;return {over:Math.min(C,Math.max(F,Math.round((1/pO)/M*100)/100)),under:Math.min(C,Math.max(F,Math.round((1/pU)/M*100)/100))};}
+function _lmxSides(fav){return fav<=1.25?[2.6,0.45]:fav<=1.45?[2.2,0.70]:fav<=1.70?[1.9,0.95]:fav<=2.10?[1.7,1.10]:[1.45,1.35];}
+function _lmxBtts(fav){const[f,d]=_lmxSides(fav);const pB=(1-Math.exp(-f))*(1-Math.exp(-d)),pN=1-pB,M=1.06,F=1.02,C=15;return {si:Math.min(C,Math.max(F,Math.round((1/pB)/M*100)/100)),no:Math.min(C,Math.max(F,Math.round((1/pN)/M*100)/100))};}
+const _LMX_CORN={over:1.85,under:1.85}, _LMX_CARD={over:1.75,under:1.95}; // líneas default 9.5 córners / 3.5 tarjetas (mismas tablas del Mundial)
 function renderLigaMX(){
   const el=document.getElementById('ligamxView');if(!el)return;
   const jor=LIGAMX_JORNADAS[0];
   const pill=(k,m)=>`<div style="flex:1;text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:7px 4px">`+
     `<div style="font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${k}</div>`+
     `<div style="font-size:14px;font-weight:800;color:var(--al)">${m}x</div></div>`;
+  const cell=(lb,m)=>`<div style="flex:1;text-align:center;background:rgba(255,255,255,.04);border-radius:8px;padding:5px 3px"><span style="font-size:10px;color:var(--muted2)">${lb}</span> <b style="font-size:12.5px;color:var(--al)">${m}x</b></div>`;
+  const mrow=(label,la,a,lb,b)=>`<div style="display:flex;align-items:center;gap:8px;margin-top:7px">`+
+    `<div style="font-size:11px;color:var(--muted);width:96px;flex-shrink:0">${label}</div>`+
+    `<div style="flex:1;display:flex;gap:6px">${cell(la,a)}${cell(lb,b)}</div></div>`;
   let h=`<div style="padding:2px 2px 12px">
     <div style="font-size:19px;font-weight:900;color:#fff">🇲🇽 Liga MX · Apertura 2026</div>
     <div style="font-size:12.5px;color:var(--muted);margin-top:2px">Vista previa (solo admin) · Jornada ${jor.j} de ${jor.declaradas} declaradas</div>
@@ -2721,6 +2734,7 @@ function renderLigaMX(){
     h+=`<div style="font-size:12px;font-weight:800;color:var(--gold);margin:16px 2px 8px;text-transform:uppercase;letter-spacing:.5px">${dia.fecha}</div>`;
     for(const p of dia.partidos){
       const L=LIGAMX_TEAMS[p.local],V=LIGAMX_TEAMS[p.visita];
+      const fav=Math.min(p.mom.l,p.mom.v),ou=_lmxOu(_lmxMu(fav),2.5),bt=_lmxBtts(fav);
       h+=`<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;margin-bottom:10px">
         <div style="text-align:center;font-size:11px;color:var(--muted2);margin-bottom:8px">🕐 ${p.hora} <span style="opacity:.6">Tijuana</span>${p.est?' · <span style="color:#e0a33a">momio estimado</span>':''}</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:11px">
@@ -2728,7 +2742,13 @@ function renderLigaMX(){
           <div style="font-size:11px;color:var(--muted2);font-weight:700">VS</div>
           <div style="flex:1;display:flex;align-items:center;gap:8px;min-width:0">${escudoLMX(p.visita,40)}<span style="font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${V.n}</span></div>
         </div>
+        <div style="font-size:10px;color:var(--muted2);font-weight:700;margin-bottom:5px">🏆 GANADOR</div>
         <div style="display:flex;gap:7px">${pill(p.local,p.mom.l)}${pill('Empate',p.mom.e)}${pill(p.visita,p.mom.v)}</div>
+        <div style="border-top:1px solid rgba(255,255,255,.07);margin:11px 0 3px"></div>
+        ${mrow('⚽ Goles 2.5','Over',ou.over,'Under',ou.under)}
+        ${mrow('🥅 Ambos anotan','Sí',bt.si,'No',bt.no)}
+        ${mrow('🚩 Córners 9.5','Over',_LMX_CORN.over,'Under',_LMX_CORN.under)}
+        ${mrow('🟨 Tarjetas 3.5','Over',_LMX_CARD.over,'Under',_LMX_CARD.under)}
       </div>`;
     }
   }
