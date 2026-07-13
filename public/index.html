@@ -1818,7 +1818,7 @@ async function installApp(){
 }
 function dismissInstall(){localStorage.setItem('ludo_install_dismiss','1');renderInstallCard();}
 let state={jugadores:{},apuestas:{},resultados:{},partidos:[],saldo_inicial:10000};
-const APP_VERSION='1.46.0';   // ← se muestra en el pie de página; súbelo en cada versión
+const APP_VERSION='1.46.1';   // ← se muestra en el pie de página; súbelo en cada versión
 let me=null,adminKey=null,isAdmin=false,myPin=null;
 let pickP=null,pickK=null,pinTarget=null;
 let grupoF='Todos',adminF='Todos',currentTab='partidos',adminTab='resultados',misF='todas';
@@ -2656,40 +2656,42 @@ async function _doSaveAvatar(avatarObj){
 
 // ── LIGA MX (preview solo-admin) · Apertura 2026 ──────────────
 // Datos de los 18 clubes con sus 2 colores (para escudos tipo badge, sin imágenes externas).
+const _ESP='https://a.espncdn.com/i/teamlogos/soccer/500/';
 const LIGAMX_TEAMS={
-  AME:{n:'América',c1:'#00204e',c2:'#ffd100'}, GDL:{n:'Chivas',c1:'#c8102e',c2:'#005eb8'},
-  CAZ:{n:'Cruz Azul',c1:'#00549f',c2:'#e2001a'}, PUM:{n:'Pumas',c1:'#00205b',c2:'#c99700'},
-  MTY:{n:'Monterrey',c1:'#003087',c2:'#e6e6e6'}, TIG:{n:'Tigres',c1:'#ffb81c',c2:'#00274c'},
-  TOL:{n:'Toluca',c1:'#c8102e',c2:'#e6e6e6'}, LEO:{n:'León',c1:'#00723f',c2:'#e6e6e6'},
-  SAN:{n:'Santos',c1:'#00954c',c2:'#e6e6e6'}, PAC:{n:'Pachuca',c1:'#005eb8',c2:'#e6e6e6'},
-  TIJ:{n:'Tijuana',c1:'#c8102e',c2:'#111111'}, NEC:{n:'Necaxa',c1:'#e2001a',c2:'#e6e6e6'},
-  PUE:{n:'Puebla',c1:'#003da5',c2:'#e6e6e6'}, ATL:{n:'Atlas',c1:'#111111',c2:'#c8102e'},
-  MAZ:{n:'Mazatlán',c1:'#5b2c86',c2:'#e4002b'}, QRO:{n:'Querétaro',c1:'#00174a',c2:'#111111'},
-  ASL:{n:'Atl. San Luis',c1:'#c8102e',c2:'#003087'}, JUA:{n:'Juárez',c1:'#009639',c2:'#e6e6e6'},
+  AME:{n:'América',c1:'#00204e',c2:'#ffd100',logo:_ESP+'227.png'}, GDL:{n:'Chivas',c1:'#c8102e',c2:'#005eb8',logo:_ESP+'219.png'},
+  CAZ:{n:'Cruz Azul',c1:'#00549f',c2:'#e2001a',logo:_ESP+'218.png'}, PUM:{n:'Pumas',c1:'#00205b',c2:'#c99700',logo:_ESP+'233.png'},
+  MTY:{n:'Monterrey',c1:'#003087',c2:'#e6e6e6',logo:_ESP+'220.png'}, TIG:{n:'Tigres',c1:'#ffb81c',c2:'#00274c',logo:_ESP+'232.png'},
+  TOL:{n:'Toluca',c1:'#c8102e',c2:'#e6e6e6',logo:_ESP+'223.png'}, LEO:{n:'León',c1:'#00723f',c2:'#e6e6e6',logo:_ESP+'228.png'},
+  SAN:{n:'Santos',c1:'#00954c',c2:'#e6e6e6',logo:_ESP+'225.png'}, PAC:{n:'Pachuca',c1:'#005eb8',c2:'#e6e6e6',logo:_ESP+'234.png'},
+  TIJ:{n:'Tijuana',c1:'#c8102e',c2:'#111111',logo:_ESP+'10125.png'}, NEC:{n:'Necaxa',c1:'#e2001a',c2:'#e6e6e6',logo:_ESP+'229.png'},
+  PUE:{n:'Puebla',c1:'#003da5',c2:'#e6e6e6',logo:_ESP+'231.png'}, ATL:{n:'Atlas',c1:'#111111',c2:'#c8102e',logo:_ESP+'216.png'},
+  MAZ:{n:'Mazatlán',c1:'#5b2c86',c2:'#e4002b',logo:_ESP+'20702.png'}, QRO:{n:'Querétaro',c1:'#00174a',c2:'#111111',logo:_ESP+'222.png'},
+  ASL:{n:'Atl. San Luis',c1:'#c8102e',c2:'#003087',logo:_ESP+'15720.png'}, JUA:{n:'Juárez',c1:'#009639',c2:'#e6e6e6',logo:_ESP+'17851.png'},
 };
-// Jornada 1 (Apertura 2026, horas del centro de México). Momios 1X2 (decimal): reales solo
-// Necaxa (ancla); el resto estimados por fuerza de equipo. Corrección: era "Atlante" (no es
-// de Liga MX) → el rival real de Necaxa es Mazatlán.
+// Jornada 1 (Apertura 2026, horas del centro de México). Momios 1X2 (decimal) REALES de bet365
+// (8/9); ASL-CAZ estimado (est:true). Rival real de Necaxa = Mazatlán.
 const LIGAMX_JORNADAS=[{ j:1, declaradas:17, dias:[
   { fecha:'Jue 16/7', partidos:[
-    {local:'NEC',visita:'MAZ',hora:'19:00',mom:{l:1.91,e:3.5,v:3.9}},
-    {local:'TIJ',visita:'TIG',hora:'21:00',mom:{l:3.4,e:3.5,v:1.83}},
+    {local:'NEC',visita:'MAZ',hora:'19:00',mom:{l:1.87,e:3.5,v:3.5}},
+    {local:'TIJ',visita:'TIG',hora:'21:00',mom:{l:3.6,e:3.5,v:1.96}},
   ]},
   { fecha:'Vie 17/7', partidos:[
-    {local:'ASL',visita:'CAZ',hora:'19:00',mom:{l:3.8,e:3.5,v:1.71}},
-    {local:'LEO',visita:'ATL',hora:'21:00',mom:{l:1.77,e:3.5,v:4.2}},
-    {local:'JUA',visita:'PUE',hora:'21:00',mom:{l:1.8,e:3.5,v:4.1}},
+    {local:'ASL',visita:'CAZ',hora:'19:00',mom:{l:4.3,e:3.5,v:1.75},est:true},
+    {local:'LEO',visita:'ATL',hora:'21:00',mom:{l:1.92,e:3.4,v:3.75}},
+    {local:'JUA',visita:'PUE',hora:'21:00',mom:{l:2.35,e:3.3,v:2.95}},
   ]},
   { fecha:'Sáb 18/7', partidos:[
-    {local:'PUM',visita:'PAC',hora:'17:00',mom:{l:2.2,e:3.4,v:2.5}},
-    {local:'MTY',visita:'SAN',hora:'19:00',mom:{l:1.38,e:4.3,v:7.5}},
-    {local:'GDL',visita:'TOL',hora:'19:00',mom:{l:2.6,e:3.5,v:2.4}},
-    {local:'QRO',visita:'AME',hora:'21:00',mom:{l:4.2,e:3.7,v:1.67}},
+    {local:'PUM',visita:'PAC',hora:'17:00',mom:{l:2.17,e:3.45,v:2.7}},
+    {local:'MTY',visita:'SAN',hora:'19:00',mom:{l:1.46,e:4.2,v:5.5}},
+    {local:'GDL',visita:'TOL',hora:'19:00',mom:{l:2.15,e:3.5,v:3.0}},
+    {local:'QRO',visita:'AME',hora:'21:00',mom:{l:3.6,e:3.4,v:1.92}},
   ]},
 ]}];
-// Escudo tipo badge: círculo bicolor (colores del club) con la abreviatura. Robusto, sin CDNs.
-function escudoLMX(ab,size){
-  const t=LIGAMX_TEAMS[ab]||{n:ab,c1:'#444',c2:'#888'};const s=size||36,r=s/2,id='es'+ab+s;
+// Escudo REAL (logo del club, ESPN CDN) con fallback automático a badge de color bicolor
+// si el logo no carga → nunca se ve roto.
+let _escN=0;
+function badgeSVG(ab,size){
+  const t=LIGAMX_TEAMS[ab]||{c1:'#444',c2:'#888'};const s=size||36,r=s/2,id='es'+(++_escN);
   return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" style="flex-shrink:0;display:block">`+
     `<defs><clipPath id="${id}"><circle cx="${r}" cy="${r}" r="${r-1}"/></clipPath></defs>`+
     `<g clip-path="url(#${id})"><rect width="${s}" height="${s}" fill="${t.c1}"/>`+
@@ -2697,6 +2699,12 @@ function escudoLMX(ab,size){
     `<circle cx="${r}" cy="${r}" r="${r-1}" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.4"/>`+
     `<text x="${r}" y="${r+s*0.135}" text-anchor="middle" font-size="${(s*0.33).toFixed(1)}" font-weight="900" fill="#fff" `+
     `style="paint-order:stroke;stroke:rgba(0,0,0,.6);stroke-width:${(s*0.05).toFixed(1)}px">${ab}</text></svg>`;
+}
+function escudoFallback(img,ab,s){const sp=document.createElement('span');sp.style.display='inline-flex';sp.innerHTML=badgeSVG(ab,s);if(img.parentNode)img.replaceWith(sp);}
+function escudoLMX(ab,size){
+  const t=LIGAMX_TEAMS[ab];const s=size||36;
+  if(t&&t.logo) return `<img src="${t.logo}" width="${s}" height="${s}" alt="${ab}" loading="lazy" onerror="escudoFallback(this,'${ab}',${s})" style="flex-shrink:0;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.08);padding:2px">`;
+  return badgeSVG(ab,s);
 }
 function renderLigaMX(){
   const el=document.getElementById('ligamxView');if(!el)return;
@@ -2707,14 +2715,14 @@ function renderLigaMX(){
   let h=`<div style="padding:2px 2px 12px">
     <div style="font-size:19px;font-weight:900;color:#fff">🇲🇽 Liga MX · Apertura 2026</div>
     <div style="font-size:12.5px;color:var(--muted);margin-top:2px">Vista previa (solo admin) · Jornada ${jor.j} de ${jor.declaradas} declaradas</div>
-    <div style="margin-top:10px;font-size:11.5px;color:var(--muted);background:rgba(255,219,0,.07);border:1px solid rgba(255,219,0,.2);border-radius:10px;padding:9px 11px;line-height:1.4">
-      🚧 <b>En desarrollo</b> · Escudos temporales (badge de color). Momios reales solo Necaxa; el resto estimados por fuerza de equipo. Aún no apostable — es el diseño base para revisar contigo.</div>`;
+    <div style="margin-top:10px;font-size:11.5px;color:var(--muted);background:rgba(31,196,58,.07);border:1px solid rgba(31,196,58,.22);border-radius:10px;padding:9px 11px;line-height:1.4">
+      ✅ Escudos y momios <b>reales</b> (bet365 · 8/9 partidos, 1 estimado marcado). Vista previa solo-admin — así se vería en producción. Aún no apostable (falta conectarlo al backend).</div>`;
   for(const dia of jor.dias){
     h+=`<div style="font-size:12px;font-weight:800;color:var(--gold);margin:16px 2px 8px;text-transform:uppercase;letter-spacing:.5px">${dia.fecha}</div>`;
     for(const p of dia.partidos){
       const L=LIGAMX_TEAMS[p.local],V=LIGAMX_TEAMS[p.visita];
       h+=`<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;margin-bottom:10px">
-        <div style="text-align:center;font-size:11px;color:var(--muted2);margin-bottom:8px">🕐 ${p.hora} <span style="opacity:.6">centro de México</span></div>
+        <div style="text-align:center;font-size:11px;color:var(--muted2);margin-bottom:8px">🕐 ${p.hora} <span style="opacity:.6">centro de México</span>${p.est?' · <span style="color:#e0a33a">momio estimado</span>':''}</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:11px">
           <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0"><span style="font-weight:700;font-size:14px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${L.n}</span>${escudoLMX(p.local,40)}</div>
           <div style="font-size:11px;color:var(--muted2);font-weight:700">VS</div>
