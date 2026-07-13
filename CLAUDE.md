@@ -3,7 +3,13 @@
 App de apuestas ficticias del Mundial 2026 entre ~10 amigos (sin dinero real).  
 **Producción:** https://ludopicks.vercel.app  
 **Repo:** leoglezmtz/ludopicks  
-**Versión actual en producción:** v1.45.5 · Fase: **Cuartos de final** (QF)
+**Versión actual en producción:** v1.46.0 · Mundial en **Semifinales** + preview **Liga MX** (solo admin)
+
+**Liga MX (v1.46.0, en desarrollo, SOLO admin):** pestaña `🇲🇽 Liga MX` (`tab-ligamx`/`tabc-ligamx`,
+gateada con `isAdmin` en `enterApp`). Datos embebidos en el frontend (`LIGAMX_TEAMS`, `LIGAMX_JORNADAS`),
+NO en data.js/backend → aislado del Mundial, no apostable aún. Escudos = badges SVG bicolor (`escudoLMX`,
+sin CDNs). Solo Jornada 1 del Apertura 2026 (fixtures reales; corrección Atlante→Mazatlán). Momios estimados
+salvo Necaxa. Pendiente si se formaliza: mover a data.js + backend, wire de apuestas, más jornadas, escudos reales.
 
 ---
 
