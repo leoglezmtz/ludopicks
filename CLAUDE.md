@@ -7,9 +7,11 @@ App de apuestas ficticias del Mundial 2026 entre ~10 amigos (sin dinero real).
 
 **Liga MX (v1.46.0, en desarrollo, SOLO admin):** pestaña `🇲🇽 Liga MX` (`tab-ligamx`/`tabc-ligamx`,
 gateada con `isAdmin` en `enterApp`). Datos embebidos en el frontend (`LIGAMX_TEAMS`, `LIGAMX_JORNADAS`),
-NO en data.js/backend → aislado del Mundial, no apostable aún. Escudos = badges SVG bicolor (`escudoLMX`,
-sin CDNs). Solo Jornada 1 del Apertura 2026 (fixtures reales; corrección Atlante→Mazatlán). Momios estimados
-salvo Necaxa. Pendiente si se formaliza: mover a data.js + backend, wire de apuestas, más jornadas, escudos reales.
+NO en data.js/backend → aislado del Mundial, no apostable aún. Escudos = logos REALES de ESPN CDN
+(`a.espncdn.com/i/teamlogos/soccer/500/{id}.png`, 18 ids verificados) vía `<img>` con `onerror=escudoFallback`
+→ badge bicolor si falla (`escudoLMX`/`badgeSVG`). Jornada 1 del Apertura 2026 con momios 1X2 REALES de bet365
+(8/9; ASL-CAZ estimado). Corrección Atlante→Mazatlán. Pendiente si se formaliza: mover a data.js + backend,
+wire de apuestas, agregar las 17 jornadas.
 
 ---
 
